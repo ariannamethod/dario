@@ -1,0 +1,6 @@
+# compiled binaries
+dario
+test_dario
+tests/test_dario
+*.o
+*.out
