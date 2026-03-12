@@ -329,7 +329,7 @@ static int vocab_add(Vocab *v, const char *word) {
     if (id >= 0) return id;
     if (v->n_words >= MAX_VOCAB) return -1;
     id = v->n_words++;
-    snprintf(v->words[id], 63, "%s", word);
+    snprintf(v->words[id], sizeof(v->words[id]), "%s", word);
     return id;
 }
 
