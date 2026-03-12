@@ -336,7 +336,7 @@
     <p><strong>The Six Terms:</strong></p>
     <ul class="term-list">
       <li><span class="t" style="color:var(--B)">B — Sequential Chain</span> — Bigram transitions. What word tends to follow the previous word. Strong early in life (12×), weakens as the organism matures (2×). Language needs local coherence.</li>
-      <li><span class="t" style="color:var(--H)">H — Hebbian Resonance</span> — Co-occurrence accumulated over conversation. This IS attention — Hebb's rule Δw = η·x_pre·x_post equals a dot-product attention score. Proven: PLOS Computational Biology, 2024.</li>
+      <li><span class="t" style="color:var(--H)">H — Hebbian Resonance</span> — Co-occurrence accumulated over conversation with learnable positional profile (36 Hebbian params: 32 distance weights + 4 token class modifiers). The organism learns which distances and word types matter — replacing fixed 0.9<sup>d</sup> decay. This IS attention — Hebb's rule Δw = η·x_pre·x_post equals a dot-product attention score. Proven: PLOS Computational Biology, 2024.</li>
       <li><span class="t" style="color:var(--F)">F — Prophecy Fulfillment</span> — Predictions about what comes next. Unfulfilled prophecies create debt: log(1 + age). The longer a thought hangs incomplete, the stronger the pull toward closure.</li>
       <li><span class="t" style="color:var(--A)">A — Destiny Attraction</span> — EMA of all context embeddings. A semantic compass. The conversation drifts toward a gravitational center. Not topic-following — field mass.</li>
       <li><span class="t" style="color:var(--S)">S — Subword Structure</span> — Morphological signal from BPE. Punctuation, suffixes, character-level rhythm that word tokenization destroys. Silent at birth, grows as structure is discovered.</li>
