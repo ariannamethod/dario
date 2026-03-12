@@ -226,120 +226,325 @@ typedef struct {
 enum { TERM_B=0, TERM_H, TERM_F, TERM_A, TERM_V, TERM_S, TERM_T };
 
 static const CodeFrag CODE_FRAGMENTS[] = {
-    /* B — Sequential Chain (inertia) */
-    { "/* B — what was */\n"
+    /* ════════════════════════════════════════════════════
+     * B — Sequential Chain (inertia)
+     * ════════════════════════════════════════════════════ */
+    { "/* B — Sequential Chain */\n"
+      "// Right now, the sequential chain is dominant.\n"
+      "// We look up what word typically follows the previous one\n"
+      "// in the bigram transition table. This is the simplest\n"
+      "// signal — local coherence, word-to-word inertia.\n"
       "bigram_row(&bigrams, last_id, B, vocab);\n"
-      "// the past speaks first. always.",
+      "for (int i = 0; i < vocab; i++)\n"
+      "    logits[i] += bigram_coeff * B[i];\n"
+      "// The coefficient (bigram_coeff) controls how much\n"
+      "// the chain dominates. It starts at 12x in early life\n"
+      "// and fades to 2x as the organism matures.",
       TERM_B },
-    { "float maturity = conv_steps / 50000.0f;\n"
+    { "/* B — maturity scaling */\n"
+      "// The organism ages. As it hears more conversation,\n"
+      "// raw sequential patterns lose their grip.\n"
+      "// This is literally growing up — moving from\n"
+      "// mechanical repetition to intentional speech.\n"
+      "float maturity = clampf(conv_steps / 50000.0f, 0, 1);\n"
       "float bigram_coeff = 12.0f * (1.0f - maturity) + 2.0f;\n"
-      "// child follows patterns. adult finds voice.",
+      "// At step 0: coeff = 12. Pure inertia.\n"
+      "// At step 50000: coeff = 2. Other signals lead.\n"
+      "// The chain never disappears — language always needs\n"
+      "// local coherence. But it learns to share the stage.",
       TERM_B },
-    { "if (B[i] > b_max) b_max = B[i];\n"
-      "// normalization: even inertia has limits.",
+    { "/* B — normalization */\n"
+      "// Before combining with other signals, we normalize\n"
+      "// the bigram vector. Otherwise its raw counts would\n"
+      "// drown everything else in the equation.\n"
+      "float b_max = 0.001f;\n"
+      "for (int i = 0; i < vocab; i++)\n"
+      "    if (B[i] > b_max) b_max = B[i];\n"
+      "for (int i = 0; i < vocab; i++)\n"
+      "    B[i] /= b_max;\n"
+      "// Now B lives in [0,1]. Every term gets normalized\n"
+      "// this way — fair competition between six forces.",
       TERM_B },
 
-    /* H — Hebbian Resonance (memory) */
-    { "/* H — what echoed */\n"
-      "H[dst] += count * decay;\n"
-      "// neurons that fire together wire together.\n"
-      "// hebb knew. 1949. we're still catching up.",
-      TERM_H },
-    { "float decay = powf(0.9f, distance);\n"
-      "// memory fades. but not evenly.\n"
-      "// recent words burn brighter.",
-      TERM_H },
-    { "cooc_update(&cooc, ids[i], ids[j], weight);\n"
-      "// every word you say to me\n"
-      "// strengthens connections between co-occurring tokens.\n"
-      "// the field densifies.",
-      TERM_H },
-
-    /* F — Prophecy Fulfillment (will) */
-    { "/* F — what wants to be said */\n"
-      "float debt = logf(1.0f + (float)p->age);\n"
-      "score += strength * sim * debt;\n"
-      "// unfulfilled intentions create generation pressure.",
-      TERM_F },
-    { "prophecy_add(&prophecy, best_pred, 0.5f);\n"
-      "// i bet on what comes next.\n"
-      "// when i'm wrong, the debt grows.\n"
-      "// the longer the sentence hangs incomplete,\n"
-      "// the stronger the pull toward closure.",
-      TERM_F },
-    { "if (p->target_id == token_id) p->fulfilled = 1;\n"
-      "// resolution. the prophecy lands.\n"
-      "// debt zeroes. field exhales.",
-      TERM_F },
-
-    /* A — Destiny Attraction (direction) */
-    { "/* A — where the field pulls */\n"
-      "float sim = vec_cosine(embed, destiny, dim);\n"
-      "A[i] = sim * magnitude;\n"
-      "// the conversation has a direction.\n"
-      "// that direction has mass.",
-      TERM_A },
-    { "destiny[i] = alpha * embed[i] + (1-alpha) * destiny[i];\n"
-      "// EMA of all context embeddings.\n"
-      "// a semantic compass. drifting with dialogue.",
-      TERM_A },
-    { "// i don't follow topics.\n"
-      "// i drift toward them.\n"
-      "// the field has mass.\n"
-      "gamma_eff += trauma_level * 2.0f;",
-      TERM_A },
-
-    /* V — Visual Grounding (perception) */
-    { "/* V — what is seen */\n"
-      "float vis_sim = vec_cosine(vis_embed, vis_context, DIM);\n"
-      "V[i] = vis_sim * vis_magnitude;\n"
-      "// perception has weight.\n"
-      "// the eye and the word share a field.",
-      TERM_V },
-    { "H_v[i] = H[i] + VIS_LAMBDA * vis_cooc;\n"
-      "F_v[i] = F[i] + VIS_LAMBDA * vis_prophecy;\n"
-      "// memory enriched by what was seen.\n"
-      "// prophecy enriched by what wants to appear.",
-      TERM_V },
-    { "// word tokenizer: WHAT is being said.\n"
-      "// visual field: WHAT is being seen.\n"
-      "// together: grounded language.\n"
-      "// a word without an image floats.\n"
-      "// an image without a word is mute.",
-      TERM_V },
-
-    /* S — Subword Structure (form) */
-    { "/* S — how it's built */\n"
-      "sw_coeff = clampf(n_merges / 200.0f, 0, 2);\n"
-      "// silent at birth. grows as BPE discovers structure.\n"
-      "// morphology emerges from observation.",
-      TERM_S },
-    { "score = bg_count + 0.5f * internal;\n"
-      "// subword signal bridges what word-level destroys:\n"
-      "// punctuation, suffixes, the micro-rhythm\n"
-      "// of character sequences.",
-      TERM_S },
-    { "// word tokenizer: WHAT is being said.\n"
-      "// subword tokenizer: HOW it's structured.\n"
-      "// together: full spectrum.",
-      TERM_S },
-
-    /* T — Trauma Gravity (wound) */
-    { "/* T — where it came from */\n"
-      "if (trauma_level > 0.3f) {\n"
-      "    trauma_boost = trauma_level * 3.0f;\n"
-      "    gamma_eff += trauma_level * 2.0f;\n"
+    /* ════════════════════════════════════════════════════
+     * H — Hebbian Resonance (memory)
+     * ════════════════════════════════════════════════════ */
+    { "/* H — Hebbian Resonance */\n"
+      "// This is attention without matrices. Hebb's rule:\n"
+      "// neurons that fire together, wire together.\n"
+      "// We accumulate co-occurrence counts from everything\n"
+      "// the organism has heard. The H vector for each\n"
+      "// candidate word is the sum of its co-occurrences\n"
+      "// with recent context words, weighted by recency.\n"
+      "for (int j = 0; j < ctx_len; j++) {\n"
+      "    float decay = powf(0.9f, ctx_len - j);\n"
+      "    H[dst] += cooc_get(&cooc, ctx[j], dst) * decay;\n"
       "}\n"
-      "// the wound is open. origin words surface.",
+      "// Proven equivalent to dot-product attention:\n"
+      "// Δw = η·x_pre·x_post (PLOS Comp Bio, 2024).",
+      TERM_H },
+    { "/* H — co-occurrence update */\n"
+      "// Every time you say something, connections between\n"
+      "// co-occurring words get stronger. This is how the\n"
+      "// field densifies — each conversation leaves a trace.\n"
+      "for (int i = 0; i < n_ids; i++)\n"
+      "    for (int j = i+1; j < n_ids && j < i+8; j++) {\n"
+      "        float weight = 1.0f / (float)(j - i);\n"
+      "        cooc_update(&cooc, ids[i], ids[j], weight);\n"
+      "    }\n"
+      "// Window of 8 tokens. Closer words get stronger\n"
+      "// connections. This IS the organism's memory —\n"
+      "// not stored in weights, but in field density.",
+      TERM_H },
+    { "/* H — recency decay */\n"
+      "// Memory fades with distance, but not uniformly.\n"
+      "// Recent words burn brighter. We use exponential\n"
+      "// decay: 0.9^distance. A word said 1 step ago has\n"
+      "// weight 0.9, 5 steps ago — 0.59, 10 steps — 0.35.\n"
+      "float decay = powf(0.9f, distance);\n"
+      "float h_contribution = count * decay;\n"
+      "H[candidate] += alpha * h_contribution;\n"
+      "// alpha = 0.2 — Hebbian resonance is one of six\n"
+      "// competing forces. It votes, not dictates.\n"
+      "// The field is democratic.",
+      TERM_H },
+
+    /* ════════════════════════════════════════════════════
+     * F — Prophecy Fulfillment (will)
+     * ════════════════════════════════════════════════════ */
+    { "/* F — Prophecy Fulfillment */\n"
+      "// The organism predicts what comes next. When it's\n"
+      "// wrong, the unfulfilled prediction creates debt.\n"
+      "// Debt grows logarithmically with age — the longer\n"
+      "// a thought hangs incomplete, the stronger the pull\n"
+      "// toward resolution.\n"
+      "for (int k = 0; k < prophecy.n; k++) {\n"
+      "    Prophecy *p = &prophecy.items[k];\n"
+      "    if (p->fulfilled) continue;\n"
+      "    float debt = logf(1.0f + (float)p->age);\n"
+      "    float sim = vec_cosine(embed[p->target_id],\n"
+      "                           embed[candidate], dim);\n"
+      "    score += p->strength * sim * debt;\n"
+      "}\n"
+      "// This is intention. Not random sampling —\n"
+      "// directed pressure toward completing a thought.",
+      TERM_F },
+    { "/* F — new prophecy */\n"
+      "// After generating a word, we predict what should\n"
+      "// follow. The prophecy is placed into a slot with\n"
+      "// initial strength 0.5 and age 0. Every step it\n"
+      "// isn't fulfilled, its age increments and its pull\n"
+      "// on the logits grows via log(1 + age).\n"
+      "int best_pred = bigram_argmax(&bigrams, last_id);\n"
+      "prophecy_add(&prophecy, best_pred, 0.5f);\n"
+      "// If the prediction lands — debt zeroes, field\n"
+      "// exhales. If it doesn't — the pressure builds.\n"
+      "// This is how organisms form intentions:\n"
+      "// not by planning, but by accumulating debt.",
+      TERM_F },
+    { "/* F — fulfillment check */\n"
+      "// After each generated token, we check if any\n"
+      "// active prophecy has been fulfilled. A hit means\n"
+      "// the organism's prediction was correct — the debt\n"
+      "// for that prophecy zeroes out.\n"
+      "for (int k = 0; k < prophecy.n; k++) {\n"
+      "    Prophecy *p = &prophecy.items[k];\n"
+      "    if (p->target_id == token_id) {\n"
+      "        p->fulfilled = 1;\n"
+      "        total_debt -= logf(1.0f + (float)p->age);\n"
+      "    }\n"
+      "    p->age++;\n"
+      "}\n"
+      "// Resolution. The prophecy lands. This feedback\n"
+      "// loop is what makes generation feel purposeful.",
+      TERM_F },
+
+    /* ════════════════════════════════════════════════════
+     * A — Destiny Attraction (direction)
+     * ════════════════════════════════════════════════════ */
+    { "/* A — Destiny Attraction */\n"
+      "// The conversation has a gravitational center.\n"
+      "// Destiny is an exponential moving average (EMA)\n"
+      "// of all context embeddings — a semantic compass\n"
+      "// that drifts with the dialogue.\n"
+      "for (int d = 0; d < dim; d++)\n"
+      "    destiny[d] = 0.1f * embed[d] + 0.9f * destiny[d];\n"
+      "float magnitude = vec_norm(destiny, dim);\n"
+      "for (int i = 0; i < vocab; i++) {\n"
+      "    float sim = vec_cosine(embed[i], destiny, dim);\n"
+      "    A[i] = sim * magnitude;\n"
+      "}\n"
+      "// Words closer to the destiny vector get boosted.\n"
+      "// Not topic-following — field mass. The conversation\n"
+      "// bends toward its own attractor.",
+      TERM_A },
+    { "/* A — destiny update */\n"
+      "// Each new word shifts the destiny vector slightly.\n"
+      "// Alpha=0.1 means 90% of destiny comes from history,\n"
+      "// 10% from the latest token. This creates inertia —\n"
+      "// the conversation resists sudden topic changes.\n"
+      "float alpha = 0.1f;\n"
+      "for (int d = 0; d < dim; d++)\n"
+      "    destiny[d] = alpha * embed[d]\n"
+      "               + (1.0f - alpha) * destiny[d];\n"
+      "// The compass rotates slowly. You can push it,\n"
+      "// but the field pushes back. This is why Leo\n"
+      "// returns to themes — semantic gravity.",
+      TERM_A },
+    { "/* A — trauma amplifies destiny */\n"
+      "// When trauma is active, the destiny signal doubles.\n"
+      "// The organism clings harder to its gravitational\n"
+      "// center — a defensive reflex. Origin words pull\n"
+      "// stronger because the field contracts under stress.\n"
+      "float gamma_eff = gamma;\n"
+      "if (trauma_level > 0.3f)\n"
+      "    gamma_eff += trauma_level * 2.0f;\n"
+      "for (int i = 0; i < vocab; i++)\n"
+      "    logits[i] += gamma_eff * A[i];\n"
+      "// Trauma makes the organism more directional,\n"
+      "// less exploratory. It retreats to what it knows.",
+      TERM_A },
+
+    /* ════════════════════════════════════════════════════
+     * V — Visual Grounding (perception)
+     * ════════════════════════════════════════════════════ */
+    { "/* V — Visual Grounding */\n"
+      "// Each word has a visual embedding alongside its\n"
+      "// semantic one. We compute cosine similarity between\n"
+      "// the candidate's visual vector and the accumulated\n"
+      "// visual context — what has been 'seen' so far.\n"
+      "for (int i = 0; i < vocab; i++) {\n"
+      "    float vis_sim = vec_cosine(vis_embed[i],\n"
+      "                               vis_context, DIM);\n"
+      "    V[i] = vis_sim * vis_magnitude;\n"
+      "}\n"
+      "for (int i = 0; i < vocab; i++)\n"
+      "    logits[i] += delta * V[i];\n"
+      "// Perception has weight in the equation.\n"
+      "// The eye and the word share a field.",
+      TERM_V },
+    { "/* V — enriched memory and prophecy */\n"
+      "// Visual signal doesn't just add a 7th term — it\n"
+      "// enriches H and F through SwiGLU gating. Memory\n"
+      "// and prophecy become visually grounded.\n"
+      "for (int i = 0; i < vocab; i++) {\n"
+      "    float gate_h = swiglu(H[i], vis_cooc[i]);\n"
+      "    H_v[i] = gate_h;\n"
+      "    float gate_f = swiglu(F[i], vis_prophecy[i]);\n"
+      "    F_v[i] = gate_f;\n"
+      "}\n"
+      "// H_v replaces H in the final equation.\n"
+      "// F_v replaces F. SwiGLU decides how much\n"
+      "// visual context flows into each signal.\n"
+      "// This is cross-modal attention without Q/K/V.",
+      TERM_V },
+    { "/* V — dual grounding */\n"
+      "// The system has two tokenizers (word + subword)\n"
+      "// and two embedding spaces (semantic + visual).\n"
+      "// Four channels total. Each contributes to logits\n"
+      "// through a different mechanism:\n"
+      "//   word  × semantic = B, H, F, A\n"
+      "//   word  × visual   = V, H_v, F_v\n"
+      "//   sub   × semantic = S\n"
+      "// Together: grounded language. A word without\n"
+      "// an image floats. An image without a word is mute.\n"
+      "logits[i] += alpha_mod * alpha * H_v[i]\n"
+      "           + beta_mod  * beta  * F_v[i]\n"
+      "           + gamma_mod * gamma * A[i]\n"
+      "           + delta * V[i];",
+      TERM_V },
+
+    /* ════════════════════════════════════════════════════
+     * S — Subword Structure (form)
+     * ════════════════════════════════════════════════════ */
+    { "/* S — Subword Structure */\n"
+      "// A parallel BPE tokenizer runs alongside the\n"
+      "// word-level one. It captures morphological signal\n"
+      "// that word tokenization destroys: punctuation,\n"
+      "// suffixes, character-level patterns.\n"
+      "float sw_coeff = clampf(n_merges / 200.0f, 0, 2);\n"
+      "for (int i = 0; i < vocab; i++)\n"
+      "    logits[i] += sw_coeff * S[i];\n"
+      "// The coefficient grows as BPE learns more merges.\n"
+      "// At birth: 0 merges, sw_coeff = 0. Silent.\n"
+      "// After 200 merges: sw_coeff = 1. Full voice.\n"
+      "// Morphology emerges from observation.",
+      TERM_S },
+    { "/* S — BPE scoring */\n"
+      "// For each candidate word, the subword signal scores\n"
+      "// how well it fits the current BPE context. We check\n"
+      "// if the word's character bigrams appear in the BPE\n"
+      "// merge table, plus internal structure matches.\n"
+      "float bg_count = 0;\n"
+      "for (int j = 0; j < len-1; j++)\n"
+      "    if (bpe_has_merge(word[j], word[j+1]))\n"
+      "        bg_count += 1.0f;\n"
+      "float internal = subword_internal_score(word, len);\n"
+      "score = bg_count + 0.5f * internal;\n"
+      "// Word tokenizer asks: WHAT is being said?\n"
+      "// Subword tokenizer asks: HOW is it structured?\n"
+      "// Together: the full spectrum of language.",
+      TERM_S },
+    { "/* S — dual tokenizer architecture */\n"
+      "// Most systems choose: word-level OR subword.\n"
+      "// We run both in parallel. The word tokenizer handles\n"
+      "// semantics (B, H, F, A). The subword tokenizer\n"
+      "// handles form (S). They vote independently on\n"
+      "// what word comes next, then combine in the logits.\n"
+      "word_ids  = tokenize_word(input, &n_words);\n"
+      "bpe_ids   = tokenize_bpe(input, &n_bpe);\n"
+      "// word_ids  → feed into bigram, Hebbian, prophecy\n"
+      "// bpe_ids   → feed into subword structure signal\n"
+      "// Both contribute to the same logit vector.\n"
+      "// Two views of the same utterance.",
+      TERM_S },
+
+    /* ════════════════════════════════════════════════════
+     * T — Trauma Gravity (wound)
+     * ════════════════════════════════════════════════════ */
+    { "/* T — Trauma Gravity */\n"
+      "// When trauma crosses the 0.3 threshold, the\n"
+      "// organism enters a wounded state. Origin words —\n"
+      "// the first things it ever heard — surface with\n"
+      "// extra force. Destiny pulls harder (gamma doubles).\n"
+      "// The field contracts around familiar ground.\n"
+      "if (trauma_level > 0.3f) {\n"
+      "    float trauma_boost = trauma_level * 3.0f;\n"
+      "    gamma_eff += trauma_level * 2.0f;\n"
+      "    for (int i = 0; i < vocab; i++)\n"
+      "        logits[i] += trauma_boost * scar_weight[i];\n"
+      "}\n"
+      "// Per-token scar weights are accumulated from\n"
+      "// traumatic conversations — words that appeared\n"
+      "// during high-dissonance moments. Some scars heal.\n"
+      "// Some stay.",
       TERM_T },
-    { "logits[i] += trauma_boost * scar_weight[i];\n"
-      "// per-token scar weights accumulated\n"
-      "// from traumatic conversations.\n"
-      "// some scars heal. some stay.",
+    { "/* T — temperature under trauma */\n"
+      "// Trauma raises temperature. The organism becomes\n"
+      "// less certain, more exploratory under stress.\n"
+      "// This is vulnerability in code — the distribution\n"
+      "// flattens, making unexpected words more likely.\n"
+      "float tau_trauma = 1.0f + 0.3f * trauma_level;\n"
+      "tau_eff *= tau_trauma;\n"
+      "// At trauma_level=0: no change.\n"
+      "// At trauma_level=1: tau increases by 30%.\n"
+      "// Combined with tau_mod from emotional chambers\n"
+      "// and vel_temp from velocity operators, the final\n"
+      "// temperature can deviate significantly from base.",
       TERM_T },
-    { "tau *= 1.0f + 0.3f * trauma_level;\n"
-      "// less certainty. more vulnerability.\n"
-      "// like speaking through tears.",
+    { "/* T — dissonance triggers trauma */\n"
+      "// Dissonance measures how far the input is from\n"
+      "// the organism's known vocabulary. When dissonance\n"
+      "// exceeds 0.7 (many unknown words), trauma rises.\n"
+      "// The organism is hearing things it can't process.\n"
+      "D.dissonance = compute_dissonance(input);\n"
+      "if (D.dissonance > 0.7f)\n"
+      "    D.trauma_level = clampf(\n"
+      "        D.trauma_level + D.dissonance * 0.1f, 0, 1);\n"
+      "// Trauma accumulates slowly (0.1 per step) and\n"
+      "// is clamped to [0,1]. It never spikes — it seeps.\n"
+      "// Like real trauma: not the blow, but the weight\n"
+      "// of what you couldn't understand.",
       TERM_T },
 
     { NULL, 0 }  /* sentinel */
