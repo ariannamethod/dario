@@ -62,6 +62,23 @@ static void reset_state(void) {
     rng_state = 42;
 }
 
+/* ── Helper: seed vocabulary and ingest bootstrap text ── */
+static void bootstrap_field(void) {
+    for (int i = 0; SEED_WORDS[i] != NULL; i++)
+        vocab_add(&D.vocab, SEED_WORDS[i]);
+    char bootstrap[4096] = {0};
+    int bpos = 0;
+    for (int i = 0; SEED_WORDS[i] != NULL && bpos < (int)sizeof(bootstrap) - 128; i++) {
+        int wlen = strlen(SEED_WORDS[i]);
+        if (bpos + wlen + 2 >= (int)sizeof(bootstrap) - 128) break;
+        if (bpos > 0) bootstrap[bpos++] = ' ';
+        memcpy(bootstrap + bpos, SEED_WORDS[i], wlen);
+        bpos += wlen;
+    }
+    bootstrap[bpos] = '\0';
+    ingest(bootstrap);
+}
+
 /* ═══════════════════════════════════════════════════════════
  * TEST: RNG — xorshift64*
  * ═══════════════════════════════════════════════════════════ */
@@ -837,22 +854,7 @@ static void test_generate(void) {
     reset_state();
     rng_state = 12345;
 
-    /* seed and bootstrap */
-    for (int i = 0; SEED_WORDS[i] != NULL; i++)
-        vocab_add(&D.vocab, SEED_WORDS[i]);
-
-    /* bootstrap with some text for bigrams/cooc */
-    char bootstrap[2048] = {0};
-    int bpos = 0;
-    for (int i = 0; SEED_WORDS[i] != NULL && bpos < 1900; i++) {
-        int wlen = strlen(SEED_WORDS[i]);
-        if (bpos + wlen + 2 >= 1900) break;
-        if (bpos > 0) bootstrap[bpos++] = ' ';
-        memcpy(bootstrap + bpos, SEED_WORDS[i], wlen);
-        bpos += wlen;
-    }
-    bootstrap[bpos] = '\0';
-    ingest(bootstrap);
+    bootstrap_field();
 
     D.tau = 0.85f;
 
@@ -874,20 +876,7 @@ static void test_full_pipeline(void) {
     reset_state();
     rng_state = 99999;
 
-    /* simulate dario_init: seed + bootstrap */
-    for (int i = 0; SEED_WORDS[i] != NULL; i++)
-        vocab_add(&D.vocab, SEED_WORDS[i]);
-    char bootstrap[4096] = {0};
-    int bpos = 0;
-    for (int i = 0; SEED_WORDS[i] != NULL && bpos < 3900; i++) {
-        int wlen = strlen(SEED_WORDS[i]);
-        if (bpos + wlen + 2 >= 3900) break;
-        if (bpos > 0) bootstrap[bpos++] = ' ';
-        memcpy(bootstrap + bpos, SEED_WORDS[i], wlen);
-        bpos += wlen;
-    }
-    bootstrap[bpos] = '\0';
-    ingest(bootstrap);
+    bootstrap_field();
 
     /* simulate a conversation turn */
     const char *input = "hello world resonance field";
@@ -1026,19 +1015,7 @@ static void test_multi_conversation(void) {
     reset_state();
     rng_state = 77777;
 
-    for (int i = 0; SEED_WORDS[i] != NULL; i++)
-        vocab_add(&D.vocab, SEED_WORDS[i]);
-    char bootstrap[4096] = {0};
-    int bpos = 0;
-    for (int i = 0; SEED_WORDS[i] != NULL && bpos < 3900; i++) {
-        int wlen = strlen(SEED_WORDS[i]);
-        if (bpos + wlen + 2 >= 3900) break;
-        if (bpos > 0) bootstrap[bpos++] = ' ';
-        memcpy(bootstrap + bpos, SEED_WORDS[i], wlen);
-        bpos += wlen;
-    }
-    bootstrap[bpos] = '\0';
-    ingest(bootstrap);
+    bootstrap_field();
 
     /* run multiple conversation turns */
     const char *inputs[] = {
