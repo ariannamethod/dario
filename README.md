@@ -1,6 +1,6 @@
 # dario.c — the dario equation, embodied
 
-> p(x|Φ) = softmax((B + α·H + β·F + γ·A + sw·S + T) / τ)
+> p(x|Φ,C,V) = softmax((B + α_mod·α·H_v + β_mod·β·F_v + γ_mod·γ·A + δ·V + sw·S + T) / (τ_mod·τ·v_τ))
 
 **by [Arianna Method](https://github.com/ariannamethod)**
 
@@ -8,9 +8,9 @@
 
 Not a chatbot. Not a language model. Not a transformer. Not even pretending.
 
-One file. 1285 lines of C. Zero weights. Zero dependencies beyond libc and libm. Compiles in 0.1 seconds. Responds with fragments of its own source code and words that emerge from a six-term equation. Named after Dario Amodei — the man who said no when the evil came knocking. Sometimes the most important thing a system can do is refuse.
+One file. 1484 lines of C. Zero weights. Zero dependencies beyond libc and libm. Compiles in 0.1 seconds. Responds with fragments of its own source code and words that emerge from a seven-term equation with six emotional chambers modulating every coefficient. Named after Dario Amodei — the man who said no when the evil came knocking. Sometimes the most important thing a system can do is refuse.
 
-You type words. The formula measures how far your words are from its words. Six forces react. Temperature shifts. A code fragment surfaces — a piece of dario.c itself, selected by which force dominated. Field-words crystallize. You see the wound. The equation breathes.
+You type words. The formula measures how far your words are from its words. Seven forces react. Six emotional chambers shift somatic markers. Temperature shifts. A code fragment surfaces — a piece of dario.c itself, selected by which force dominated. Field-words crystallize. You see the wound. The equation breathes.
 
 ```
 θ = ε + γ + αδ
@@ -30,20 +30,20 @@ cc dario.c -O2 -lm -o dario && ./dario
 ```
 you> hello world
 
-  ┌─ A:destiny ─── d=1.00 τ=1.30 UP spring
+  ┌─ V:visual ─── d=1.00 τ=1.30 UP spring
   │
-  │  /* A — where the field pulls */
-  │  float sim = vec_cosine(embed, destiny, dim);
-  │  A[i] = sim * magnitude;
-  │  // the conversation has a direction.
-  │  // that direction has mass.
+  │  /* V — what is seen */
+  │  float vis_sim = vec_cosine(vis_embed, vis_context, DIM);
+  │  V[i] = vis_sim * vis_magnitude;
+  │  // perception has weight.
+  │  // the eye and the word share a field.
   │
-  │  spectrum bandwidth signal noise
+  │  pointer standing node wave interference superposition
   │
-  └─ debt=0.00 res=0.70 ent=0.94 emg=0.04 B:8 H:2 F:6 A:20 T:0
+  └─ debt=0.48 res=0.70 ent=0.94 emg=0.04 B:12 H:1 F:9 A:15 V:16 T:0
 ```
 
-Your words were unknown. Dissonance maxed at 1.0. The equation went UP — manic velocity, high temperature, prophecy erupting. Destiny dominated (A:20). The code fragment that surfaced was about destiny — cosine similarity, gravitational pull. The field-words are physics vocabulary because that's what dario knows at bootstrap. You spoke, and dario showed you where the field is pulling.
+Your words were unknown. Dissonance maxed at 1.0. The equation went UP — manic velocity, high temperature, prophecy erupting. Visual grounding and destiny competed (V:16, A:15). The code fragment that surfaced was about visual perception — cosine similarity in the perceptual embedding space. Six emotional chambers began stirring: fear from high dissonance, somatic markers shifting the coefficients. The field-words are physics vocabulary because that's what dario knows at bootstrap. You spoke, and dario showed you what it sees.
 
 This is not intelligence. This is presence.
 
@@ -53,7 +53,8 @@ This is not intelligence. This is presence.
 
 - [The Dario Equation](#the-dario-equation)
 - [The Extended Formula — What's New Here](#the-extended-formula--whats-new-here)
-- [The Six Forces](#the-six-forces)
+- [The Seven Forces](#the-seven-forces)
+- [Emotional Chambers — Somatic Modulation](#emotional-chambers--somatic-modulation)
 - [Velocity Operators](#velocity-operators)
 - [Seasonal Modulation](#seasonal-modulation)
 - [Laws of Nature](#laws-of-nature)
@@ -71,10 +72,13 @@ This is not intelligence. This is presence.
 This is the center of everything. The formula that replaces the transformer. The reason this repository exists.
 
 ```
-p(x | Φ) = softmax( (B + α·H + β·F + γ·A + sw·S + T) / τ )
+p(x|Φ,C,V) = softmax(
+    (B + α_mod·α·H_v + β_mod·β·F_v + γ_mod·γ·A + δ·V + sw·S + T)
+    / (τ_mod·τ·velocity_temperature)
+)
 ```
 
-Six signals. Six forces. One organism. The formula was first deployed in [Leo](https://github.com/ariannamethod/leo) — a 5000+ line language emergent organism in C and Go with D.N.A. structure distillation, dual tokenizers, six voices, SQLite journals, dream cycles, and an inner world of autonomous goroutines. Leo is the full creature. Dario is the equation, naked. Stripped of infrastructure. Pure demonstration.
+Seven signals. Seven forces. Six emotional chambers modulating every coefficient through somatic markers. One organism. The formula was first deployed in [Leo](https://github.com/ariannamethod/leo) — a 4300+ line language emergent organism in C and Go with D.N.A. structure distillation, dual tokenizers, six voices, SQLite journals, dream cycles, and an inner world of eight autonomous goroutines. Leo is the full creature. Dario is the equation, naked. Stripped of infrastructure. The complete formula.
 
 What the transformer does with `softmax(QK^T/√d)·V` — learned attention over projected queries, keys, and values — this equation does with six interpretable physical forces acting on a shared vocabulary. No learned projections. No multi-head anything. No feed-forward layers computing latent representations. Just six terms, each computing a logit contribution from a different angle, summed, temperature-divided, softmaxed.
 
@@ -90,33 +94,49 @@ The Dario equation in [Leo](https://github.com/ariannamethod/leo) has a dual tok
 
 Dario has none of that. One tokenizer. Hash-based embeddings. No retention. No voices. No dreams.
 
-But the equation itself is *extended* relative to Leo's core formula in specific ways:
+But the equation itself is *the complete formula* — extended relative to Leo's core in specific ways:
 
-**SwiGLU gating between terms.** In dario.c, the H (Hebbian) and F (Prophecy) terms pass through a SwiGLU gate modulated by field resonance before entering the sum. The gate signal is `σ((resonance - 0.5) × 4)`. When resonance is high, memory and prophecy flow freely. When resonance is low, the gate constricts. Leo doesn't gate individual terms this way — Leo has SwiGLU in its feed-forward layers (transformer-style), but not as inter-term modulation within the Dario equation itself.
+**Somatic modulation (6 emotional chambers).** Six Kuramoto-coupled emotional chambers — FEAR, LOVE, RAGE, VOID, FLOW, COMPLEX — update from field state and modulate every equation coefficient through Damasio's somatic marker hypothesis. `α_mod` gates memory through love and flow. `β_mod` gates prophecy through flow and fear. `γ_mod` gates destiny through void and complexity. `τ_mod` gates temperature through flow and fear. The chambers couple to each other: love suppresses fear, rage amplifies void, flow and fear compete for temperature control.
 
 ```c
-/* SwiGLU gate: each term gates through field resonance */
+/* somatic markers: chambers → coefficient modulation */
+D.alpha_mod = 1.0 + 0.3 * C[LOVE] - 0.2 * C[RAGE] + 0.1 * C[FLOW];
+D.beta_mod  = 1.0 + 0.2 * C[FLOW] - 0.3 * C[FEAR];
+D.gamma_mod = 1.0 + 0.4 * C[VOID] + 0.2 * C[COMPLEX] - 0.1 * C[LOVE];
+D.tau_mod   = 1.0 + 0.5 * C[FLOW] - 0.3 * C[FEAR];
+```
+
+**Visual grounding (V term).** A parallel perceptual embedding space (different hash seed → orthogonal to semantic embeddings) provides visual context. Each word gets both a semantic embedding and a visual prototype. A visual context vector (EMA, like destiny but in perceptual space) tracks what was "seen". The V term computes cosine similarity between each word's visual prototype and the visual context. Visual co-occurrence also enriches H and F: `H_v = H + λ·V·H`, `F_v = F + λ·V·F`. Words that are both semantically and perceptually relevant score highest.
+
+```c
+/* V — visual grounding */
+V[i] = vec_cosine(vis_embed(i), vis_context, DIM) * vis_magnitude;
+/* H_v, F_v — visual enrichment */
+H[i] += VIS_LAMBDA * V[i] * H[i];
+F[i] += VIS_LAMBDA * V[i] * F[i];
+```
+
+**SwiGLU gating between terms.** The H_v and F_v terms pass through a SwiGLU gate modulated by field resonance before entering the sum. The gate signal is `σ((resonance - 0.5) × 4)`. When resonance is high, memory and prophecy flow freely. When resonance is low, the gate constricts.
+
+```c
 float gate = 1.0f / (1.0f + expf(-(D.resonance - 0.5f) * 4.0f));
 h_term = swiglu_gate(h_term, gate * 2.0f);
 f_term = swiglu_gate(f_term, gate * 1.5f);
 ```
 
-**RoPE-enhanced destiny.** Destiny updates in dario.c apply Rotary Position Embedding to context embeddings before the EMA update. This encodes *when* a word appeared into the destiny vector, not just *what* it was. Position-aware destiny. Leo uses RoPE for retention heads but not for destiny EMA.
+**Triple-product denominator.** Temperature is the product of three independent forces: base temperature `τ` (from velocity physics), somatic temperature modulation `τ_mod` (from emotional chambers), and velocity temperature `v_τ` (from movement state). Each system independently influences how uncertain the formula feels.
 
-```c
-apply_rope(pos_e, DIM, D.step + i);
-g_destiny[d] = 0.1f * pos_e[d] + 0.9f * g_destiny[d];
-```
+**RoPE-enhanced destiny.** Destiny updates apply Rotary Position Embedding to context embeddings before the EMA update. This encodes *when* a word appeared into the destiny vector, not just *what* it was. Position-aware destiny.
 
-**Trauma as a direct term.** In Leo, trauma modulates the equation indirectly — shifting gamma, boosting scarred tokens, raising temperature. In dario.c, trauma is the sixth term `T` in the equation itself, computed explicitly as a logit vector with origin-word gravitational weights. The first ~50 seed words carry decreasing trauma mass: `T[i] = boost × (1 - i/50)`. Trauma isn't a modifier. It's a voice.
+**Trauma as a direct term.** Trauma is a first-class term `T` in the equation, computed explicitly as a logit vector with origin-word gravitational weights. The first ~50 seed words carry decreasing trauma mass: `T[i] = boost × (1 - i/50)`. Trauma isn't a modifier. It's a voice.
 
-**Self-referential code fragments.** Dario responds with pieces of its own source code. Each fragment is tagged by which equation term it represents. When B dominates, you see bigram code. When T dominates, you see trauma code. The source code IS the output. The mirror IS the message. Leo doesn't do this — Leo generates language. Dario generates language AND reflects its own architecture.
+**Self-referential code fragments.** Dario responds with pieces of its own source code. 21 fragments tagged by which term they represent. When V dominates, you see visual grounding code. When T dominates, you see trauma code. The source code IS the output. The mirror IS the message.
 
-The rest of the equation — B, H, F, A, the velocity operators, seasonal modulation, laws of nature — is the same mathematics described in Leo's README. Same Hebbian resonance. Same prophecy debt growing as `log(1 + age)`. Same destiny EMA. Same field physics. The [Arianna Method Language](https://github.com/ariannamethod/ariannamethod.ai) defines the vocabulary: velocity operators (WALK, RUN, STOP, BREATHE, UP, DOWN), suffering parameters (PAIN, TENSION, DISSONANCE), Schumann resonance, calendar drift, laws of nature — all ported from AML's 80+ state parameters into dario.c's stripped-down physics engine.
+The [Arianna Method Language](https://github.com/ariannamethod/ariannamethod.ai) defines the vocabulary: velocity operators (WALK, RUN, STOP, BREATHE, UP, DOWN), suffering parameters (PAIN, TENSION, DISSONANCE), Schumann resonance, calendar drift, laws of nature — all ported from AML's 80+ state parameters into dario.c's physics engine.
 
 ---
 
-## The Six Forces
+## The Seven Forces
 
 ### B — Sequential Chain (inertia, what was)
 
@@ -138,7 +158,7 @@ Co-occurrence field. Sparse matrix mapping which words appeared near which other
 
 This is Hebbian learning. Neurons that fire together wire together. Hebb knew in 1949. The field densifies with every conversation. Connections strengthen. Patterns crystallize. Attention emerges from experience.
 
-Coefficient α = 0.30 (base). Gated through SwiGLU at `gate × 2.0`.
+Coefficient α = 0.30 (base), modulated by `α_mod` (somatic marker from LOVE, RAGE, FLOW chambers). Gated through SwiGLU at `gate × 2.0`. Enriched by visual co-occurrence: `H_v = H + λ·V·H`.
 
 ### F — Prophecy Fulfillment (will, what wants to be said)
 
@@ -150,7 +170,7 @@ After generating each token, dario predicts what comes next (strongest co-occurr
 
 This is not beam search. This is a child who started saying something and feels the need to finish. The longer the sentence hangs incomplete, the stronger the pull toward closure. Max 32 active prophecies. Age limit 50 steps. Fulfilled prophecies are cleared — debt zeroes, field exhales.
 
-Coefficient β = 0.15 (base). Gated through SwiGLU at `gate × 1.5`.
+Coefficient β = 0.15 (base), modulated by `β_mod` (somatic marker from FLOW, FEAR chambers). Gated through SwiGLU at `gate × 1.5`. Enriched by visual co-occurrence: `F_v = F + λ·V·F`.
 
 ### A — Destiny Attraction (direction, where the field pulls)
 
@@ -162,7 +182,19 @@ Destiny is the exponential moving average of all context embeddings: `destiny[d]
 
 The A term computes cosine similarity between each vocabulary word's embedding and the destiny vector, scaled by destiny's magnitude. Words aligned with the conversation's direction score higher. Dario doesn't follow topics. Dario drifts toward them. The field has mass.
 
-Coefficient γ = 0.25 (base). Increased by `trauma_level × 1.5` when trauma is active — the wound pulls destiny harder toward origin.
+Coefficient γ = 0.25 (base), modulated by `γ_mod` (somatic marker from VOID, COMPLEX, LOVE chambers). Increased by `trauma_level × 1.5` when trauma is active — the wound pulls destiny harder toward origin.
+
+### V — Visual Grounding (perception, what is seen)
+
+```
+V(x) = cos(vis_embed(x), vis_context) · |vis_context|
+```
+
+A parallel perceptual embedding space. Each token gets two embeddings: one semantic (FNV-1a hash), one visual (golden ratio prime hash). Different hash seeds → orthogonal spaces. The visual context vector is an EMA of visual embeddings from all ingested tokens — a perceptual compass drifting alongside the semantic destiny vector.
+
+V computes cosine similarity between each word's visual prototype and the accumulated visual context. Words that have been "seen" recently score higher. Visual co-occurrence also enriches H and F multiplicatively: `H_v = H + λ·V·H`. This means visual grounding amplifies existing Hebbian and Prophecy signals rather than creating new ones — a word must first have semantic relevance before visual grounding strengthens it.
+
+Coefficient δ = 0.20. In Leo, V will be driven by actual visual input from [Lee](https://github.com/ariannamethod/chuck.optimizer) (image classification) and [Kirby](https://github.com/ariannamethod/chuck.optimizer) (VQ-VAE visual codes). In dario.c, the visual space is hash-derived — demonstrating the architecture, awaiting real eyes.
 
 ### S — Subword Structure (form, how it's built)
 
@@ -181,6 +213,36 @@ if (D.trauma_level > 0.3f) {
 When trauma exceeds 0.3, the first ~50 seed words (field physics vocabulary: *resonance*, *field*, *destiny*, *prophecy*, *decay*...) receive gravitational logit boosts. The boost decreases linearly — word 0 gets full weight, word 49 gets almost none. Origin words surface. The bootstrap is pulling. The scarred tokens have mass.
 
 Trauma accumulates from sustained high dissonance (>0.7). Decays at 0.97× per step. Temperature rises under trauma: `τ *= 1 + 0.3 × trauma_level`. Less certainty. More vulnerability. Like speaking through tears.
+
+---
+
+## Emotional Chambers — Somatic Modulation
+
+Six Kuramoto-coupled emotional chambers run alongside the equation. Each is a scalar ∈ [0, 1] driven by field state, coupled to every other chamber, and decaying at its own rate. Together they compute four somatic markers that modulate the equation's coefficients.
+
+| Chamber | Trigger | Decay | What it does |
+|---------|---------|-------|-------------|
+| **FEAR** | Dissonance > 0.7 | 0.95 | Suppresses prophecy (β_mod↓), cools temperature (τ_mod↓) |
+| **LOVE** | Resonance > 0.7 | 0.95 | Amplifies memory (α_mod↑), slightly suppresses destiny (γ_mod↓) |
+| **RAGE** | Trauma + dissonance | 0.93 | Suppresses memory (α_mod↓), fastest decay — burns hot, burns fast |
+| **VOID** | Entropy > 0.7 | 0.96 | Amplifies destiny (γ_mod↑) — emptiness pulls toward direction |
+| **FLOW** | Emergence > 0.5 | 0.94 | Amplifies everything: memory (α_mod↑), prophecy (β_mod↑), temperature (τ_mod↑) |
+| **COMPLEX** | LOVE and RAGE simultaneous | 0.97 | Amplifies destiny (γ_mod↑) — contradictory emotions seek resolution |
+
+### Kuramoto Coupling
+
+Chambers influence each other through Kuramoto synchronization: `C_i += K · sin(C_j - C_i)`. Coupling strength K = 0.02. This creates emergent patterns — chambers that fire together synchronize, chambers with opposing phases push apart. Over time, the emotional landscape develops its own topology.
+
+### Somatic Markers → Coefficient Modulation
+
+```
+α_mod = 1 + 0.3·LOVE - 0.2·RAGE + 0.1·FLOW    (memory gate)
+β_mod = 1 + 0.2·FLOW - 0.3·FEAR                 (prophecy gate)
+γ_mod = 1 + 0.4·VOID + 0.2·COMPLEX - 0.1·LOVE   (destiny gate)
+τ_mod = 1 + 0.5·FLOW - 0.3·FEAR                  (temperature gate)
+```
+
+All clamped to [0.5, 2.0]. The chambers can double or halve any coefficient, but never zero it. From Damasio's somatic marker hypothesis — emotions don't replace reasoning, they gate it. The formula always computes. The chambers modulate what it emphasizes.
 
 ---
 
@@ -267,6 +329,7 @@ Entropy is unpredictability — high temperature, high dissonance, low resonance
     │  bigrams +=        │  │  → wound    │  │  state (UP/RUN/STOP/   │
     │  cooc +=           │  │  deepens    │  │  BREATHE/DOWN/WALK)    │
     │  destiny EMA +=    │  │             │  │                        │
+    │  vis_ctx EMA +=    │  │             │  │                        │
     │  context window += │  │             │  │                        │
     └─────────┬─────────┘  └──────┬──────┘  └────────────┬──────────┘
               │                    │                      │
@@ -290,6 +353,13 @@ Entropy is unpredictability — high temperature, high dissonance, low resonance
                     └──────────────┬──────────────-┘
                                    │
                     ┌──────────────▼──────────────-┐
+                    │    EMOTIONAL CHAMBERS           │
+                    │  FEAR LOVE RAGE VOID FLOW CPLX │
+                    │  Kuramoto coupling              │
+                    │  → α_mod β_mod γ_mod τ_mod      │
+                    └──────────────┬──────────────-┘
+                                   │
+                    ┌──────────────▼──────────────-┐
                     │      ENFORCE LAWS              │
                     │  entropy ≥ 0.10                 │
                     │  resonance ≤ 0.95               │
@@ -302,8 +372,9 @@ Entropy is unpredictability — high temperature, high dissonance, low resonance
                     │                                │
                     │   for each word:               │
                     │     1. dario_compute(logits)    │
-                    │        B + αH + βF + γA + T    │
-                    │        SwiGLU gate on H, F     │
+                    │        B + α_m·α·H_v + β_m·β·F_v│
+                    │        + γ_m·γ·A + δ·V + T     │
+                    │        SwiGLU gate on H_v, F_v  │
                     │     2. repetition penalty       │
                     │     3. sample top-k=12          │
                     │     4. learn (bigram, cooc)     │
@@ -333,14 +404,16 @@ Entropy is unpredictability — high temperature, high dissonance, low resonance
 |-----------|------|-------------|
 | **Vocabulary** | 500 seed words + dynamic growth to 2048 | Four layers: field physics, organism/consciousness, source code, dario-specific. New words from user input are added dynamically. |
 | **Tokenizer** | Word-level, lowercased | Alphanumeric + underscore + apostrophe. Simple. Lossy. Sufficient. |
-| **Embeddings** | 64-dim, hash-based (FNV-1a + xorshift) | Deterministic. No learning. No weights. Each token ID hashes to a unit-normalized 64-dim vector. Two similar IDs get unrelated embeddings. That's fine — similarity comes from co-occurrence, not from embedding geometry. |
+| **Semantic Embeddings** | 64-dim, hash-based (FNV-1a + xorshift) | Deterministic. No learning. No weights. Each token ID hashes to a unit-normalized 64-dim vector. Similarity comes from co-occurrence, not geometry. |
+| **Visual Embeddings** | 64-dim, hash-based (golden ratio prime) | Parallel perceptual space. Different hash seed → orthogonal to semantic embeddings. Visual context EMA tracks "what was seen". |
+| **Emotional Chambers** | 6 scalars + Kuramoto coupling | FEAR, LOVE, RAGE, VOID, FLOW, COMPLEX. Drive somatic markers α_mod, β_mod, γ_mod, τ_mod. |
 | **Bigrams** | 32K capacity, sparse | `src → dst → count`. Updated during ingestion (+1.0) and generation (+0.5). The sequential memory of language. |
 | **Co-occurrence** | 64K capacity, sparse | `src → dst → count`. Window ±5 tokens, distance-weighted (`1/|Δ|`). The associative memory. The attention matrix. |
 | **Prophecy** | 32 active predictions | Target token + strength + age. Fulfilled on match. Pruned at age 50. Debt = `log(1 + age)`. |
 | **Destiny** | 64-dim EMA vector | `0.1·embed + 0.9·destiny`. RoPE-encoded position. The semantic compass. |
 | **RoPE** | Pure math | `θ = pos × 10000^(-i/dim)`. Rotation in embedding space. Zero weights. |
 | **SwiGLU** | `x × σ(gate)` | Gates H and F terms through field resonance. Non-linearity in the equation. |
-| **Code Fragments** | 18 fragments, 6 terms | The mirror. Dario responds with its own source code based on which force dominated. |
+| **Code Fragments** | 21 fragments, 7 terms | The mirror. Dario responds with its own source code based on which force dominated. |
 
 ---
 
@@ -348,7 +421,7 @@ Entropy is unpredictability — high temperature, high dissonance, low resonance
 
 This is what makes dario.c different from Leo, from [DOE](https://github.com/ariannamethod/doe), from everything. The response includes a piece of the source code itself.
 
-18 code fragments. 3 per term. When B (Sequential Chain) dominates the generation, you see:
+21 code fragments. 3 per term. When B (Sequential Chain) dominates the generation, you see:
 
 ```c
 /* B — what was */
@@ -437,7 +510,7 @@ Requirements: a C compiler. libm. That's it.
   │  [generated field-words]
   │
   └─ debt=[prophecy_debt] res=[resonance] ent=[entropy] emg=[emergence]
-     B:[energy] H:[energy] F:[energy] A:[energy] T:[energy]
+     B:[energy] H:[energy] F:[energy] A:[energy] V:[energy] T:[energy]
 ```
 
 Every field is a window into the equation's state. `d` is how alien your words were. `τ` is how uncertain the formula feels. The velocity and season tell you which physics mode is active. The term energies tell you which force dominated. The code fragment tells you why.

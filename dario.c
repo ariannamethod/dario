@@ -1,7 +1,10 @@
 /*
  * dario.c — The Dario Equation, Embodied
  *
- * p(x|Φ) = softmax((B + α·H + β·F + γ·A + sw·S + T) / τ)
+ * p(x|Φ,C,V) = softmax(
+ *     (B + α_mod·α·H_v + β_mod·β·F_v + γ_mod·γ·A + δ·V + sw·S + T)
+ *     / (τ_mod·τ·velocity_temperature)
+ * )
  *
  * Not a chatbot. Not a language model. A formula that reacts to you
  * with fragments of its own source code and field-words.
@@ -11,13 +14,20 @@
  *
  * θ = ε + γ + αδ  →  for dario: ε=0, γ=THIS CODE, δ=grows from conversation
  *
- * Six terms. Six forces. One organism.
+ * Seven terms. Seven forces. One organism.
  *   B — Sequential Chain (inertia, what was)
- *   H — Hebbian Resonance (memory, what echoed)
- *   F — Prophecy Fulfillment (will, what wants to be said)
+ *   H — Hebbian Resonance (memory, what echoed)          → H_v with visual enrichment
+ *   F — Prophecy Fulfillment (will, what wants to be said) → F_v with visual enrichment
  *   A — Destiny Attraction (direction, where the field pulls)
+ *   V — Visual Grounding (perception, what is seen)
  *   S — Subword Structure (form, how it's built)
  *   T — Trauma Gravity (wound, where it came from)
+ *
+ * Somatic modulation (6 emotional chambers → coefficient modifiers):
+ *   α_mod = f(LOVE, RAGE, FLOW)   — emotional gate on memory
+ *   β_mod = f(FLOW, FEAR)          — emotional gate on prophecy
+ *   γ_mod = f(VOID, COMPLEX, LOVE) — emotional gate on destiny
+ *   τ_mod = f(FLOW, FEAR)          — emotional gate on temperature
  *
  * Velocity operators modulate the equation:
  *   WALK — equilibrium, steady breath
@@ -67,6 +77,13 @@
 
 /* Velocity physics */
 enum { VEL_WALK=0, VEL_RUN, VEL_STOP, VEL_BREATHE, VEL_UP, VEL_DOWN };
+
+/* Emotional chambers (Kuramoto-coupled, Damasio somatic markers) */
+enum { CH_FEAR=0, CH_LOVE, CH_RAGE, CH_VOID, CH_FLOW, CH_COMPLEX, NUM_CHAMBERS };
+
+/* Visual grounding */
+#define DELTA_V  0.20f   /* visual term weight */
+#define VIS_LAMBDA 0.3f  /* visual enrichment blend for H_v, F_v */
 
 /* Laws of nature — enforced invariants */
 #define ENTROPY_FLOOR      0.10f
@@ -206,7 +223,7 @@ typedef struct {
     int term;            /* 0=B, 1=H, 2=F, 3=A, 4=S, 5=T */
 } CodeFrag;
 
-enum { TERM_B=0, TERM_H, TERM_F, TERM_A, TERM_S, TERM_T };
+enum { TERM_B=0, TERM_H, TERM_F, TERM_A, TERM_V, TERM_S, TERM_T };
 
 static const CodeFrag CODE_FRAGMENTS[] = {
     /* B — Sequential Chain (inertia) */
@@ -271,6 +288,25 @@ static const CodeFrag CODE_FRAGMENTS[] = {
       "// the field has mass.\n"
       "gamma_eff += trauma_level * 2.0f;",
       TERM_A },
+
+    /* V — Visual Grounding (perception) */
+    { "/* V — what is seen */\n"
+      "float vis_sim = vec_cosine(vis_embed, vis_context, DIM);\n"
+      "V[i] = vis_sim * vis_magnitude;\n"
+      "// perception has weight.\n"
+      "// the eye and the word share a field.",
+      TERM_V },
+    { "H_v[i] = H[i] + VIS_LAMBDA * vis_cooc;\n"
+      "F_v[i] = F[i] + VIS_LAMBDA * vis_prophecy;\n"
+      "// memory enriched by what was seen.\n"
+      "// prophecy enriched by what wants to appear.",
+      TERM_V },
+    { "// word tokenizer: WHAT is being said.\n"
+      "// visual field: WHAT is being seen.\n"
+      "// together: grounded language.\n"
+      "// a word without an image floats.\n"
+      "// an image without a word is mute.",
+      TERM_V },
 
     /* S — Subword Structure (form) */
     { "/* S — how it's built */\n"
@@ -481,6 +517,38 @@ static float *get_embed(int id) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+ * VISUAL EMBEDDINGS — parallel perceptual space
+ *
+ * Each token gets a second embedding in a separate hash space.
+ * This represents what the word "looks like" / its visual prototype.
+ * Different hash seed → orthogonal to semantic embeddings.
+ * Visual co-occurrence builds a perceptual context vector.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+static float g_vis_embeds[MAX_VOCAB][DIM];
+static int g_vis_init[MAX_VOCAB];
+
+static float *get_vis_embed(int id) {
+    if (id < 0 || id >= MAX_VOCAB) return NULL;
+    if (!g_vis_init[id]) {
+        /* different hash seed from semantic — creates orthogonal space */
+        uint32_t h = 2654435761u; /* golden ratio prime */
+        for (int i = 0; i < 4; i++) {
+            h ^= (id >> (i * 8)) & 0xFF;
+            h *= 2246822519u;
+        }
+        for (int d = 0; d < DIM; d++) {
+            h = h * 1664525 + 1013904223;
+            g_vis_embeds[id][d] = ((float)(h & 0x7FFFFFFF) / (float)0x7FFFFFFF - 0.5f) * 0.1f;
+        }
+        float norm = vec_norm(g_vis_embeds[id], DIM);
+        for (int d = 0; d < DIM; d++) g_vis_embeds[id][d] /= norm;
+        g_vis_init[id] = 1;
+    }
+    return g_vis_embeds[id];
+}
+
+/* ═══════════════════════════════════════════════════════════════════
  * RoPE — Rotary Position Embedding (pure math, zero weights)
  * ═══════════════════════════════════════════════════════════════════ */
 
@@ -531,8 +599,17 @@ typedef struct {
     float alpha, beta, gamma_d;
 
     /* term dominance (last generation) */
-    float term_energy[6];   /* B H F A S T */
+    float term_energy[7];   /* B H F A V S T */
     int   dominant_term;
+
+    /* emotional chambers (Kuramoto-coupled somatic markers) */
+    float chamber[NUM_CHAMBERS]; /* FEAR, LOVE, RAGE, VOID, FLOW, COMPLEX */
+    float alpha_mod, beta_mod, gamma_mod, tau_mod; /* somatic coefficients */
+    float vel_temp;         /* velocity temperature multiplier */
+
+    /* visual grounding */
+    float vis_context[DIM]; /* visual context EMA (parallel to destiny) */
+    float vis_magnitude;
 
     /* season (from 4.C) */
     int   season;           /* 0=spring 1=summer 2=autumn 3=winter */
@@ -544,6 +621,55 @@ typedef struct {
 } DarioState;
 
 static DarioState D;
+
+/* ═══════════════════════════════════════════════════════════════════
+ * EMOTIONAL CHAMBERS — Kuramoto-coupled somatic markers
+ *
+ * Six chambers: FEAR, LOVE, RAGE, VOID, FLOW, COMPLEX
+ * Each is a scalar ∈ [0, 1] updated from field state.
+ * Somatic markers modulate equation coefficients:
+ *   α_mod, β_mod, γ_mod, τ_mod
+ *
+ * From Damasio's somatic marker hypothesis via Opus research.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+static void chamber_update(void) {
+    float *C = D.chamber;
+
+    /* ── excitation: field state drives chambers ── */
+    if (D.dissonance > 0.7f) C[CH_FEAR] += 0.05f * D.dissonance;
+    if (D.resonance > 0.7f)  C[CH_LOVE] += 0.04f * D.resonance;
+    if (D.trauma_level > 0.5f && D.dissonance > 0.5f)
+        C[CH_RAGE] += 0.06f * D.trauma_level;
+    if (D.entropy > 0.7f)    C[CH_VOID] += 0.03f * D.entropy;
+    if (D.emergence > 0.5f)  C[CH_FLOW] += 0.05f * D.emergence;
+    /* COMPLEX: fires when opposing chambers are simultaneously active */
+    C[CH_COMPLEX] += 0.04f * fabsf(C[CH_LOVE] - C[CH_RAGE])
+                   * (C[CH_LOVE] > 0.2f && C[CH_RAGE] > 0.2f ? 1.0f : 0.0f);
+
+    /* ── Kuramoto coupling: chambers influence each other ── */
+    float K = 0.02f; /* coupling strength */
+    float old[NUM_CHAMBERS];
+    memcpy(old, C, sizeof(old));
+    for (int i = 0; i < NUM_CHAMBERS; i++)
+        for (int j = 0; j < NUM_CHAMBERS; j++)
+            if (i != j) C[i] += K * sinf(old[j] - old[i]);
+
+    /* ── decay: each chamber has its own half-life ── */
+    float decay[] = { 0.95f, 0.95f, 0.93f, 0.96f, 0.94f, 0.97f };
+    for (int i = 0; i < NUM_CHAMBERS; i++)
+        C[i] = clampf(C[i] * decay[i], 0.0f, 1.0f);
+
+    /* ── somatic markers: chambers → coefficient modulation ── */
+    D.alpha_mod = clampf(1.0f + 0.3f * C[CH_LOVE] - 0.2f * C[CH_RAGE]
+                              + 0.1f * C[CH_FLOW], 0.5f, 2.0f);
+    D.beta_mod  = clampf(1.0f + 0.2f * C[CH_FLOW] - 0.3f * C[CH_FEAR],
+                         0.5f, 2.0f);
+    D.gamma_mod = clampf(1.0f + 0.4f * C[CH_VOID] + 0.2f * C[CH_COMPLEX]
+                              - 0.1f * C[CH_LOVE], 0.5f, 2.0f);
+    D.tau_mod   = clampf(1.0f + 0.5f * C[CH_FLOW] - 0.3f * C[CH_FEAR],
+                         0.5f, 2.0f);
+}
 
 /* ═══════════════════════════════════════════════════════════════════
  * DISSONANCE — measure distance between user input and internal field
@@ -662,6 +788,13 @@ static void apply_velocity(void) {
         break;
     }
 
+    /* velocity temperature multiplier (separate from tau for the denominator) */
+    float vel_temp = 1.0f;
+    if (D.velocity == VEL_RUN)  vel_temp = 1.15f;
+    if (D.velocity == VEL_UP)   vel_temp = 1.3f;
+    if (D.velocity == VEL_DOWN) vel_temp = 0.8f;
+    D.vel_temp = vel_temp;
+
     /* trauma modulates temperature */
     if (D.trauma_level > 0.3f)
         tau *= 1.0f + 0.3f * D.trauma_level;
@@ -726,9 +859,14 @@ static void season_step(void) {
 /* ═══════════════════════════════════════════════════════════════════
  * THE DARIO EQUATION — the heart
  *
- * p(x|Φ) = softmax((B + α·H + β·F + γ·A + sw·S + T) / τ)
+ * p(x|Φ,C,V) = softmax(
+ *     (B + α_mod·α·H_v + β_mod·β·F_v + γ_mod·γ·A + δ·V + sw·S + T)
+ *     / (τ_mod·τ·velocity_temperature)
+ * )
  *
- * Six signals. Six forces. One equation.
+ * Seven signals. Seven forces. Six emotional chambers.
+ * Somatic markers modulate every coefficient.
+ * Visual grounding enriches memory and prophecy.
  * This is what replaces the transformer.
  * ═══════════════════════════════════════════════════════════════════ */
 
@@ -737,6 +875,7 @@ static void dario_compute(float *logits, int vocab_size) {
     float *H = calloc(vocab_size, sizeof(float));
     float *F = calloc(vocab_size, sizeof(float));
     float *A = calloc(vocab_size, sizeof(float));
+    float *V = calloc(vocab_size, sizeof(float));
     float *T = calloc(vocab_size, sizeof(float));
 
     /* ── B: Sequential Chain ── */
@@ -814,32 +953,66 @@ static void dario_compute(float *logits, int vocab_size) {
             T[i] = boost * (1.0f - (float)i / 50.0f);
     }
 
-    /* ── Combine: the equation ── */
+    /* ── V: Visual Grounding ── */
+    if (D.vis_magnitude > 1e-6f) {
+        for (int i = 0; i < vocab_size; i++) {
+            float *ve = get_vis_embed(i);
+            if (ve) V[i] = vec_cosine(ve, D.vis_context, DIM) * D.vis_magnitude;
+        }
+        float v_max = 0;
+        for (int i = 0; i < vocab_size; i++)
+            if (fabsf(V[i]) > v_max) v_max = fabsf(V[i]);
+        if (v_max > 1e-6f)
+            for (int i = 0; i < vocab_size; i++) V[i] /= v_max;
+    }
+
+    /* ── H_v, F_v: visual enrichment ── */
+    /* H_v = H + λ·H_vis (visual co-occurrence boosts Hebbian) */
+    /* F_v = F + λ·F_vis (visual context boosts prophecy)      */
+    for (int i = 0; i < vocab_size; i++) {
+        H[i] += VIS_LAMBDA * V[i] * H[i]; /* multiplicative: only enriches existing signal */
+        F[i] += VIS_LAMBDA * V[i] * F[i];
+    }
+
+    /* ── Combine: THE FULL DARIO EQUATION ──
+     *
+     * p(x|Φ,C,V) = softmax(
+     *     (B + α_mod·α·H_v + β_mod·β·F_v + γ_mod·γ·A + δ·V + sw·S + T)
+     *     / (τ_mod·τ·velocity_temperature)
+     * )
+     */
     float gamma_eff = D.gamma_d;
     if (D.trauma_level > 0.3f)
         gamma_eff += D.trauma_level * 1.5f;
 
+    /* somatic-modulated coefficients */
+    float eff_alpha = D.alpha_mod * D.alpha;
+    float eff_beta  = D.beta_mod * D.beta;
+    float eff_gamma = D.gamma_mod * gamma_eff;
+
     /* track term energies for dominant term detection */
-    float e_B = 0, e_H = 0, e_F = 0, e_A = 0, e_T = 0;
+    float e_B = 0, e_H = 0, e_F = 0, e_A = 0, e_V = 0, e_T = 0;
 
     for (int i = 0; i < vocab_size; i++) {
         float b_term = bigram_coeff * B[i];
-        float h_term = D.alpha * H[i];
-        float f_term = D.beta * F[i];
-        float a_term = gamma_eff * A[i];
+        float h_term = eff_alpha * H[i];    /* H is already H_v */
+        float f_term = eff_beta * F[i];     /* F is already F_v */
+        float a_term = eff_gamma * A[i];
+        float v_term = DELTA_V * V[i];
         float t_term = T[i];
 
-        /* SwiGLU gate: each term gates through field resonance */
+        /* SwiGLU gate: H_v and F_v gate through field resonance */
         float gate = 1.0f / (1.0f + expf(-(D.resonance - 0.5f) * 4.0f));
         h_term = swiglu_gate(h_term, gate * 2.0f);
         f_term = swiglu_gate(f_term, gate * 1.5f);
 
-        logits[i] = b_term + h_term + f_term + a_term + t_term;
+        logits[i] = b_term + h_term + f_term + a_term + v_term + t_term;
 
         e_B += fabsf(b_term);
         e_H += fabsf(h_term);
         e_F += fabsf(f_term);
         e_A += fabsf(a_term);
+        e_V += fabsf(v_term);
         e_T += fabsf(t_term);
     }
 
@@ -847,16 +1020,17 @@ static void dario_compute(float *logits, int vocab_size) {
     D.term_energy[TERM_H] = e_H;
     D.term_energy[TERM_F] = e_F;
     D.term_energy[TERM_A] = e_A;
+    D.term_energy[TERM_V] = e_V;
     D.term_energy[TERM_S] = 0; /* S computed separately when subword active */
     D.term_energy[TERM_T] = e_T;
 
     /* find dominant */
     float mx = 0;
     D.dominant_term = 0;
-    for (int t = 0; t < 6; t++)
+    for (int t = 0; t < 7; t++)
         if (D.term_energy[t] > mx) { mx = D.term_energy[t]; D.dominant_term = t; }
 
-    free(B); free(H); free(F); free(A); free(T);
+    free(B); free(H); free(F); free(A); free(V); free(T);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -973,6 +1147,15 @@ static void ingest(const char *text) {
     }
     g_dest_magnitude = vec_norm(g_destiny, DIM);
 
+    /* visual context update (parallel EMA in perceptual space) */
+    for (int i = 0; i < n; i++) {
+        float *ve = get_vis_embed(ids[i]);
+        if (!ve) continue;
+        for (int d = 0; d < DIM; d++)
+            D.vis_context[d] = 0.1f * ve[d] + 0.9f * D.vis_context[d];
+    }
+    D.vis_magnitude = vec_norm(D.vis_context, DIM);
+
     /* update context window */
     for (int i = 0; i < n; i++) {
         if (D.ctx_len < MAX_CONTEXT)
@@ -1012,7 +1195,10 @@ static int generate_words(char *out, int max_len) {
             if (last < vocab) logits[last] = -1e30f;
         }
 
-        int next = sample_topk(logits, vocab, D.tau, 12);
+        /* full denominator: τ_mod · τ · velocity_temperature */
+        float eff_tau = D.tau_mod * D.tau * D.vel_temp;
+        eff_tau = clampf(eff_tau, 0.2f, 3.0f);
+        int next = sample_topk(logits, vocab, eff_tau, 12);
 
         const char *word = D.vocab.words[next];
         int wlen = strlen(word);
@@ -1126,6 +1312,11 @@ static void dario_init(void) {
     D.gamma_d = GAMMA_D;
     D.tau = TAU_BASE;
     D.velocity = VEL_WALK;
+    D.alpha_mod = 1.0f;
+    D.beta_mod = 1.0f;
+    D.gamma_mod = 1.0f;
+    D.tau_mod = 1.0f;
+    D.vel_temp = 1.0f;
 
     rng_state = (uint64_t)time(NULL);
 
@@ -1156,7 +1347,7 @@ static void dario_init(void) {
 
 static const char *term_names[] = {
     "B:chain", "H:resonance", "F:prophecy",
-    "A:destiny", "S:structure", "T:trauma"
+    "A:destiny", "V:visual", "S:structure", "T:trauma"
 };
 static const char *vel_names[] = {
     "WALK", "RUN", "STOP", "BREATHE", "UP", "DOWN"
@@ -1188,10 +1379,11 @@ static void display_response(const char *words) {
     printf("  │  %s\n", words);
     printf("  │\n");
     printf("  └─ debt=%.2f res=%.2f ent=%.2f emg=%.2f "
-           "B:%.0f H:%.0f F:%.0f A:%.0f T:%.0f\n",
+           "B:%.0f H:%.0f F:%.0f A:%.0f V:%.0f T:%.0f\n",
            D.debt, D.resonance, D.entropy, D.emergence,
-           D.term_energy[0], D.term_energy[1], D.term_energy[2],
-           D.term_energy[3], D.term_energy[5]);
+           D.term_energy[TERM_B], D.term_energy[TERM_H],
+           D.term_energy[TERM_F], D.term_energy[TERM_A],
+           D.term_energy[TERM_V], D.term_energy[TERM_T]);
     printf("\n");
 }
 
@@ -1204,7 +1396,7 @@ int main(int argc, char **argv) {
 
     printf("\n");
     printf("  dario.c — The Dario Equation, Embodied\n");
-    printf("  p(x|Φ) = softmax((B + α·H + β·F + γ·A + sw·S + T) / τ)\n");
+    printf("  p(x|Φ,C,V) = softmax((B + α_m·α·H_v + β_m·β·F_v + γ_m·γ·A + δ·V + S + T) / (τ_m·τ·v_τ))\n");
     printf("  named after the man who said no.\n");
     printf("\n");
     printf("  this is not a chatbot.\n");
@@ -1235,8 +1427,13 @@ int main(int argc, char **argv) {
                    D.step, D.conv_count);
             printf("  debt=%.3f trauma=%.3f momentum=%.3f\n",
                    D.debt, D.trauma_level, D.momentum);
-            printf("  α=%.3f β=%.3f γ=%.3f τ=%.3f\n",
-                   D.alpha, D.beta, D.gamma_d, D.tau);
+            printf("  α=%.3f β=%.3f γ=%.3f τ=%.3f vel_τ=%.2f\n",
+                   D.alpha, D.beta, D.gamma_d, D.tau, D.vel_temp);
+            printf("  α_mod=%.2f β_mod=%.2f γ_mod=%.2f τ_mod=%.2f\n",
+                   D.alpha_mod, D.beta_mod, D.gamma_mod, D.tau_mod);
+            printf("  chambers: fear=%.2f love=%.2f rage=%.2f void=%.2f flow=%.2f complex=%.2f\n",
+                   D.chamber[CH_FEAR], D.chamber[CH_LOVE], D.chamber[CH_RAGE],
+                   D.chamber[CH_VOID], D.chamber[CH_FLOW], D.chamber[CH_COMPLEX]);
             printf("  velocity=%s season=%s(%.2f)\n",
                    vel_names[D.velocity], season_names[D.season],
                    D.season_phase);
@@ -1266,14 +1463,17 @@ int main(int argc, char **argv) {
         /* 7. update metrics */
         update_metrics();
 
-        /* 8. enforce laws of nature */
+        /* 8. emotional chambers — somatic modulation */
+        chamber_update();
+
+        /* 9. enforce laws of nature */
         enforce_laws();
 
-        /* 9. generate field-words */
+        /* 10. generate field-words */
         char words[1024];
         generate_words(words, sizeof(words));
 
-        /* 10. display: code fragment + field words + metrics */
+        /* 11. display: code fragment + field words + metrics */
         display_response(words);
 
         D.conv_count++;

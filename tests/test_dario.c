@@ -53,12 +53,19 @@ static void reset_state(void) {
     memset(g_destiny, 0, sizeof(g_destiny));
     memset(g_embeds, 0, sizeof(g_embeds));
     memset(g_embed_init, 0, sizeof(g_embed_init));
+    memset(g_vis_embeds, 0, sizeof(g_vis_embeds));
+    memset(g_vis_init, 0, sizeof(g_vis_init));
     g_dest_magnitude = 0;
     D.alpha = ALPHA;
     D.beta = BETA;
     D.gamma_d = GAMMA_D;
     D.tau = TAU_BASE;
     D.velocity = VEL_WALK;
+    D.alpha_mod = 1.0f;
+    D.beta_mod = 1.0f;
+    D.gamma_mod = 1.0f;
+    D.tau_mod = 1.0f;
+    D.vel_temp = 1.0f;
     rng_state = 42;
 }
 
@@ -796,7 +803,7 @@ static void test_dario_compute(void) {
 
     /* term energies should be populated */
     float total_energy = 0;
-    for (int t = 0; t < 6; t++) total_energy += D.term_energy[t];
+    for (int t = 0; t < 7; t++) total_energy += D.term_energy[t];
     ASSERT_GT(total_energy, 0.0f, "term energies populated");
 
     /* B term should have energy (last context word 'field' has outgoing bigrams) */
@@ -953,21 +960,23 @@ static void test_seed_words(void) {
 
 static void test_code_fragment_coverage(void) {
     /* count fragments per term */
-    int counts[6] = {0};
+    int counts[7] = {0};
     for (int i = 0; CODE_FRAGMENTS[i].code != NULL; i++) {
         int t = CODE_FRAGMENTS[i].term;
-        ASSERT(t >= 0 && t < 6, "fragment term in range");
-        counts[t]++;
+        ASSERT(t >= 0 && t < 7, "fragment term in range");
+        if (t >= 0 && t < 7) counts[t]++;
     }
 
-    /* each term should have at least one fragment */
-    for (int t = 0; t < 6; t++)
-        ASSERT_GT(counts[t], 0, "each term has at least one fragment");
+    /* each term should have at least one fragment (except S which is placeholder) */
+    for (int t = 0; t < 7; t++) {
+        if (t == TERM_S) continue; /* S has fragments but no active signal */
+        ASSERT_GT(counts[t], 0, "each active term has at least one fragment");
+    }
 
-    /* total count */
+    /* total count: 18 original + 3 visual = 21 */
     int total = 0;
-    for (int t = 0; t < 6; t++) total += counts[t];
-    ASSERT_EQ_INT(total, 18, "18 code fragments total");
+    for (int t = 0; t < 7; t++) total += counts[t];
+    ASSERT_EQ_INT(total, 21, "21 code fragments total");
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1053,7 +1062,7 @@ static void test_multi_conversation(void) {
  * ═══════════════════════════════════════════════════════════ */
 
 static void test_display_names(void) {
-    ASSERT_EQ_INT(6, (int)(sizeof(term_names) / sizeof(term_names[0])), "6 term names");
+    ASSERT_EQ_INT(7, (int)(sizeof(term_names) / sizeof(term_names[0])), "7 term names");
     ASSERT_EQ_INT(6, (int)(sizeof(vel_names) / sizeof(vel_names[0])), "6 velocity names");
     ASSERT_EQ_INT(4, (int)(sizeof(season_names) / sizeof(season_names[0])), "4 season names");
 
