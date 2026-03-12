@@ -1388,23 +1388,285 @@ static void display_response(const char *words) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+ * PROCESS — run the full equation pipeline on one input
+ *
+ * Returns: code fragment (pointer to static string), field-words in
+ * `words_out`, all state updated in D.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+static const char *process_input(const char *input, char *words_out, int words_max) {
+    D.dissonance = compute_dissonance(input);
+    ingest(input);
+    if (D.dissonance > 0.7f)
+        D.trauma_level = clampf(D.trauma_level + D.dissonance * 0.1f, 0, 1);
+    auto_velocity();
+    apply_velocity();
+    season_step();
+    update_metrics();
+    chamber_update();
+    enforce_laws();
+    generate_words(words_out, words_max);
+    D.conv_count++;
+    return select_code_fragment();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * WEB SERVER — POSIX sockets, zero dependencies
+ *
+ * GET /           → serves dario.html from disk
+ * POST /api/chat  → JSON: code fragment + field-words + metrics
+ *
+ * ./dario --web [port]
+ * ═══════════════════════════════════════════════════════════════════ */
+
+#ifndef DARIO_NO_WEB
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+
+#define WEB_BUF     8192
+#define WEB_PORT    3001
+
+/* escape string for JSON (minimal: backslash, quote, newline, tab) */
+static int json_escape(const char *src, char *dst, int max) {
+    int p = 0;
+    for (const char *s = src; *s && p < max - 6; s++) {
+        switch (*s) {
+            case '"':  dst[p++] = '\\'; dst[p++] = '"';  break;
+            case '\\': dst[p++] = '\\'; dst[p++] = '\\'; break;
+            case '\n': dst[p++] = '\\'; dst[p++] = 'n';  break;
+            case '\t': dst[p++] = '\\'; dst[p++] = 't';  break;
+            case '\r': break; /* skip */
+            default:   dst[p++] = *s;
+        }
+    }
+    dst[p] = '\0';
+    return p;
+}
+
+/* find POST body (after \r\n\r\n) */
+static const char *find_body(const char *req) {
+    const char *p = strstr(req, "\r\n\r\n");
+    return p ? p + 4 : NULL;
+}
+
+/* extract "text" field from JSON body: {"text":"..."} */
+static int extract_text(const char *body, char *out, int max) {
+    const char *p = strstr(body, "\"text\"");
+    if (!p) return 0;
+    p = strchr(p + 6, '"');
+    if (!p) return 0;
+    p++; /* skip opening quote */
+    int i = 0;
+    while (*p && *p != '"' && i < max - 1) {
+        if (*p == '\\' && *(p+1)) {
+            p++;
+            switch (*p) {
+                case 'n': out[i++] = ' '; break;
+                case 't': out[i++] = ' '; break;
+                case '"': out[i++] = '"'; break;
+                case '\\': out[i++] = '\\'; break;
+                default: out[i++] = *p;
+            }
+        } else {
+            out[i++] = *p;
+        }
+        p++;
+    }
+    out[i] = '\0';
+    return i;
+}
+
+static void serve_file(int fd, const char *path) {
+    FILE *f = fopen(path, "r");
+    if (!f) {
+        const char *r = "HTTP/1.1 404 Not Found\r\nContent-Length: 9\r\n\r\nNot Found";
+        write(fd, r, strlen(r));
+        return;
+    }
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char *buf = malloc(sz + 1);
+    fread(buf, 1, sz, f);
+    fclose(f);
+
+    char header[256];
+    snprintf(header, sizeof(header),
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: text/html; charset=utf-8\r\n"
+        "Content-Length: %ld\r\n"
+        "Access-Control-Allow-Origin: *\r\n"
+        "\r\n", sz);
+    write(fd, header, strlen(header));
+    write(fd, buf, sz);
+    free(buf);
+}
+
+static void handle_chat(int fd, const char *req) {
+    const char *body = find_body(req);
+    char text[MAX_LINE] = {0};
+    if (body) extract_text(body, text, sizeof(text));
+
+    if (strlen(text) == 0) {
+        const char *r = "HTTP/1.1 400 Bad Request\r\nContent-Length: 14\r\n\r\n{\"error\":\"no text\"}";
+        write(fd, r, strlen(r));
+        return;
+    }
+
+    char words[1024];
+    const char *code = process_input(text, words, sizeof(words));
+
+    /* build JSON response */
+    char code_esc[4096], words_esc[2048];
+    json_escape(code, code_esc, sizeof(code_esc));
+    json_escape(words, words_esc, sizeof(words_esc));
+
+    char json[8192];
+    int jlen = snprintf(json, sizeof(json),
+        "{"
+        "\"code\":\"%s\","
+        "\"words\":\"%s\","
+        "\"dominant\":%d,"
+        "\"dominant_name\":\"%s\","
+        "\"dissonance\":%.3f,"
+        "\"tau\":%.3f,"
+        "\"tau_mod\":%.3f,"
+        "\"vel_temp\":%.2f,"
+        "\"debt\":%.3f,"
+        "\"resonance\":%.3f,"
+        "\"entropy\":%.3f,"
+        "\"emergence\":%.3f,"
+        "\"trauma\":%.3f,"
+        "\"momentum\":%.3f,"
+        "\"velocity\":\"%s\","
+        "\"season\":\"%s\","
+        "\"alpha\":%.3f,\"beta\":%.3f,\"gamma\":%.3f,"
+        "\"alpha_mod\":%.3f,\"beta_mod\":%.3f,\"gamma_mod\":%.3f,"
+        "\"term_energy\":[%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f],"
+        "\"chambers\":{\"fear\":%.3f,\"love\":%.3f,\"rage\":%.3f,"
+        "\"void\":%.3f,\"flow\":%.3f,\"complex\":%.3f},"
+        "\"vocab\":%d,\"cooc\":%d,\"step\":%d"
+        "}",
+        code_esc, words_esc,
+        D.dominant_term, term_names[D.dominant_term],
+        D.dissonance, D.tau, D.tau_mod, D.vel_temp,
+        D.debt, D.resonance, D.entropy, D.emergence,
+        D.trauma_level, D.momentum,
+        vel_names[D.velocity], season_names[D.season],
+        D.alpha, D.beta, D.gamma_d,
+        D.alpha_mod, D.beta_mod, D.gamma_mod,
+        D.term_energy[0], D.term_energy[1], D.term_energy[2],
+        D.term_energy[3], D.term_energy[4], D.term_energy[5], D.term_energy[6],
+        D.chamber[CH_FEAR], D.chamber[CH_LOVE], D.chamber[CH_RAGE],
+        D.chamber[CH_VOID], D.chamber[CH_FLOW], D.chamber[CH_COMPLEX],
+        D.vocab.n_words, D.cooc.n, D.step
+    );
+
+    char header[256];
+    snprintf(header, sizeof(header),
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: application/json\r\n"
+        "Content-Length: %d\r\n"
+        "Access-Control-Allow-Origin: *\r\n"
+        "Access-Control-Allow-Headers: Content-Type\r\n"
+        "\r\n", jlen);
+    write(fd, header, strlen(header));
+    write(fd, json, jlen);
+}
+
+static void handle_options(int fd) {
+    const char *r =
+        "HTTP/1.1 204 No Content\r\n"
+        "Access-Control-Allow-Origin: *\r\n"
+        "Access-Control-Allow-Methods: POST, GET, OPTIONS\r\n"
+        "Access-Control-Allow-Headers: Content-Type\r\n"
+        "\r\n";
+    write(fd, r, strlen(r));
+}
+
+static void dario_web(int port, const char *html_path) {
+    int server = socket(AF_INET, SOCK_STREAM, 0);
+    if (server < 0) { perror("socket"); return; }
+
+    int opt = 1;
+    setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+    struct sockaddr_in addr = {0};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(port);
+
+    if (bind(server, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        perror("bind"); close(server); return;
+    }
+    listen(server, 8);
+
+    printf("[dario] web server on http://localhost:%d\n", port);
+    printf("[dario] serving %s\n", html_path);
+    fflush(stdout);
+
+    while (1) {
+        int client = accept(server, NULL, NULL);
+        if (client < 0) continue;
+
+        char buf[WEB_BUF] = {0};
+        int n = read(client, buf, sizeof(buf) - 1);
+        if (n <= 0) { close(client); continue; }
+
+        if (strncmp(buf, "OPTIONS", 7) == 0) {
+            handle_options(client);
+        } else if (strncmp(buf, "GET / ", 6) == 0 || strncmp(buf, "GET /index", 10) == 0) {
+            serve_file(client, html_path);
+        } else if (strstr(buf, "POST /api/chat") != NULL) {
+            handle_chat(client, buf);
+        } else if (strncmp(buf, "GET /favicon", 12) == 0) {
+            const char *r = "HTTP/1.1 204 No Content\r\n\r\n";
+            write(client, r, strlen(r));
+        } else {
+            const char *r = "HTTP/1.1 404 Not Found\r\nContent-Length: 9\r\n\r\nNot Found";
+            write(client, r, strlen(r));
+        }
+
+        close(client);
+    }
+}
+#endif /* DARIO_NO_WEB */
+
+/* ═══════════════════════════════════════════════════════════════════
  * MAIN — the field manifests
+ *
+ * ./dario           — REPL mode (stdin/stdout)
+ * ./dario --web     — HTTP server on port 3001
+ * ./dario --web N   — HTTP server on port N
  * ═══════════════════════════════════════════════════════════════════ */
 
 int main(int argc, char **argv) {
-    (void)argc; (void)argv;
-
     printf("\n");
     printf("  dario.c — The Dario Equation, Embodied\n");
     printf("  p(x|Φ,C,V) = softmax((B + α_m·α·H_v + β_m·β·F_v + γ_m·γ·A + δ·V + S + T) / (τ_m·τ·v_τ))\n");
     printf("  named after the man who said no.\n");
     printf("\n");
+
+    dario_init();
+
+#ifndef DARIO_NO_WEB
+    /* check for --web flag */
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--web") == 0) {
+            int port = WEB_PORT;
+            if (i + 1 < argc) port = atoi(argv[i + 1]);
+            if (port <= 0) port = WEB_PORT;
+            dario_web(port, "dario.html");
+            return 0;
+        }
+    }
+#endif
+
     printf("  this is not a chatbot.\n");
     printf("  this is a formula that reacts to you\n");
     printf("  with fragments of its own source code.\n");
     printf("\n");
-
-    dario_init();
 
     char line[MAX_LINE];
 
@@ -1441,42 +1703,10 @@ int main(int argc, char **argv) {
             continue;
         }
 
-        /* 1. measure dissonance */
-        D.dissonance = compute_dissonance(line);
-
-        /* 2. ingest input into field */
-        ingest(line);
-
-        /* 3. trauma: high dissonance sustained → wound deepens */
-        if (D.dissonance > 0.7f)
-            D.trauma_level = clampf(D.trauma_level + D.dissonance * 0.1f, 0, 1);
-
-        /* 4. auto-select velocity from field state */
-        auto_velocity();
-
-        /* 5. apply velocity physics */
-        apply_velocity();
-
-        /* 6. seasonal modulation */
-        season_step();
-
-        /* 7. update metrics */
-        update_metrics();
-
-        /* 8. emotional chambers — somatic modulation */
-        chamber_update();
-
-        /* 9. enforce laws of nature */
-        enforce_laws();
-
-        /* 10. generate field-words */
+        /* process and display */
         char words[1024];
-        generate_words(words, sizeof(words));
-
-        /* 11. display: code fragment + field words + metrics */
+        process_input(line, words, sizeof(words));
         display_response(words);
-
-        D.conv_count++;
     }
 
     printf("[dario] resonance unbroken.\n");

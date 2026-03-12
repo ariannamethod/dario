@@ -483,21 +483,39 @@ Dario sits at the purest point: ε=0, γ=the equation, δ=what grows. The formul
 ```bash
 # any C compiler works
 cc dario.c -O2 -lm -o dario
-gcc dario.c -O2 -lm -o dario
-clang dario.c -O2 -lm -o dario
 
-# run
+# or use the Makefile
+make          # build CLI
+make test     # build and run tests (1725/1725)
+make clean    # remove binaries
+
+# run interactive REPL
 ./dario
+
+# run with web UI (brutal dark visualization)
+./dario --web           # default port 3001
+./dario --web 8080      # custom port
 ```
 
 Requirements: a C compiler. libm. That's it.
 
-### Commands
+### Web UI
+
+`--web` launches a POSIX socket HTTP server and serves `dario.html` — a brutal dark visualization with per-term colored code fragments, glitch animations, real-time metrics bars, and the full equation watermark. All computation happens in C; the browser is pure display.
+
+- `GET /` — serves dario.html
+- `POST /api/chat` — JSON `{"input": "your words"}` → JSON response with code fragment, field-words, all metrics, chambers, term energies
+
+The web UI connects to the same `process_input()` pipeline as the REPL. Same equation. Same state. Different surface.
+
+To build without web server support: `cc dario.c -O2 -lm -DDARIO_NO_WEB -o dario`
+
+### Commands (REPL mode)
 
 | Command | What it does |
 |---------|-------------|
 | Any text | Process through the equation, generate response |
-| `/stats` | Print internal state: vocab, cooc, bigrams, step, debt, trauma, α, β, γ, τ, velocity, season |
+| `/stats` | Print internal state: vocab, cooc, bigrams, step, debt, trauma, α, β, γ, τ, velocity, season, chambers |
 | `/quit` | Exit |
 
 ### Output Format
