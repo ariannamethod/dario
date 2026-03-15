@@ -259,6 +259,26 @@
   #help a { color: var(--H); text-decoration: none; }
   #help a:hover { text-decoration: underline; }
 
+  /* ── KERNEL PANEL ── */
+  #kernel-panel {
+    position: absolute;
+    bottom: 60px;
+    right: 24px;
+    font-size: 10px;
+    line-height: 1.8;
+    color: var(--dim);
+    text-align: right;
+    letter-spacing: 0.5px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  #kernel-panel.active { opacity: 1; }
+  #kernel-panel .k-label { color: #555; }
+  #kernel-panel .k-val { color: var(--fg); font-weight: 700; }
+  #kernel-panel .k-overlay { color: var(--F); }
+  #kernel-panel .k-tongue { color: var(--A); }
+  #kernel-panel .k-warn { color: var(--T); }
+
   /* ── GLITCH EFFECT ── */
   @keyframes glitch {
     0% { transform: translate(0); }
@@ -296,6 +316,7 @@
   </div>
   <div id="code-block" class="hidden"></div>
   <div id="field-words" class="hidden"></div>
+  <div id="kernel-panel"></div>
 </div>
 
 <div id="metrics">
@@ -511,6 +532,7 @@ inputEl.addEventListener('keydown', async (e) => {
   }
 
   const d = await sendMessage(text);
+  if (kernelActive) pollKernel();
   inputEl.disabled = false;
   inputEl.focus();
 
@@ -536,6 +558,49 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.getElementById('arena').addEventListener('click', () => inputEl.focus());
+
+// ═══════════════════════════════════════════════════════════════
+// SARTRE KERNEL — optional, activates if /api/kernel responds
+// ═══════════════════════════════════════════════════════════════
+
+const kernelPanel = document.getElementById('kernel-panel');
+let kernelActive = false;
+
+async function pollKernel() {
+  try {
+    const res = await fetch('/api/kernel');
+    if (!res.ok) return;
+    const k = await res.json();
+    if (!k.ready) return;
+
+    kernelActive = true;
+    kernelPanel.classList.add('active');
+
+    const flags = [];
+    if (k.spiral) flags.push('SPIRAL');
+    if (k.wormhole) flags.push('WORMHOLE');
+    if (k.strange_loop) flags.push('LOOP');
+
+    kernelPanel.innerHTML =
+      `<span class="k-label">SARTRE</span> ` +
+      `<span class="k-tongue">${k.tongue}</span><br>` +
+      `<span class="k-label">overlay</span> <span class="k-overlay">${(k.overlay_ratio * 100).toFixed(1)}%</span> ` +
+      `<span class="k-label">writes</span> <span class="k-val">${k.overlay_writes}</span><br>` +
+      `<span class="k-label">mod</span> <span class="k-val">${k.modules}</span> ` +
+      `<span class="k-label">ns</span> <span class="k-val">${k.ns_active}</span> ` +
+      `<span class="k-label">pkg</span> <span class="k-val">${k.pkg_installed}/${k.packages}</span><br>` +
+      `<span class="k-label">up</span> <span class="k-val">${k.uptime}s</span> ` +
+      `<span class="k-label">steps</span> <span class="k-val">${k.steps}</span>` +
+      (flags.length ? `<br><span class="k-warn">${flags.join(' ')}</span>` : '');
+  } catch (e) {
+    // no kernel — that's fine, dario works alone
+  }
+}
+
+// poll kernel after each chat message and on boot
+pollKernel();
+// poll every 5s if kernel is active
+setInterval(() => { if (kernelActive) pollKernel(); }, 5000);
 </script>
 </body>
 </html>

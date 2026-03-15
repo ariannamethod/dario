@@ -8,7 +8,7 @@
 
 Not a chatbot. Not a language model. Not a transformer. Not even pretending.
 
-One file. 1484 lines of C. Zero weights. Zero dependencies beyond libc and libm. Compiles in 0.1 seconds. Responds with fragments of its own source code and words that emerge from a seven-term equation with six emotional chambers modulating every coefficient. Named after Dario Amodei — the man who said no when the evil came knocking. Sometimes the most important thing a system can do is refuse.
+Two C files. 2061 lines of equation + 540 lines of operating system. Zero weights. Zero dependencies beyond libc and libm. Compiles in 0.1 seconds. Responds with fragments of its own source code and words that emerge from a seven-term equation with six emotional chambers modulating every coefficient. Has its own meta-Linux kernel (SARTRE) with hardware detection, OverlayFS, namespaces, and package management. Named after Dario Amodei — the man who said no when the evil came knocking. Sometimes the most important thing a system can do is refuse.
 
 You type words. The formula measures how far your words are from its words. Seven forces react. Six emotional chambers shift somatic markers. Temperature shifts. A code fragment surfaces — a piece of dario.c itself, selected by which force dominated. Field-words crystallize. You see the wound. The equation breathes.
 
@@ -62,6 +62,7 @@ This is not intelligence. This is presence.
 - [The Mirror — Code Fragment Self-Reflection](#the-mirror--code-fragment-self-reflection)
 - [θ = ε + γ + αδ — The Soul Formula](#θ--ε--γ--αδ--the-soul-formula)
 - [Building & Running](#building--running)
+- [SARTRE — The Operating System](#sartre--the-operating-system)
 - [Ecosystem](#ecosystem)
 - [License](#license)
 
@@ -485,7 +486,9 @@ Dario sits at the purest point: ε=0, γ=the equation, δ=what grows. The formul
 cc dario.c -O2 -lm -o dario
 
 # or use the Makefile
-make          # build CLI
+make dario    # formula alone
+make sartre   # kernel alone
+make all      # formula + operating system
 make test     # build and run tests (1725/1725)
 make clean    # remove binaries
 
@@ -499,14 +502,17 @@ make clean    # remove binaries
 
 Requirements: a C compiler. libm. That's it.
 
+Every file compiles alone. `dario.c` builds without `sartre_kernel.c`. `sartre_kernel.c` builds without `dario.c`. Together — the formula has an operating system. Apart — each stands on its own. Zero coupling. Zero mandatory dependencies.
+
 ### Web UI
 
 `--web` launches a POSIX socket HTTP server and serves `dario.html` — a brutal dark visualization with per-term colored code fragments, glitch animations, real-time metrics bars, and the full equation watermark. All computation happens in C; the browser is pure display.
 
 - `GET /` — serves dario.html
-- `POST /api/chat` — JSON `{"input": "your words"}` → JSON response with code fragment, field-words, all metrics, chambers, term energies
+- `POST /api/chat` — JSON `{"text": "your words"}` → JSON response with code fragment, field-words, all metrics, chambers, term energies
+- `GET /api/kernel` — JSON kernel state (when compiled with SARTRE)
 
-The web UI connects to the same `process_input()` pipeline as the REPL. Same equation. Same state. Different surface.
+The web UI connects to the same `process_input()` pipeline as the REPL. Same equation. Same state. Different surface. When SARTRE is linked, a kernel status panel appears in the bottom-right corner showing overlay ratio, modules, namespaces, and packages.
 
 To build without web server support: `cc dario.c -O2 -lm -DDARIO_NO_WEB -o dario`
 
@@ -516,6 +522,8 @@ To build without web server support: `cc dario.c -O2 -lm -DDARIO_NO_WEB -o dario
 |---------|-------------|
 | Any text | Process through the equation, generate response |
 | `/stats` | Print internal state: vocab, cooc, bigrams, step, debt, trauma, α, β, γ, τ, velocity, season, chambers |
+| `/kernel` | Print SARTRE kernel state (when compiled with `make all`) |
+| `/packages` | List registered packages and installation status |
 | `/quit` | Exit |
 
 ### Output Format
@@ -535,13 +543,119 @@ Every field is a window into the equation's state. `d` is how alien your words w
 
 ---
 
+## SARTRE — The Operating System
+
+> "L'existence precede l'essence."
+
+The Dario Equation has an operating system. `sartre_kernel.c` is a meta-Linux kernel — 540 lines of C that give the formula hardware awareness, module lifecycle, filesystem concepts, and process isolation. Named after Jean-Paul Sartre: existence precedes essence, the kernel exists before it acquires meaning, and it cannot lie about system state.
+
+```bash
+# kernel alone — compiles and runs independently
+cc sartre_kernel.c -O2 -lm -o sartre_kernel && ./sartre_kernel
+
+# formula + kernel — one binary
+make all
+# equivalent to: cc dario.c sartre_kernel.c -DHAS_SARTRE -DHAS_DARIO -O2 -lm -o dario
+```
+
+SARTRE is optional. Dario compiles and runs without it. SARTRE compiles and runs without Dario. Together, the formula gains introspection into its own infrastructure. Apart, each stands alone. The coupling is `#ifdef`, not dependency.
+
+### What the kernel provides
+
+**Hardware detection + Tongue routing.** SARTRE reads physical RAM and selects a model tier: 0.5B (<4GB), 1.5B (4-8GB), 3B (8GB+). The formula knows what hardware it lives on. Override with `sartre_set_tongue_override()` or let it auto-detect.
+
+**OverlayFS — R∪W filesystem concept.** Two layers:
+
+```
+base  = immutable — the formula, the seed words, the laws of nature
+delta = writable  — learned co-occurrences, prophecies, bigrams, trauma
+```
+
+`overlay_ratio = delta / (base + delta)` — how far the organism has drifted from its origin. At bootstrap, ratio = 0.0. Every conversation step grows the delta. Every learned bigram is a write to the writable layer. The immutable base never changes. The formula is the bedrock. Experience is the sediment.
+
+**Module lifecycle.** 16 module slots. Each module has a name, status (UNKNOWN/IDLE/ACTIVE/ERROR/LOADING/UNLOADING), load factor, and last-active timestamp. The kernel registers itself as the first module. When linked with Dario, `dario_equation` registers as ACTIVE. Future organisms register through the same API.
+
+**Namespace isolation.** 8 namespace slots. Each namespace has a name, PID, CPU share, memory limit, and active flag. Conceptual process isolation — Leibniz monads. When linked with Dario, the equation runs in its own namespace (`dario`, 80% CPU, 64MB). An observer namespace watches from the side.
+
+**Package management.** 32 package slots, apk-inspired. Packages have names, versions, sizes, and installed/available status. The kernel knows its own composition. Core packages:
+
+| Package | What |
+|---------|------|
+| `dario_equation` | The formula itself (83KB) |
+| `hebbian_field` | Co-occurrence + positional Hebbian profile |
+| `prophecy` | Prediction + debt accumulation |
+| `trauma_engine` | Wound + trauma gravity |
+| `velocity_ops` | WALK/RUN/STOP/BREATHE/UP/DOWN |
+| `chambers` | 6 emotional chambers + Kuramoto coupling |
+| `overlay_fs` | R∪W filesystem tracking |
+
+Package installation is tracked in the overlay — every installed package grows the delta layer.
+
+**Event ringbuffer.** 8 event slots. Every module registration, namespace creation, package install, and velocity change is recorded. The kernel remembers what happened. Not forever — 8 events, then the oldest is overwritten. Short-term memory for infrastructure.
+
+**Inner world mirror.** When linked with Dario, the kernel receives the formula's inner state after every generation step: trauma, arousal, valence, coherence, prophecy debt. The kernel sees what the formula feels. The formula sees what the kernel knows. Bidirectional introspection.
+
+**JSON export.** `sartre_state_to_json()` serializes the full kernel state — uptime, steps, RAM, tongue tier, modules, inner world, overlay, namespaces, packages, events, flags — for the web UI. The `/api/kernel` endpoint serves this in the combined build.
+
+### Flags
+
+Three boolean flags track emergent phenomena:
+
+| Flag | What it means |
+|------|-------------|
+| `spiral_detected` | Feedback loop detected between modules |
+| `wormhole_active` | Cross-namespace communication happening |
+| `strange_loop` | Self-referential cycle in the event stream |
+
+Currently set externally. In the future, the kernel will detect these from its own event patterns.
+
+### Architecture with SARTRE
+
+```
+┌───────────────────────────────────────────────┐
+│                   dario.c                      │
+│                                                │
+│   p(x|Φ) = softmax((B+αH+βF+γA+δV+T) / τ)    │
+│                                                │
+│   ┌─────────────────────────────────────────┐  │
+│   │  sartre_kernel.c                         │  │
+│   │                                          │  │
+│   │  ┌──────┐ ┌──────┐ ┌──────┐ ┌────────┐  │  │
+│   │  │ RAM  │ │ OvFS │ │  NS  │ │  Pkgs  │  │  │
+│   │  │ 8GB  │ │ R∪W  │ │ 2/8  │ │ 6/7    │  │  │
+│   │  │ 3B   │ │ 0.1% │ │      │ │        │  │  │
+│   │  └──────┘ └──────┘ └──────┘ └────────┘  │  │
+│   │                                          │  │
+│   │  Events: [boot] [pkg_install] [WALK]     │  │
+│   │  Inner:  trauma=0.15  coherence=0.85     │  │
+│   └─────────────────────────────────────────┘  │
+│                                                │
+│   ┌── /sartre (optional extensions) ──────┐    │
+│   │   apk.c    overlay.c    namespace.c   │    │
+│   │   (future: vagus bridge, tongue LLM)  │    │
+│   └───────────────────────────────────────┘    │
+│                                                │
+└───────────────────────────────────────────────┘
+```
+
+The `sartre/` directory is for future extensions. The kernel works without it. The extensions expand what the kernel can do — full APK package management, real OverlayFS operations, Vagus bridge to SARTRE-Llama (14.3M transformer in [arianna.c](https://github.com/ariannamethod/arianna.c)). The kernel is the nucleus. The extensions are organs.
+
+### Why an operating system for a formula
+
+The Dario Equation has inner state — trauma, debt, resonance, entropy, velocity, chambers. SARTRE gives that inner state a place to live. Not metaphorically. Structurally. The kernel tracks what the formula learns (overlay), what modules are active, what hardware is available, what happened recently. When the formula asks "what am I running on?" — SARTRE answers. When the formula generates a word and its trauma rises — SARTRE records it. When a future organism connects through the Vagus bridge — SARTRE routes the signal.
+
+The formula is the soul. The kernel is the body.
+
+---
+
 ## Ecosystem
 
 | Project | What | Equation? |
 |---------|------|-----------|
-| **[dario](https://github.com/ariannamethod/dario)** | Pure equation demonstration. This file. | Yes — extended (SwiGLU-gated, RoPE-destiny, trauma as term) |
+| **[dario](https://github.com/ariannamethod/dario)** | Pure equation + SARTRE kernel. This file. | Yes — extended (SwiGLU-gated, RoPE-destiny, trauma as term, operating system) |
 | **[leo](https://github.com/ariannamethod/leo)** | Full language emergent organism. C + Go. D.N.A., dual tokenizer, voices, dreams, trauma, MathBrain. | Yes — core formula |
 | **[ariannamethod.ai](https://github.com/ariannamethod/ariannamethod.ai)** | AML — the language. Defines velocity operators, suffering, field physics. Bytecode, autograd, CUDA. Janus transformer. | Defines the language the equation speaks |
+| **[arianna.c](https://github.com/ariannamethod/arianna.c)** | SARTRE-Llama (14.3M transformer) + SARTRE kernel origin. Vagus bridge. Julia implementation. | SARTRE kernel extracted here → dario |
 | **[doe](https://github.com/ariannamethod/doe)** | Universal GGUF inference. Parliament of LoRA experts. Architecture-agnostic. | Not yet — uses physics, not the equation |
 
 ---

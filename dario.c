@@ -54,6 +54,10 @@
 #include <ctype.h>
 #include <stdint.h>
 
+#ifdef HAS_SARTRE
+#include "sartre_kernel.h"
+#endif
+
 /* ═══════════════════════════════════════════════════════════════════
  * CONFIGURATION — the bones
  * ═══════════════════════════════════════════════════════════════════ */
@@ -1614,6 +1618,36 @@ static void dario_init(void) {
 
     printf("[dario] bootstrapped. vocab=%d cooc=%d bigrams=%d\n",
            D.vocab.n_words, D.cooc.n, D.bigrams.n);
+
+#ifdef HAS_SARTRE
+    sartre_init(NULL);
+
+    /* register dario packages */
+    sartre_pkg_register("dario_equation", DARIO_VERSION, 83);
+    sartre_pkg_register("hebbian_field",  "1.0.0", 12);
+    sartre_pkg_register("prophecy",       "1.0.0", 8);
+    sartre_pkg_register("trauma_engine",  "1.0.0", 4);
+    sartre_pkg_register("velocity_ops",   "1.0.0", 6);
+    sartre_pkg_register("chambers",       "1.0.0", 10);
+    sartre_pkg_register("overlay_fs",     "1.0.0", 2);
+
+    /* install core */
+    sartre_pkg_install("dario_equation");
+    sartre_pkg_install("hebbian_field");
+    sartre_pkg_install("prophecy");
+    sartre_pkg_install("trauma_engine");
+    sartre_pkg_install("velocity_ops");
+    sartre_pkg_install("chambers");
+
+    /* overlay: dario.c source is the immutable base */
+    sartre_overlay_init(83 * 1024);
+
+    /* namespace for the equation */
+    sartre_ns_create("dario", 0.8f, 64.0f);
+
+    sartre_update_module("dario_equation", SARTRE_MODULE_ACTIVE, 0.05f);
+    sartre_notify_event("dario_bootstrap_complete");
+#endif
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1682,6 +1716,16 @@ static const char *process_input(const char *input, char *words_out, int words_m
     enforce_laws();
     generate_words(words_out, words_max);
     D.conv_count++;
+
+#ifdef HAS_SARTRE
+    /* sync Dario's inner state → SARTRE kernel */
+    sartre_update_inner_state(D.trauma_level, D.chamber[CH_LOVE],
+                              D.chamber[CH_FLOW] - D.chamber[CH_FEAR],
+                              D.resonance, D.debt);
+    sartre_overlay_write(sizeof(float) * 7); /* each step grows the delta */
+    sartre_notify_event(vel_names[D.velocity]);
+#endif
+
     return select_code_fragment();
 }
 
@@ -1895,6 +1939,20 @@ static void dario_web(int port, const char *html_path) {
             serve_file(client, html_path);
         } else if (strstr(buf, "POST /api/chat") != NULL) {
             handle_chat(client, buf);
+#ifdef HAS_SARTRE
+        } else if (strncmp(buf, "GET /api/kernel", 15) == 0) {
+            char kj[2048];
+            int kjlen = sartre_state_to_json(kj, sizeof(kj));
+            char kh[256];
+            snprintf(kh, sizeof(kh),
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: application/json\r\n"
+                "Content-Length: %d\r\n"
+                "Access-Control-Allow-Origin: *\r\n"
+                "\r\n", kjlen);
+            write(client, kh, strlen(kh));
+            write(client, kj, kjlen);
+#endif
         } else if (strncmp(buf, "GET /favicon", 12) == 0) {
             const char *r = "HTTP/1.1 204 No Content\r\n\r\n";
             write(client, r, strlen(r));
@@ -1958,6 +2016,17 @@ int main(int argc, char **argv) {
 
         if (strcmp(line, "/quit") == 0) break;
 
+#ifdef HAS_SARTRE
+        if (strcmp(line, "/kernel") == 0) {
+            sartre_print_state();
+            continue;
+        }
+        if (strcmp(line, "/packages") == 0) {
+            sartre_pkg_list();
+            continue;
+        }
+#endif
+
         if (strcmp(line, "/stats") == 0) {
             printf("\n  vocab=%d cooc=%d bigrams=%d step=%d conv=%d\n",
                    D.vocab.n_words, D.cooc.n, D.bigrams.n,
@@ -1984,6 +2053,9 @@ int main(int argc, char **argv) {
         display_response(words);
     }
 
+#ifdef HAS_SARTRE
+    sartre_shutdown();
+#endif
     printf("[dario] resonance unbroken.\n");
     return 0;
 }
