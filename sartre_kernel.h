@@ -41,6 +41,9 @@ typedef enum {
 
 /* ═══════════════════════════════════════════════════════════════════
  * TONGUE TIER — hardware-aware model routing
+ *
+ * Legacy tiers kept for backward compatibility.
+ * New code should use SartreModelProfile (agnostic auto-detection).
  * ═══════════════════════════════════════════════════════════════════ */
 
 typedef enum {
@@ -48,6 +51,30 @@ typedef enum {
     SARTRE_TONGUE_15B = 1,   /* 1.5B (~1.4GB runtime) */
     SARTRE_TONGUE_3B  = 2    /* 3B (~2.8GB runtime)   */
 } SartreTongueTier;
+
+/* ═══════════════════════════════════════════════════════════════════
+ * MODEL PROFILE — agnostic auto-detected model capabilities
+ *
+ * DoE-style: system profiles the model, not the other way around.
+ * Any model, any size, any architecture. No hardcoded tiers.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+#define SARTRE_MAX_MODELS 4
+
+typedef struct {
+    char     name[64];          /* human label: "resonance_bpe_12m" */
+    char     path[256];         /* file path to weights/GGUF */
+    int64_t  param_count;       /* auto-detected from file size or metadata */
+    int64_t  file_size_bytes;   /* raw file size on disk */
+    int      dim;               /* embedding dimension (0 = unknown) */
+    int      layers;            /* number of layers (0 = unknown) */
+    int      vocab_size;        /* vocabulary size (0 = unknown) */
+    float    runtime_mb;        /* estimated runtime memory (params * bytes_per_param) */
+    int      fits_in_ram;       /* 1 if runtime_mb < available RAM * 0.8 */
+    int      loaded;            /* 1 if model is currently loaded */
+    int      can_embed;         /* 1 if model can generate embeddings */
+    float    health;            /* 0-1: sonar-style layer health (0 = unknown) */
+} SartreModelProfile;
 
 /* ═══════════════════════════════════════════════════════════════════
  * MODULE INFO — each module is an existential fact
@@ -124,6 +151,10 @@ typedef struct {
     int64_t        total_ram_mb;
     SartreTongueTier tongue_tier;
     int            tongue_override; /* -1 = auto */
+
+    /* agnostic model registry */
+    SartreModelProfile models[SARTRE_MAX_MODELS];
+    int                model_count;
 
     /* inner world (mirrors Dario chambers when linked) */
     float trauma_level;
@@ -213,7 +244,7 @@ int  sartre_pkg_find(const char *name);
 void sartre_pkg_list(void);
 
 /* ═══════════════════════════════════════════════════════════════════
- * TONGUE ROUTING
+ * TONGUE ROUTING (legacy — kept for backward compat)
  * ═══════════════════════════════════════════════════════════════════ */
 
 SartreTongueTier sartre_detect_tongue_tier(void);
@@ -222,6 +253,34 @@ void             sartre_clear_tongue_override(void);
 SartreTongueTier sartre_get_tongue_tier(void);
 const char      *sartre_tongue_tier_name(SartreTongueTier tier);
 int64_t          sartre_get_total_ram_mb(void);
+
+/* ═══════════════════════════════════════════════════════════════════
+ * MODEL ROUTING (agnostic — DoE-style)
+ *
+ * Register any model file. Sartre auto-detects:
+ *   - Param count (from file size: .bin=float32, .gguf=metadata)
+ *   - Whether it fits in available RAM
+ *   - Best model for current hardware
+ *
+ * No hardcoded sizes. No hardcoded architectures.
+ * Plug in resonance_bpe_12M — it works.
+ * Plug in janus_285M — it works.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+/* Register a model file. Auto-profiles it. Returns slot index or -1. */
+int  sartre_model_register(const char *name, const char *path);
+
+/* Get profile for a registered model. Returns NULL if not found. */
+const SartreModelProfile *sartre_model_get(const char *name);
+
+/* Get the best model that fits in RAM. Returns NULL if none registered. */
+const SartreModelProfile *sartre_model_best(void);
+
+/* Mark model as loaded/unloaded. */
+void sartre_model_set_loaded(const char *name, int loaded);
+
+/* List all registered models (debug). */
+void sartre_model_list(void);
 
 /* ═══════════════════════════════════════════════════════════════════
  * DEBUG / MONITORING

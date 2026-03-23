@@ -58,6 +58,10 @@
 #include "sartre_kernel.h"
 #endif
 
+#ifdef HAS_KK
+#include "kk_kernel.h"
+#endif
+
 /* ═══════════════════════════════════════════════════════════════════
  * CONFIGURATION — the bones
  * ═══════════════════════════════════════════════════════════════════ */
@@ -845,6 +849,148 @@ typedef struct {
 } DarioState;
 
 static DarioState D;
+
+/* ═══════════════════════════════════════════════════════════════════
+ * KNOWLEDGE KERNEL STATE — the memory organ
+ *
+ * When compiled with -DHAS_KK, dario gains persistent memory:
+ *   - Knowledge retrieval modulates Prophecy (F) and Destiny (A)
+ *   - Hebbian state feeds back into kk scoring
+ *   - Conversation history is ingested for lineage tracking
+ * ═══════════════════════════════════════════════════════════════════ */
+
+#ifdef HAS_KK
+static kk_ctx *g_kk = NULL;
+
+/* Hebbian bridge callbacks — connect dario's field to kk scoring */
+static float dario_kk_word_resonance(const char *word, void *ud) {
+    (void)ud;
+    int id = -1;
+    for (int i = 0; i < D.vocab.n_words; i++) {
+        if (strcmp(D.vocab.words[i], word) == 0) { id = i; break; }
+    }
+    if (id < 0) return 0.0f;
+
+    /* Sum co-occurrence strength for this word across recent context */
+    float total = 0.0f;
+    int ctx_start = (D.ctx_len > 8) ? D.ctx_len - 8 : 0;
+    for (int c = ctx_start; c < D.ctx_len; c++) {
+        int ctx_id = D.context[c];
+        for (int i = 0; i < D.cooc.n; i++) {
+            if (D.cooc.src[i] == ctx_id && D.cooc.dst[i] == id)
+                total += D.cooc.count[i];
+        }
+    }
+    /* Normalize to [0,1] */
+    return total > 0 ? (total < 10.0f ? total / 10.0f : 1.0f) : 0.0f;
+}
+
+static int dario_kk_get_prophecies(const char **words_out, float *strengths_out,
+                                    int max, void *ud) {
+    (void)ud;
+    int count = 0;
+    for (int i = 0; i < D.prophecy.n && count < max; i++) {
+        if (D.prophecy.p[i].fulfilled) continue;
+        int tid = D.prophecy.p[i].target;
+        if (tid >= 0 && tid < D.vocab.n_words) {
+            words_out[count] = D.vocab.words[tid];
+            strengths_out[count] = D.prophecy.p[i].strength;
+            count++;
+        }
+    }
+    return count;
+}
+
+static float dario_kk_destiny_magnitude(void *ud) {
+    (void)ud;
+    extern float g_dest_magnitude;
+    return g_dest_magnitude;
+}
+
+static kk_hebbian_bridge g_kk_bridge = {
+    .word_resonance    = dario_kk_word_resonance,
+    .get_prophecies    = dario_kk_get_prophecies,
+    .destiny_magnitude = dario_kk_destiny_magnitude,
+    .user_data         = NULL
+};
+
+/* Query kk and boost Prophecy/Destiny terms in the equation.
+ * Called from process_input() before generate_words(). */
+static void kk_modulate_field(const char *input) {
+    if (!g_kk) return;
+
+    kk_result *results = NULL;
+    int n = kk_query(g_kk, input, "public", NULL, 3, KK_PROFILE_TINY, &results);
+    if (n <= 0 || !results) return;
+
+    /* Knowledge boosts Prophecy: place bets on words from retrieved chunks */
+    for (int r = 0; r < n; r++) {
+        if (!results[r].text) continue;
+        /* Extract keywords from retrieved chunk, add as prophecies */
+        const char *p = results[r].text;
+        char word[64];
+        int wpos = 0;
+        while (*p) {
+            if ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z')) {
+                if (wpos < 63) word[wpos++] = (*p >= 'A' && *p <= 'Z') ? *p + 32 : *p;
+            } else {
+                if (wpos >= 4) { /* skip short words */
+                    word[wpos] = '\0';
+                    int wid = -1;
+                    for (int i = 0; i < D.vocab.n_words; i++) {
+                        if (strcmp(D.vocab.words[i], word) == 0) { wid = i; break; }
+                    }
+                    if (wid >= 0) {
+                        /* Prophecy strength weighted by retrieval resonance */
+                        float strength = 0.2f * (float)results[r].resonance;
+                        prophecy_add(&D.prophecy, wid, strength);
+                    }
+                }
+                wpos = 0;
+            }
+            p++;
+        }
+    }
+
+    /* Knowledge boosts Destiny: shift gravity toward retrieved concepts */
+    for (int r = 0; r < n; r++) {
+        if (!results[r].text) continue;
+        /* Nudge destiny vector toward keywords from top result */
+        /* This is subtle: resonance * 0.05 ensures knowledge doesn't overpower
+         * the conversational trajectory, just gently pulls toward relevant topics */
+        float weight = 0.05f * (float)results[r].resonance;
+        extern float g_destiny[];
+        /* Use first keyword's embedding to nudge destiny */
+        const char *p = results[r].text;
+        char word[64];
+        int wpos = 0;
+        while (*p && wpos < 63) {
+            if ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z')) {
+                word[wpos++] = (*p >= 'A' && *p <= 'Z') ? *p + 32 : *p;
+            } else if (wpos >= 4) {
+                word[wpos] = '\0';
+                int wid = -1;
+                for (int i = 0; i < D.vocab.n_words; i++) {
+                    if (strcmp(D.vocab.words[i], word) == 0) { wid = i; break; }
+                }
+                if (wid >= 0) {
+                    float *e = get_embed(wid);
+                    if (e) {
+                        for (int d = 0; d < DIM; d++)
+                            g_destiny[d] += weight * e[d];
+                    }
+                }
+                break; /* one nudge per result is enough */
+            } else {
+                wpos = 0;
+            }
+            p++;
+        }
+    }
+
+    kk_free_results(results, n);
+}
+#endif /* HAS_KK */
 
 /* ═══════════════════════════════════════════════════════════════════
  * EMOTIONAL CHAMBERS — Kuramoto-coupled somatic markers
@@ -1648,6 +1794,34 @@ static void dario_init(void) {
     sartre_update_module("dario_equation", SARTRE_MODULE_ACTIVE, 0.05f);
     sartre_notify_event("dario_bootstrap_complete");
 #endif
+
+#ifdef HAS_KK
+    /* Initialize knowledge kernel — the memory organ.
+     * DB path: alongside the binary, or from env KK_DB_PATH. */
+    {
+        const char *kk_path = getenv("KK_DB_PATH");
+        if (!kk_path) kk_path = "dario_memory.db";
+        g_kk = kk_open(kk_path);
+        if (g_kk) {
+            kk_set_hebbian_bridge(g_kk, &g_kk_bridge);
+
+            /* Register knowledge kernel as a namespace */
+            kk_set_namespace(g_kk, "dario", "public",
+                             "Dario equation field memory");
+
+            printf("[kk] knowledge kernel initialized: %s\n", kk_path);
+
+#ifdef HAS_SARTRE
+            sartre_pkg_register("knowledge_kernel", "1.0.0", 16);
+            sartre_pkg_install("knowledge_kernel");
+            sartre_update_module("kk_kernel", SARTRE_MODULE_ACTIVE, 0.02f);
+            sartre_notify_event("kk_bootstrap_complete");
+#endif
+        } else {
+            fprintf(stderr, "[kk] warning: could not open %s\n", kk_path);
+        }
+    }
+#endif
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1714,6 +1888,22 @@ static const char *process_input(const char *input, char *words_out, int words_m
     update_metrics();
     chamber_update();
     enforce_laws();
+
+#ifdef HAS_KK
+    /* Knowledge modulates the field BEFORE generation.
+     * Retrieved knowledge becomes prophecy pressure and destiny nudge.
+     * This is where memory influences what the organism says next. */
+    kk_modulate_field(input);
+
+    /* Ingest this conversation turn for future retrieval.
+     * The organism remembers what was said to it. */
+    if (g_kk) {
+        char conv_path[128];
+        snprintf(conv_path, sizeof(conv_path), "conversation/%06d.txt", D.conv_count);
+        kk_ingest_buffer(g_kk, conv_path, input, strlen(input), "dario", "public");
+    }
+#endif
+
     generate_words(words_out, words_max);
     D.conv_count++;
 
@@ -1724,6 +1914,12 @@ static const char *process_input(const char *input, char *words_out, int words_m
                               D.resonance, D.debt);
     sartre_overlay_write(sizeof(float) * 7); /* each step grows the delta */
     sartre_notify_event(vel_names[D.velocity]);
+#endif
+
+#ifdef HAS_KK
+    if (g_kk) {
+        sartre_overlay_write(sizeof(float) * 3); /* kk delta grows too */
+    }
 #endif
 
     return select_code_fragment();
@@ -2025,6 +2221,36 @@ int main(int argc, char **argv) {
             sartre_pkg_list();
             continue;
         }
+        if (strcmp(line, "/models") == 0) {
+            sartre_model_list();
+            continue;
+        }
+#endif
+
+#ifdef HAS_KK
+        if (strcmp(line, "/knowledge") == 0 || strcmp(line, "/kk") == 0) {
+            if (g_kk) {
+                kk_stats st;
+                if (kk_get_stats(g_kk, &st) == 0) {
+                    printf("\n  Knowledge Kernel:\n");
+                    printf("  docs=%d versions=%d chunks=%d namespaces=%d models=%d links=%d\n",
+                           st.documents, st.versions, st.chunks,
+                           st.namespaces, st.models, st.links);
+                    printf("  db size: %lld bytes\n\n", (long long)st.db_size_bytes);
+                }
+            } else {
+                printf("\n  [kk] not initialized\n\n");
+            }
+            continue;
+        }
+        if (strncmp(line, "/ingest ", 8) == 0) {
+            if (g_kk) {
+                const char *path = line + 8;
+                int n = kk_ingest_dir(g_kk, path, "dario", "public");
+                printf("\n  [kk] ingested %d files from %s\n\n", n, path);
+            }
+            continue;
+        }
 #endif
 
         if (strcmp(line, "/stats") == 0) {
@@ -2052,6 +2278,13 @@ int main(int argc, char **argv) {
         process_input(line, words, sizeof(words));
         display_response(words);
     }
+
+#ifdef HAS_KK
+    if (g_kk) {
+        kk_close(g_kk);
+        g_kk = NULL;
+    }
+#endif
 
 #ifdef HAS_SARTRE
     sartre_shutdown();

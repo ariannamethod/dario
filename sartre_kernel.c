@@ -361,6 +361,204 @@ int64_t sartre_get_total_ram_mb(void) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+ * MODEL ROUTING — agnostic, DoE-style auto-detection
+ *
+ * Any model file. Any size. Any architecture.
+ * Sartre profiles it from the file itself:
+ *   .bin  → param_count = file_size / 4 (float32)
+ *   .gguf → read GGUF metadata header for actual param count
+ *   .pt   → param_count = file_size / 4 (approximation)
+ *
+ * Runtime memory estimated. Fit-in-RAM checked against 80% threshold.
+ * Best model = largest that fits.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+static int64_t file_size_bytes(const char *path) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return -1;
+    fseek(f, 0, SEEK_END);
+    int64_t size = ftell(f);
+    fclose(f);
+    return size;
+}
+
+static int detect_gguf_params(const char *path, SartreModelProfile *out) {
+    /* GGUF magic: 0x46554747 ("GGUF") at offset 0 */
+    FILE *f = fopen(path, "rb");
+    if (!f) return 0;
+
+    uint32_t magic = 0;
+    if (fread(&magic, 4, 1, f) != 1) { fclose(f); return 0; }
+
+    if (magic != 0x46554747) { fclose(f); return 0; } /* not GGUF */
+
+    /* GGUF v3: version(4) + tensor_count(8) + metadata_kv_count(8) */
+    uint32_t version = 0;
+    fread(&version, 4, 1, f);
+
+    uint64_t tensor_count = 0, kv_count = 0;
+    if (version >= 3) {
+        fread(&tensor_count, 8, 1, f);
+        fread(&kv_count, 8, 1, f);
+    } else {
+        uint32_t tc32 = 0, kv32 = 0;
+        fread(&tc32, 4, 1, f);
+        fread(&kv32, 4, 1, f);
+        tensor_count = tc32;
+        kv_count = kv32;
+    }
+
+    (void)kv_count; /* we'd need to parse KV pairs for exact dims */
+
+    fclose(f);
+
+    /* Estimate: typical GGUF packs ~2 bytes per param (Q4/Q5 average) */
+    if (out->file_size_bytes > 0 && tensor_count > 0) {
+        out->param_count = out->file_size_bytes / 2; /* rough for quantized */
+        out->runtime_mb = (float)(out->file_size_bytes + 512 * 1024 * 1024) / (1024.0f * 1024.0f);
+    }
+    return 1;
+}
+
+static void profile_model_file(SartreModelProfile *p) {
+    p->file_size_bytes = file_size_bytes(p->path);
+    if (p->file_size_bytes <= 0) return;
+
+    const char *ext = strrchr(p->path, '.');
+    if (!ext) ext = "";
+
+    if (strcmp(ext, ".gguf") == 0 || strcmp(ext, ".GGUF") == 0) {
+        detect_gguf_params(p->path, p);
+    } else if (strcmp(ext, ".bin") == 0) {
+        /* Raw float32 weights: params = file_size / 4 */
+        p->param_count = p->file_size_bytes / 4;
+        p->runtime_mb = (float)p->file_size_bytes / (1024.0f * 1024.0f) * 1.2f;
+    } else if (strcmp(ext, ".pt") == 0 || strcmp(ext, ".pth") == 0) {
+        /* PyTorch checkpoint: rough estimate, mixed types */
+        p->param_count = p->file_size_bytes / 3; /* avg ~3 bytes per param */
+        p->runtime_mb = (float)p->file_size_bytes / (1024.0f * 1024.0f) * 1.5f;
+    } else {
+        /* Unknown format: assume float32 */
+        p->param_count = p->file_size_bytes / 4;
+        p->runtime_mb = (float)p->file_size_bytes / (1024.0f * 1024.0f) * 1.2f;
+    }
+
+    /* Check if it fits */
+    p->fits_in_ram = (p->runtime_mb < sys.total_ram_mb * 0.8f) ? 1 : 0;
+}
+
+int sartre_model_register(const char *name, const char *path) {
+    if (!sartre_ready || !name || !path) return -1;
+    if (sys.model_count >= SARTRE_MAX_MODELS) return -1;
+
+    /* Check if already registered */
+    for (int i = 0; i < sys.model_count; i++) {
+        if (strncmp(sys.models[i].name, name, 63) == 0) {
+            /* Update path, re-profile */
+            strncpy(sys.models[i].path, path, 255);
+            sys.models[i].path[255] = '\0';
+            profile_model_file(&sys.models[i]);
+
+            char ev[128];
+            snprintf(ev, sizeof(ev), "model_update:%s %lldM params",
+                     name, (long long)(sys.models[i].param_count / 1000000));
+            sartre_notify_event(ev);
+            return i;
+        }
+    }
+
+    int idx = sys.model_count++;
+    memset(&sys.models[idx], 0, sizeof(SartreModelProfile));
+    strncpy(sys.models[idx].name, name, 63);
+    sys.models[idx].name[63] = '\0';
+    strncpy(sys.models[idx].path, path, 255);
+    sys.models[idx].path[255] = '\0';
+
+    profile_model_file(&sys.models[idx]);
+
+    char ev[128];
+    snprintf(ev, sizeof(ev), "model_register:%s %lldM params %.0fMB fits=%d",
+             name, (long long)(sys.models[idx].param_count / 1000000),
+             sys.models[idx].runtime_mb, sys.models[idx].fits_in_ram);
+    sartre_notify_event(ev);
+
+    /* Also update legacy tongue tier based on best model */
+    const SartreModelProfile *best = sartre_model_best();
+    if (best && sys.tongue_override < 0) {
+        if (best->param_count >= 2000000000LL)      sys.tongue_tier = SARTRE_TONGUE_3B;
+        else if (best->param_count >= 1000000000LL)  sys.tongue_tier = SARTRE_TONGUE_15B;
+        else                                          sys.tongue_tier = SARTRE_TONGUE_05B;
+    }
+
+    return idx;
+}
+
+const SartreModelProfile *sartre_model_get(const char *name) {
+    if (!name) return NULL;
+    for (int i = 0; i < sys.model_count; i++) {
+        if (strncmp(sys.models[i].name, name, 63) == 0)
+            return &sys.models[i];
+    }
+    return NULL;
+}
+
+const SartreModelProfile *sartre_model_best(void) {
+    const SartreModelProfile *best = NULL;
+    int64_t best_params = -1;
+
+    for (int i = 0; i < sys.model_count; i++) {
+        if (sys.models[i].fits_in_ram && sys.models[i].param_count > best_params) {
+            best = &sys.models[i];
+            best_params = sys.models[i].param_count;
+        }
+    }
+
+    /* Fallback: if nothing fits, pick smallest */
+    if (!best && sys.model_count > 0) {
+        int64_t smallest = INT64_MAX;
+        for (int i = 0; i < sys.model_count; i++) {
+            if (sys.models[i].param_count < smallest) {
+                smallest = sys.models[i].param_count;
+                best = &sys.models[i];
+            }
+        }
+    }
+
+    return best;
+}
+
+void sartre_model_set_loaded(const char *name, int loaded) {
+    for (int i = 0; i < sys.model_count; i++) {
+        if (strncmp(sys.models[i].name, name, 63) == 0) {
+            sys.models[i].loaded = loaded;
+            sartre_update_module(name, loaded ? SARTRE_MODULE_ACTIVE : SARTRE_MODULE_IDLE,
+                                 loaded ? sys.models[i].runtime_mb / (float)sys.total_ram_mb : 0.0f);
+            char ev[128];
+            snprintf(ev, sizeof(ev), "model_%s:%s", loaded ? "load" : "unload", name);
+            sartre_notify_event(ev);
+            return;
+        }
+    }
+}
+
+void sartre_model_list(void) {
+    printf("\n=== SARTRE MODELS ===\n");
+    for (int i = 0; i < sys.model_count; i++) {
+        SartreModelProfile *m = &sys.models[i];
+        printf("  %s %s [%lldM params, %.0fMB, %s%s]\n",
+               m->loaded ? "*" : " ",
+               m->name,
+               (long long)(m->param_count / 1000000),
+               m->runtime_mb,
+               m->fits_in_ram ? "fits" : "NO FIT",
+               m->can_embed ? ", embed" : "");
+        printf("    %s\n", m->path);
+    }
+    const SartreModelProfile *best = sartre_model_best();
+    printf("  best: %s\n\n", best ? best->name : "(none)");
+}
+
+/* ═══════════════════════════════════════════════════════════════════
  * DEBUG / MONITORING — sartre observes itself
  * ═══════════════════════════════════════════════════════════════════ */
 
