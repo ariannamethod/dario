@@ -64,6 +64,7 @@ typedef struct {
     double      linkage;            /* structural + related density */
     double      freshness;          /* 1.0 latest, 0.35 old */
     double      hebbian_boost;      /* boost from dario's Hebbian state (0 if standalone) */
+    double      rrpram_resonance;   /* RRPRAM X·Wr resonance (0 if no embedding provided) */
 
     /* lineage */
     const char *sha256;
@@ -138,6 +139,70 @@ typedef struct {
 
     void *user_data;
 } kk_hebbian_bridge;
+
+/* ═══════════════════════════════════════════════════════════════════
+ * RRPRAM RESONANCE — PostGPT-style statistical fingerprints
+ *
+ * At ingest time, each chunk gets a statistical fingerprint:
+ * positional affinity, bigram patterns, Hebbian co-occurrence.
+ * These are the chunk's "metaweights" — PostGPT proved that
+ * corpus statistics alone form a complete probability space.
+ *
+ * At generation time, the organism's current state (embedding
+ * from co-occurrence context) resonates against chunk fingerprints
+ * via X·Wr — the same RRPRAM mechanism as Janus attention.
+ * High-resonance chunks boost Prophecy and Destiny signals.
+ *
+ * This is not RAG. The model doesn't search — knowledge resonates.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+#define KK_META_BIGRAM_MAX    256     /* top bigrams per chunk */
+#define KK_META_AFFINITY_DIM  64      /* positional affinity vector size */
+#define KK_META_HEBBIAN_MAX   128     /* top co-occurrence pairs per chunk */
+
+typedef struct {
+    /* positional affinity — where tokens cluster in this chunk.
+     * Aggregated PostGPT-style: P(position | token) per chunk.
+     * Dense vector, usable as Wr column for RRPRAM scoring. */
+    float   affinity[KK_META_AFFINITY_DIM];
+
+    /* top bigram transitions within chunk */
+    int     bigram_src[KK_META_BIGRAM_MAX];
+    int     bigram_dst[KK_META_BIGRAM_MAX];
+    float   bigram_prob[KK_META_BIGRAM_MAX];
+    int     bigram_n;
+
+    /* Hebbian co-occurrence pairs (distance-weighted) */
+    int     hebb_a[KK_META_HEBBIAN_MAX];
+    int     hebb_b[KK_META_HEBBIAN_MAX];
+    float   hebb_strength[KK_META_HEBBIAN_MAX];
+    int     hebb_n;
+
+    /* chunk token count (for normalization) */
+    int     n_tokens;
+} kk_chunk_meta;
+
+/* Build metaweights for a single chunk. Returns 0 on success.
+ * Called automatically during ingest. Can also be called to rebuild. */
+int kk_build_chunk_meta(kk_ctx *k, int chunk_id);
+
+/* Rebuild metaweights for all chunks (after re-ingest or schema change). */
+int kk_rebuild_all_meta(kk_ctx *k);
+
+/* Compute RRPRAM resonance between current generation embedding
+ * and a chunk's positional affinity fingerprint.
+ * Returns [0, 1]. This is the core X·Wr operation. */
+float kk_chunk_resonance(const kk_chunk_meta *meta,
+                         const float *current_embedding, int dim);
+
+/* Query with RRPRAM resonance — like kk_query but also scores
+ * chunks by resonance with the organism's current field state.
+ * Requires: current_embedding from dario's co-occurrence context. */
+int kk_query_resonant(kk_ctx *k, const char *query_text,
+                      const float *current_embedding, int embed_dim,
+                      const char *access_scope, const char *namespace_filter,
+                      int top_k, kk_profile profile,
+                      kk_result **results_out);
 
 /* ═══════════════════════════════════════════════════════════════════
  * LIFECYCLE

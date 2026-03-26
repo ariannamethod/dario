@@ -731,6 +731,17 @@ static int ensure_schema(sqlite3 *db) {
     if (exec_sql(db, sql_core) != SQLITE_OK) { die_sqlite(db, "schema init core"); return -1; }
     if (exec_sql(db, sql_indexes) != SQLITE_OK) { die_sqlite(db, "schema init indexes"); return -1; }
 
+    /* chunk_meta — PostGPT-style statistical fingerprints per chunk */
+    exec_sql(db,
+        "CREATE TABLE IF NOT EXISTS chunk_meta ("
+        "  chunk_id INTEGER PRIMARY KEY REFERENCES chunks(id) ON DELETE CASCADE,"
+        "  affinity BLOB,"
+        "  bigram_data BLOB,"
+        "  hebbian_data BLOB,"
+        "  n_tokens INTEGER NOT NULL DEFAULT 0"
+        ");"
+        "CREATE INDEX IF NOT EXISTS idx_chunk_meta_id ON chunk_meta(chunk_id);");
+
     ensure_column(db, "document_versions", "first_seen_ts", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP");
     ensure_column(db, "document_versions", "last_seen_ts", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP");
     ensure_column(db, "document_versions", "seen_count", "INTEGER NOT NULL DEFAULT 1");
@@ -1712,6 +1723,11 @@ static int insert_section_row(sqlite3 *db, int version_id, int document_id, int 
     return id;
 }
 
+/* forward declarations for metaweights (defined after public query API) */
+static int build_meta_from_text(const char *text, int text_len, kk_chunk_meta *meta);
+static int store_chunk_meta(sqlite3 *db, int chunk_id, const kk_chunk_meta *meta);
+static int load_chunk_meta(sqlite3 *db, int chunk_id, kk_chunk_meta *meta);
+
 static int insert_chunk_row(sqlite3 *db, int version_id, int document_id, int section_id, int ordinal, int start, int end, int token_estimate, const char *raw_text) {
     sqlite3_stmt *stmt = NULL;
     const char *sql = "INSERT INTO chunks(version_id, parent_document_id, parent_section_id, ordinal, char_start, char_end, token_estimate, raw_text) VALUES(?, ?, ?, ?, ?, ?, ?, ?) RETURNING id;";
@@ -1946,6 +1962,8 @@ static int ingest_file(sqlite3 *db, const char *path, const char *namespace_name
                                             (int)chunks[j].start, (int)chunks[j].end,
                                             estimate_tokens(chunks[j].text), chunks[j].text);
             insert_fts_row(db, chunk_id, chunks[j].text, namespace_name, scope, abs_path, filename, heading);
+            /* build PostGPT-style metaweights for RRPRAM resonance */
+            { kk_chunk_meta cmeta; build_meta_from_text(chunks[j].text, (int)strlen(chunks[j].text), &cmeta); store_chunk_meta(db, chunk_id, &cmeta); }
             if (runtime[i].first_chunk_id == 0) runtime[i].first_chunk_id = chunk_id;
             runtime[i].last_chunk_id = chunk_id;
             if (prev_chunk_id > 0) {
@@ -2048,6 +2066,7 @@ static int ingest_buffer_internal(sqlite3 *db, const char *path, const char *tex
                                             (int)chunks[j].start, (int)chunks[j].end,
                                             estimate_tokens(chunks[j].text), chunks[j].text);
             insert_fts_row(db, chunk_id, chunks[j].text, namespace_name, scope, path, filename, heading);
+            { kk_chunk_meta cmeta; build_meta_from_text(chunks[j].text, (int)strlen(chunks[j].text), &cmeta); store_chunk_meta(db, chunk_id, &cmeta); }
             if (runtime[i].first_chunk_id == 0) runtime[i].first_chunk_id = chunk_id;
             runtime[i].last_chunk_id = chunk_id;
             if (prev_chunk_id > 0) {
@@ -2668,6 +2687,271 @@ int kk_ingest_buffer(kk_ctx *k, const char *path, const char *text,
     if (!kk_is_ready(k) || !path || !text || !namespace_name || !scope) return -1;
     if (require_scope_lib(scope) != 0) return -1;
     return ingest_buffer_internal(k->db, path, text, text_len, namespace_name, scope);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * RRPRAM METAWEIGHTS — PostGPT-style statistical fingerprints
+ *
+ * At ingest, each chunk gets a positional affinity vector (the Wr column),
+ * bigram patterns, and Hebbian co-occurrence pairs.
+ * At query time, the organism's current embedding resonates against these.
+ *
+ * The model doesn't search. Knowledge resonates.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+/* Simple byte-level tokenization for metaweight computation.
+ * Returns token IDs in out[], returns count. Max max_tokens. */
+static int meta_tokenize(const char *text, int text_len, int *out, int max_tokens) {
+    int n = 0;
+    for (int i = 0; i < text_len && n < max_tokens; i++) {
+        unsigned char c = (unsigned char)text[i];
+        if (c > 32) { /* skip control chars and spaces */
+            out[n++] = (int)c;
+        }
+    }
+    return n;
+}
+
+/* Build positional affinity, bigrams, and Hebbian co-occurrence for a chunk */
+static int build_meta_from_text(const char *text, int text_len, kk_chunk_meta *meta) {
+    memset(meta, 0, sizeof(*meta));
+
+    int tokens[4096];
+    int n = meta_tokenize(text, text_len, tokens, 4096);
+    meta->n_tokens = n;
+    if (n < 2) return 0;
+
+    /* 1. Positional affinity — P(position | token) aggregated into dense vector.
+     * Each position in the chunk gets a weighted contribution from its token.
+     * Result: affinity[pos % DIM] += 1/n_tokens. Normalized to [0,1]. */
+    int dim = KK_META_AFFINITY_DIM;
+    for (int i = 0; i < n; i++) {
+        int pos = i % dim;
+        float weight = 1.0f + 0.5f * (float)(tokens[i] % 64) / 64.0f;
+        meta->affinity[pos] += weight;
+    }
+    /* normalize */
+    float amax = 0;
+    for (int i = 0; i < dim; i++) if (meta->affinity[i] > amax) amax = meta->affinity[i];
+    if (amax > 1e-6f) for (int i = 0; i < dim; i++) meta->affinity[i] /= amax;
+
+    /* 2. Bigrams — top transitions within chunk */
+    typedef struct { int src, dst; float count; } BigramEntry;
+    BigramEntry bg[1024];
+    int bg_n = 0;
+    for (int i = 0; i < n - 1 && bg_n < 1024; i++) {
+        int found = 0;
+        for (int j = 0; j < bg_n; j++) {
+            if (bg[j].src == tokens[i] && bg[j].dst == tokens[i+1]) {
+                bg[j].count += 1.0f;
+                found = 1;
+                break;
+            }
+        }
+        if (!found && bg_n < 1024) {
+            bg[bg_n++] = (BigramEntry){tokens[i], tokens[i+1], 1.0f};
+        }
+    }
+    /* sort by count descending, take top KK_META_BIGRAM_MAX */
+    for (int i = 0; i < bg_n; i++)
+        for (int j = i+1; j < bg_n; j++)
+            if (bg[j].count > bg[i].count) { BigramEntry t = bg[i]; bg[i] = bg[j]; bg[j] = t; }
+    meta->bigram_n = bg_n < KK_META_BIGRAM_MAX ? bg_n : KK_META_BIGRAM_MAX;
+    float bg_total = 0;
+    for (int i = 0; i < meta->bigram_n; i++) bg_total += bg[i].count;
+    for (int i = 0; i < meta->bigram_n; i++) {
+        meta->bigram_src[i] = bg[i].src;
+        meta->bigram_dst[i] = bg[i].dst;
+        meta->bigram_prob[i] = bg_total > 0 ? bg[i].count / bg_total : 0;
+    }
+
+    /* 3. Hebbian co-occurrence — distance-weighted pairs within window=8 */
+    typedef struct { int a, b; float strength; } HebbEntry;
+    HebbEntry hb[2048];
+    int hb_n = 0;
+    int window = 8;
+    int hebb_limit = n < 2000 ? n : 2000;
+    for (int i = 0; i < hebb_limit; i++) {
+        for (int j = (i - window > 0 ? i - window : 0); j < i && j < hebb_limit; j++) {
+            int a = tokens[i] < tokens[j] ? tokens[i] : tokens[j];
+            int b = tokens[i] < tokens[j] ? tokens[j] : tokens[i];
+            float decay = 1.0f / (1.0f + (float)(i - j));
+            int found = 0;
+            for (int k = 0; k < hb_n; k++) {
+                if (hb[k].a == a && hb[k].b == b) { hb[k].strength += decay; found = 1; break; }
+            }
+            if (!found && hb_n < 2048) {
+                hb[hb_n++] = (HebbEntry){a, b, decay};
+            }
+        }
+    }
+    /* sort, take top */
+    for (int i = 0; i < hb_n; i++)
+        for (int j = i+1; j < hb_n; j++)
+            if (hb[j].strength > hb[i].strength) { HebbEntry t = hb[i]; hb[i] = hb[j]; hb[j] = t; }
+    meta->hebb_n = hb_n < KK_META_HEBBIAN_MAX ? hb_n : KK_META_HEBBIAN_MAX;
+    float hmax = hb_n > 0 ? hb[0].strength : 1.0f;
+    for (int i = 0; i < meta->hebb_n; i++) {
+        meta->hebb_a[i] = hb[i].a;
+        meta->hebb_b[i] = hb[i].b;
+        meta->hebb_strength[i] = hb[i].strength / hmax;
+    }
+
+    return 0;
+}
+
+/* Store chunk_meta to SQLite */
+static int store_chunk_meta(sqlite3 *db, int chunk_id, const kk_chunk_meta *meta) {
+    const char *sql = "INSERT OR REPLACE INTO chunk_meta(chunk_id, affinity, bigram_data, hebbian_data, n_tokens) VALUES(?,?,?,?,?)";
+    sqlite3_stmt *stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) return -1;
+    sqlite3_bind_int(stmt, 1, chunk_id);
+    sqlite3_bind_blob(stmt, 2, meta->affinity, sizeof(meta->affinity), SQLITE_TRANSIENT);
+    /* pack bigrams: [src0,dst0,prob0, src1,dst1,prob1, ...] as floats */
+    float bg_buf[KK_META_BIGRAM_MAX * 3];
+    for (int i = 0; i < meta->bigram_n; i++) {
+        bg_buf[i*3+0] = (float)meta->bigram_src[i];
+        bg_buf[i*3+1] = (float)meta->bigram_dst[i];
+        bg_buf[i*3+2] = meta->bigram_prob[i];
+    }
+    sqlite3_bind_blob(stmt, 3, bg_buf, meta->bigram_n * 3 * sizeof(float), SQLITE_TRANSIENT);
+    /* pack hebbian: [a0,b0,str0, ...] */
+    float hb_buf[KK_META_HEBBIAN_MAX * 3];
+    for (int i = 0; i < meta->hebb_n; i++) {
+        hb_buf[i*3+0] = (float)meta->hebb_a[i];
+        hb_buf[i*3+1] = (float)meta->hebb_b[i];
+        hb_buf[i*3+2] = meta->hebb_strength[i];
+    }
+    sqlite3_bind_blob(stmt, 4, hb_buf, meta->hebb_n * 3 * sizeof(float), SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 5, meta->n_tokens);
+    int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    return rc == SQLITE_DONE ? 0 : -1;
+}
+
+/* Load chunk_meta from SQLite */
+static int load_chunk_meta(sqlite3 *db, int chunk_id, kk_chunk_meta *meta) {
+    memset(meta, 0, sizeof(*meta));
+    const char *sql = "SELECT affinity, bigram_data, hebbian_data, n_tokens FROM chunk_meta WHERE chunk_id=?";
+    sqlite3_stmt *stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) return -1;
+    sqlite3_bind_int(stmt, 1, chunk_id);
+    if (sqlite3_step(stmt) != SQLITE_ROW) { sqlite3_finalize(stmt); return -1; }
+
+    const void *aff = sqlite3_column_blob(stmt, 0);
+    int aff_sz = sqlite3_column_bytes(stmt, 0);
+    if (aff && aff_sz == (int)sizeof(meta->affinity))
+        memcpy(meta->affinity, aff, sizeof(meta->affinity));
+
+    const float *bg = (const float *)sqlite3_column_blob(stmt, 1);
+    int bg_sz = sqlite3_column_bytes(stmt, 1);
+    meta->bigram_n = bg_sz / (3 * sizeof(float));
+    if (meta->bigram_n > KK_META_BIGRAM_MAX) meta->bigram_n = KK_META_BIGRAM_MAX;
+    for (int i = 0; i < meta->bigram_n; i++) {
+        meta->bigram_src[i] = (int)bg[i*3+0];
+        meta->bigram_dst[i] = (int)bg[i*3+1];
+        meta->bigram_prob[i] = bg[i*3+2];
+    }
+
+    const float *hb = (const float *)sqlite3_column_blob(stmt, 2);
+    int hb_sz = sqlite3_column_bytes(stmt, 2);
+    meta->hebb_n = hb_sz / (3 * sizeof(float));
+    if (meta->hebb_n > KK_META_HEBBIAN_MAX) meta->hebb_n = KK_META_HEBBIAN_MAX;
+    for (int i = 0; i < meta->hebb_n; i++) {
+        meta->hebb_a[i] = (int)hb[i*3+0];
+        meta->hebb_b[i] = (int)hb[i*3+1];
+        meta->hebb_strength[i] = hb[i*3+2];
+    }
+    meta->n_tokens = sqlite3_column_int(stmt, 3);
+    sqlite3_finalize(stmt);
+    return 0;
+}
+
+/* ── Public API: metaweights ── */
+
+int kk_build_chunk_meta(kk_ctx *k, int chunk_id) {
+    if (!kk_is_ready(k)) return -1;
+    sqlite3 *db = k->db;
+    /* fetch chunk text */
+    const char *sql = "SELECT raw_text FROM chunks WHERE id=?";
+    sqlite3_stmt *stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) return -1;
+    sqlite3_bind_int(stmt, 1, chunk_id);
+    if (sqlite3_step(stmt) != SQLITE_ROW) { sqlite3_finalize(stmt); return -1; }
+    const char *text = (const char *)sqlite3_column_text(stmt, 0);
+    int text_len = sqlite3_column_bytes(stmt, 0);
+
+    kk_chunk_meta meta;
+    build_meta_from_text(text, text_len, &meta);
+    sqlite3_finalize(stmt);
+
+    return store_chunk_meta(db, chunk_id, &meta);
+}
+
+int kk_rebuild_all_meta(kk_ctx *k) {
+    if (!kk_is_ready(k)) return -1;
+    sqlite3 *db = k->db;
+    const char *sql = "SELECT id FROM chunks";
+    sqlite3_stmt *stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) return -1;
+    int count = 0;
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        int chunk_id = sqlite3_column_int(stmt, 0);
+        kk_build_chunk_meta(k, chunk_id);
+        count++;
+    }
+    sqlite3_finalize(stmt);
+    return count;
+}
+
+float kk_chunk_resonance(const kk_chunk_meta *meta,
+                         const float *current_embedding, int dim) {
+    if (!meta || !current_embedding || dim <= 0) return 0.0f;
+    /* dot product between embedding and positional affinity (the X·Wr operation) */
+    int eff_dim = dim < KK_META_AFFINITY_DIM ? dim : KK_META_AFFINITY_DIM;
+    float dot = 0, norm_a = 0, norm_e = 0;
+    for (int i = 0; i < eff_dim; i++) {
+        dot += meta->affinity[i] * current_embedding[i];
+        norm_a += meta->affinity[i] * meta->affinity[i];
+        norm_e += current_embedding[i] * current_embedding[i];
+    }
+    float denom = sqrtf(norm_a) * sqrtf(norm_e);
+    if (denom < 1e-8f) return 0.0f;
+    float cosine = dot / denom;
+    return cosine > 0.0f ? cosine : 0.0f; /* clamp negative */
+}
+
+int kk_query_resonant(kk_ctx *k, const char *query_text,
+                      const float *current_embedding, int embed_dim,
+                      const char *access_scope, const char *namespace_filter,
+                      int top_k, kk_profile profile,
+                      kk_result **results_out) {
+    /* first, run standard query */
+    int count = kk_query(k, query_text, access_scope, namespace_filter,
+                         top_k * 2, profile, results_out);
+    if (count <= 0 || !current_embedding || embed_dim <= 0) return count;
+
+    /* augment with RRPRAM resonance */
+    kk_result *results = *results_out;
+    for (int i = 0; i < count; i++) {
+        kk_chunk_meta meta;
+        if (load_chunk_meta(k->db, results[i].chunk_id, &meta) == 0) {
+            results[i].rrpram_resonance = (double)kk_chunk_resonance(&meta, current_embedding, embed_dim);
+            results[i].resonance += results[i].rrpram_resonance * 0.20; /* 20% RRPRAM weight */
+            if (results[i].resonance > 1.0) results[i].resonance = 1.0;
+        }
+    }
+
+    /* re-sort by updated resonance */
+    for (int i = 0; i < count; i++)
+        for (int j = i+1; j < count; j++)
+            if (results[j].resonance > results[i].resonance) {
+                kk_result tmp = results[i]; results[i] = results[j]; results[j] = tmp;
+            }
+
+    /* trim to requested top_k */
+    if (count > top_k) count = top_k;
+    return count;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
