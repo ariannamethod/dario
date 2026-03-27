@@ -145,8 +145,13 @@ class KnowledgeKernel:
     def mark_used(self, rowid):
         self.used.add(rowid)
 
-    def extract_injection(self, chunk, max_len=150):
-        """Extract best sentence for injection. Technical > metaphor."""
+    def extract_injection(self, chunk, max_len=100):
+        """Extract ONE short concrete sentence for injection.
+
+        Yesterday's working injections were ~60-80 chars:
+        "RRPRAM creates fingerprints for each position in the sequence."
+        Short. Concrete. One concept. Model dances from there.
+        """
         # prefer answer part in Q/A format
         nl_a = '\nA:'
         if nl_a in chunk:
@@ -160,29 +165,32 @@ class KnowledgeKernel:
 
         scored = []
         for i, s in enumerate(sentences):
-            if len(s) < 15 or len(s) > max_len:
+            if len(s) < 10 or len(s) > max_len:
                 continue
             score = 0
-            # UPPERCASE terms (RRPRAM, KK, etc) = high value
-            score += len(re.findall(r'[A-Z]{3,}', s)) * 3
-            # first sentence = likely definition
+            # UPPERCASE terms (RRPRAM, KK, SARTRE, etc) = highest value
+            score += len(re.findall(r'[A-Z]{3,}', s)) * 4
+            # first sentence of answer = definition, most concrete
             if i == 0:
-                score += 2
+                score += 3
             elif i == 1:
                 score += 1
-            # penalize metaphor openers
-            if re.match(r'(Like |Just as |Much like |Imagine |Think of |Consider )', s):
-                score -= 2
-            # penalize filler
-            if s.startswith(('Absolutely', 'Yes,', 'Indeed')):
-                score -= 1
-            # reward concrete verbs
-            if re.search(r'(creates?|assigns?|computes?|measures?|generates?|produces?|captures?)', s, re.I):
+            # penalize metaphor openers hard
+            if re.match(r'(Like |Just as |Much like |Imagine |Think of |Consider |It\'s akin)', s):
+                score -= 4
+            # penalize filler starters
+            if s.startswith(('Absolutely', 'Yes,', 'Indeed', 'Of course', 'Certainly')):
+                score -= 3
+            # reward concrete action verbs
+            if re.search(r'(creates?|assigns?|computes?|measures?|generates?|produces?|captures?|tracks?|scores?|blends?)', s, re.I):
+                score += 2
+            # reward shorter = punchier (sweet spot 40-80 chars)
+            if 40 <= len(s) <= 80:
                 score += 1
-            scored.append((score, len(s), s))
+            scored.append((score, -len(s), s))  # prefer shorter at same score
 
         if scored:
-            scored.sort(key=lambda x: (-x[0], -x[1]))
+            scored.sort(key=lambda x: (-x[0], x[1]))
             return scored[0][2]
         return sentences[0][:max_len]
 
@@ -197,6 +205,8 @@ class KnowledgeKernel:
         injection = self.extract_injection(chunk)
         if not injection:
             return None, None
+        # clean: no newlines, no trailing fragments
+        injection = injection.replace('\n', ' ').replace('  ', ' ').strip()
         self.mark_used(rowid)
         return injection, chunk
 
@@ -294,16 +304,17 @@ def chain_generate(model, tok, kk, prompt, chain_depth=6,
     t0 = time.time()
 
     # Prime: inject technical definition from essay as start of answer
-    # Skip warmup — it poisons context with random tokens.
-    # Instead: prompt + injection = clean context for first generation.
     first_inj, _ = kk.pick_next(prompt, prefer_source='dario_essay.txt')
     if first_inj:
-        print(f'  [prime] {first_inj[:80]}\n', flush=True)
+        print(f'  [prime] {first_inj[:80]}', flush=True)
         ids = ids + tok.encode(' ' + first_inj)
-    second_inj, _ = kk.pick_next(prompt)
-    if second_inj and second_inj != first_inj:
-        print(f'  [prime 2] {second_inj[:80]}\n', flush=True)
-        ids = ids + tok.encode('\n' + second_inj)
+
+    # Absorption: model processes the prime injection (~100 tokens)
+    # This output is NOT in the narrative — it absorbs the concept.
+    # The chain starts after, when KK resonates with what was absorbed.
+    ids, absorbed_text, _ = generate_segment(
+        model, tok, ids, max_tokens=100, **sample_kwargs)
+    print()
 
     for step in range(chain_depth):
         ids, segment_text, hit_boundary = generate_segment(
@@ -318,8 +329,10 @@ def chain_generate(model, tok, kk, prompt, chain_depth=6,
                               'text': seg_clean[:100]})
             break
 
-        # KK resonates with what model SAID
-        injection, _ = kk.pick_next(segment_text)
+        # KK resonates with TOPIC + what model SAID
+        # Topic keywords anchor the chain, model output steers within topic
+        query_text = prompt + ' ' + segment_text[-200:]
+        injection, _ = kk.pick_next(query_text)
 
         if injection is None:
             chain_log.append({'step': step, 'type': 'kk_exhausted',
