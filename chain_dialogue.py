@@ -29,11 +29,16 @@ from nanochat.janus_gpt import JanusGPT, JanusConfig
 # CONSTANTS
 # ===================================================================
 
-BOS = 32766        # <|output_start|>
-EOS = 32767        # <|output_end|>
-ASST_END = 32763   # <|assistant_end|>
-CTX_WINDOW = 900   # max tokens before trimming in generation
-CTX_TRIM = 500     # trim target for chain steps
+# Chat format tokens (SFT training format)
+BOS = 32759         # <|bos|>
+USER_START = 32760  # <|user_start|>
+USER_END = 32761    # <|user_end|>
+ASST_START = 32762  # <|assistant_start|>
+ASST_END = 32763    # <|assistant_end|>
+# Ban these from generation
+SPECIAL_TOKENS = {32759, 32760, 32761, 32762, 32764, 32765, 32766, 32767}
+CTX_WINDOW = 900
+CTX_TRIM = 500
 
 VOICES = {
     'leo': {
@@ -69,6 +74,10 @@ def sample_token(logits, temperature=0.75, top_k=40, top_p=0.92,
                 logits[tid] /= rep_penalty
             else:
                 logits[tid] *= rep_penalty
+
+    # ban all special tokens except ASST_END (boundary signal)
+    for tid in SPECIAL_TOKENS:
+        logits[tid] = float('-inf')
 
     if temperature > 0:
         logits /= temperature
@@ -237,13 +246,12 @@ def generate_segment(model, tok, ids, max_tokens=200,
                 x = x[:, -CTX_WINDOW:]
 
             logits = model(x)[:, -1, :][0]
-            logits[BOS] = float('-inf')
 
             tid = sample_token(logits, temperature=temperature, top_k=top_k,
                                rep_penalty=rep_penalty, recent_tokens=recent)
 
             # end of thought
-            if tid == EOS or tid == ASST_END:
+            if tid == ASST_END:
                 return ids + out_tokens, ''.join(out_text), True
 
             # repetition detection: 4 identical -> stop
@@ -289,14 +297,17 @@ def chain_generate(model, tok, kk, prompt, chain_depth=6,
     print(f'  CHAIN DIALOGUE -- depth {chain_depth}')
     print('='*60 + '\n')
 
-    if not prompt.startswith('Q:'):
-        prompt = f'Q: {prompt}\nA:'
-    elif '\nA:' not in prompt:
-        prompt += '\nA:'
+    # Strip Q:/A: if user added them — we use proper chat tokens now
+    clean_prompt = prompt
+    if clean_prompt.startswith('Q: '):
+        clean_prompt = clean_prompt[3:]
+    if clean_prompt.endswith('\nA:'):
+        clean_prompt = clean_prompt[:-3]
 
-    ids = [BOS] + tok.encode(prompt)
-    print(f'[seed] {prompt}')
-    print(f'[{len(ids)} tokens]\n')
+    # Proper SFT chat format: [BOS] [user_start] question [user_end] [asst_start]
+    ids = [BOS, USER_START] + tok.encode(clean_prompt) + [USER_END, ASST_START]
+    print(f'[seed] {clean_prompt}')
+    print(f'[{len(ids)} chat tokens]\n')
 
     chain_log = []
     full_narrative = []
@@ -306,15 +317,8 @@ def chain_generate(model, tok, kk, prompt, chain_depth=6,
     # Prime: inject technical definition from essay as start of answer
     first_inj, _ = kk.pick_next(prompt, prefer_source='dario_essay.txt')
     if first_inj:
-        print(f'  [prime] {first_inj[:80]}', flush=True)
-        ids = ids + tok.encode(' ' + first_inj)
-
-    # Absorption: model processes the prime injection (~100 tokens)
-    # This output is NOT in the narrative — it absorbs the concept.
-    # The chain starts after, when KK resonates with what was absorbed.
-    ids, absorbed_text, _ = generate_segment(
-        model, tok, ids, max_tokens=100, **sample_kwargs)
-    print()
+        print(f'  [prime] {first_inj[:80]}\n', flush=True)
+        ids = ids + tok.encode(first_inj)
 
     for step in range(chain_depth):
         ids, segment_text, hit_boundary = generate_segment(
@@ -406,8 +410,6 @@ def dialogue_mode(model, tok, kk, voice_name='leo', **sample_kwargs):
             break
 
         turn += 1
-        prompt = f'Q: {user_input}\nA:'
-        prompt_ids = tok.encode(prompt)
 
         query_text = user_input
         if prev_answer:
@@ -417,13 +419,14 @@ def dialogue_mode(model, tok, kk, voice_name='leo', **sample_kwargs):
 
         if injection:
             print(f'  [kk] {injection[:80]}')
-            inject_ids = tok.encode(injection + '\n')
-            ids = context_ids + inject_ids + prompt_ids
-        else:
-            ids = context_ids + prompt_ids
+
+        # Build proper chat format
+        ids = [BOS, USER_START] + tok.encode(user_input) + [USER_END, ASST_START]
+        if injection:
+            ids = ids + tok.encode(injection + ' ')
 
         if len(ids) > CTX_TRIM:
-            ids = [BOS] + ids[-(CTX_TRIM - 1):]
+            ids = [BOS, USER_START] + ids[-(CTX_TRIM - 3):] + [USER_END, ASST_START]
 
         print(f'\n{voice_name}> ', end='', flush=True)
         ids, text, _ = generate_segment(
@@ -447,8 +450,8 @@ def explore_mode(model, tok, kk, seed, voice_name='leo',
     print(f'  EXPLORE -- {voice_name} leads, KK follows')
     print('='*60 + '\n')
 
-    prompt = f'Q: {seed}\nA: Let me think about this.'
-    ids = [BOS] + tok.encode(prompt)
+    ids = [BOS, USER_START] + tok.encode(seed) + [USER_END, ASST_START]
+    ids = ids + tok.encode('Let me think about this. ')
     kk.reset()
     print(f'[seed] {seed}\n')
 
