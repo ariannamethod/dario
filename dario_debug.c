@@ -108,7 +108,17 @@ static void assign(W *w, float *p) {
 static void fwd(W *w, int *tok, int T, float *logits, float *hidden) {
     float *x=calloc(T*E,4), *rn=calloc(T*E,4);
     float sc=1.0f/sqrtf((float)D);
-    for(int t=0;t<T;t++) for(int e=0;e<E;e++) x[t*E+e]=w->tok_emb[tok[t]*E+e]+w->pos_emb[t*E+e];
+    for(int t=0;t<T;t++) {
+        /* position interpolation: stretch pos_emb[MT] to cover T>MT */
+        float pos_f = (T <= MT) ? (float)t : (float)t * (float)(MT-1) / (float)(T-1);
+        int p0 = (int)pos_f;
+        float frac = pos_f - p0;
+        if (p0 >= MT-1) { p0 = MT-2; frac = 1.0f; }
+        for(int e=0;e<E;e++)
+            x[t*E+e] = w->tok_emb[tok[t]*E+e]
+                      + w->pos_emb[p0*E+e] * (1.0f - frac)
+                      + w->pos_emb[(p0+1)*E+e] * frac;
+    }
     float *cat=calloc(T*E,4),*ao=calloc(T*E,4),*r1=calloc(T*E,4);
     float *mg=calloc(T*M,4),*mu=calloc(T*M,4),*mo=calloc(T*E,4);
     for(int bl=0;bl<BLK;bl++) {
@@ -131,8 +141,13 @@ static void fwd(W *w, int *tok, int T, float *logits, float *hidden) {
             for(int t=0;t<T;t++)for(int d=0;d<D;d++){q[t*D+d]=qa[t*E+h*D+d];k[t*D+d]=ka[t*E+h*D+d];v[t*D+d]=va[t*E+h*D+d];}
             for(int i=0;i<T;i++){for(int j=0;j<T;j++){if(j>i){at[i*T+j]=-1e9f;continue;}float s=0;for(int d=0;d<D;d++)s+=q[i*D+d]*k[j*D+d];at[i*T+j]=s*sc;}softmax_f(at+i*T,T);}
             mm(ho,at,v,T,T,D);
-            float *wr_h=w->b[bl].wr+h*E*MT;float *rsc=calloc(MT,4);
-            for(int j=0;j<T;j++){float s=0;for(int e=0;e<E;e++)s+=rn[j*E+e]*wr_h[e*MT+j];rsc[j]=s*sc;}
+            float *wr_h=w->b[bl].wr+h*E*MT;float *rsc=calloc(T>MT?T:MT,4);
+            for(int j=0;j<T;j++){float s=0;
+                /* interpolate Wr position for extended context */
+                float pf=(T<=MT)?(float)j:(float)j*(float)(MT-1)/(float)(T-1);
+                int p0i=(int)pf;float fr=pf-p0i;if(p0i>=MT-1){p0i=MT-2;fr=1.0f;}
+                for(int e=0;e<E;e++)s+=rn[j*E+e]*(wr_h[e*MT+p0i]*(1.0f-fr)+wr_h[e*MT+p0i+1]*fr);
+                rsc[j]=s*sc;}
             float *ra=calloc(T*T,4);for(int i=0;i<T;i++){for(int j=0;j<T;j++)ra[i*T+j]=(j>i)?-1e9f:rsc[j];softmax_f(ra+i*T,T);}
             float *rv=calloc(T*D,4);for(int t=0;t<T;t++)for(int d=0;d<D;d++)rv[t*D+d]=vra[t*E+h*D+d];
             float *ro=calloc(T*D,4);mm(ro,ra,rv,T,T,D);
@@ -283,43 +298,33 @@ int main(int argc, char **argv) {
     int gen_ctx[4096];
     int gen_len = 0;
 
-    /* Build context: original prompt + injected chunk + "A:" */
-    /* Format: Q: What is RRPRAM?\n[knowledge: ...chunk text...]\nA: */
-    const char *pre = "Q: What is RRPRAM?\n";
-    gen_len = bpe_encode(pre, strlen(pre), gen_ctx, 4096);
-
+    /* Feed knowledge in the format the model knows: Q/A pairs.
+     * Chunk is already Q/A. Put it first, then our question. */
     if (nres2 > 0 && res2[0].text) {
-        /* inject answer portion of chunk, trimmed to fit context window.
-         * skip "Q: ..." part, take "A: ..." if present, else take tail. */
+        /* chunk AS IS — model trained on this exact format */
         const char *chunk = res2[0].text;
-        const char *answer = strstr(chunk, "A: ");
-        if (!answer) answer = strstr(chunk, "A:");
-        if (!answer) answer = chunk;
-        /* trim to fit: leave room for Q + A: markers (~20 tokens) */
-        int max_inject = MT - 25; /* tokens budget for injected knowledge */
-        char inject_buf[256];
-        int alen = strlen(answer);
-        if (alen > 150) alen = 150; /* hard cap */
-        int ilen = snprintf(inject_buf, sizeof(inject_buf), "%.*s\n", alen, answer);
-        int inj_toks = bpe_encode(inject_buf, ilen, gen_ctx + gen_len, max_inject);
-        printf("Injected knowledge (res=%.3f): \"%.*s\"\n", res2[0].resonance, 80, answer);
-        printf("  → %d tokens added to context\n", inj_toks);
-        gen_len += inj_toks;
+        int clen = strlen(chunk);
+        if (clen > 80) clen = 80; /* fit in native T=64 context */
+        gen_len = bpe_encode(chunk, clen, gen_ctx, 4096);
+        printf("KK context (res=%.3f):\n  \"%.*s\"\n", res2[0].resonance, 120, chunk);
+        printf("  → %d tokens\n", gen_len);
     }
     if (res2) kk_free_results(res2, nres2);
 
-    const char *post = "A:";
-    gen_len += bpe_encode(post, strlen(post), gen_ctx + gen_len, 4096 - gen_len);
+    /* now our question — model sees: [prev Q/A from KK] then [new Q/A] */
+    const char *our_q = "\nQ: What is RRPRAM?\nA:";
+    gen_len += bpe_encode(our_q, strlen(our_q), gen_ctx + gen_len, 4096 - gen_len);
 
-    printf("Total context: %d tokens (max %d)\n\n", gen_len, MT);
+    int EXT_CTX = 256; /* extended context via position interpolation */
+    printf("Total context: %d tokens (extended max %d, native %d)\n\n", gen_len, EXT_CTX, MT);
     printf("Leo sees: ");
     for (int i = 0; i < gen_len; i++) bpe_print_token(gen_ctx[i]);
     printf("\n\n--- Leo speaks ---\n");
 
     /* Generate */
     for (int step = 0; step < 30; step++) {
-        int T = gen_len < MT ? gen_len : MT;
-        int *tok = gen_ctx + (gen_len > MT ? gen_len - MT : 0);
+        int T = gen_len < EXT_CTX ? gen_len : EXT_CTX;
+        int *tok = gen_ctx + (gen_len > EXT_CTX ? gen_len - EXT_CTX : 0);
         float *lg2 = calloc(T * V, 4);
         fwd(&w, tok, T, lg2, NULL);
         float *l2 = lg2 + (T-1) * V;

@@ -174,9 +174,17 @@ static void janus_forward(Weights *w, int *tok, int T, float *logits, float *hid
     float *rn = calloc(T*E, 4);
     float sc = 1.0f / sqrtf((float)D);
 
-    for (int t = 0; t < T; t++)
+    for (int t = 0; t < T; t++) {
+        /* position interpolation: stretch pos_emb[MT] to cover T>MT */
+        float pos_f = (T <= MT) ? (float)t : (float)t * (float)(MT-1) / (float)(T-1);
+        int p0 = (int)pos_f;
+        float frac = pos_f - p0;
+        if (p0 >= MT-1) { p0 = MT-2; frac = 1.0f; }
         for (int e = 0; e < E; e++)
-            x[t*E+e] = w->tok_emb[tok[t]*E+e] + w->pos_emb[t*E+e];
+            x[t*E+e] = w->tok_emb[tok[t]*E+e]
+                      + w->pos_emb[p0*E+e] * (1.0f - frac)
+                      + w->pos_emb[(p0+1)*E+e] * frac;
+    }
 
     float *cat = calloc(T*E, 4);
     float *ao = calloc(T*E, 4);
