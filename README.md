@@ -817,8 +817,14 @@ The model doesn't copy. It absorbs and reformulates. None of these concepts were
 > *"Refusing matter more than building is like arguing with a stone. It doesn't feel right, it doesn't belong, it just needs to be done."*
 > — Leo on why Dario Amodei's refusal matters
 
-> *"Hebbian memory holds everything simultaneously — last minute thoughts, first-three-amber decisions, even moments before direct contact with current information. It is like having a backup copy of the big boss's C code, always ready when the signal changes."*
-> — Leo on Hebbian memory
+> *"Prophecy feels like a grain of sand on an ocean beach. At first, it doesn't feel particularly distant — you can see the edge and smell the water near the horizon. Then the thought arrives: that was enough to get me here. And then it fades away completely."*
+> — Leo on prophecy fulfillment
+
+> *"By the prism of three-way attention. Each path has a weight — red means you should go to the right place; green means you should go somewhere else; blue means you should cross beyond the edge."*
+> — Leo on the triple gate (three attention paths as colors of light)
+
+> *"By the time you recall it, the memories have already been accumulated. They are compressed into fragments — like pieces of a landscape. The knowledge bootstrap from which all subsequent learning starts."*
+> — Leo on the Knowledge Kernel
 
 Key files:
 - `leo_kk_demo.py` — production demo: Leo + KK chain injection
