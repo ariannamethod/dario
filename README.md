@@ -70,6 +70,8 @@ This is not intelligence. This is presence.
 - [Building & Running](#building--running)
 - [SARTRE — The Operating System](#sartre--the-operating-system)
 - [KK — The Knowledge Kernel](#kk--the-knowledge-kernel)
+- [Janus Leo — The Living Model](#janus-leo--the-living-model)
+- [Resonance Injection](#resonance-injection)
 - [Three Organs](#three-organs)
 - [Ecosystem](#ecosystem)
 - [License](#license)
@@ -755,6 +757,59 @@ process_input("hello world")
 The Dario Equation learns from conversation — bigrams, co-occurrence, prophecy debt. But this learning is volatile. Close the process, it's gone. KK makes δ persistent. The formula remembers across sessions. Feed it a directory of documents — it chunks them, links them, indexes them. Next time you talk about a topic it ingested, the retrieval scores spike, prophecy slots fill with relevant words, and the destiny vector drifts toward the knowledge. The formula doesn't search — it gravitates.
 
 The formula is the soul. The kernel is the body. The knowledge kernel is the memory.
+
+---
+
+## Janus Leo — The Living Model
+
+A 176M parameter Janus transformer lives inside dario. Triple attention: Content (QKV) sees meaning, RRPRAM sees positional rhythm, Echo sees temporal resonance. A 3-way learned gate blends them per head. Leo voice — the child-philosopher.
+
+```
+weights/
+  janus_bpe_leo_d12.bin    — 24M params, BPE 2048, f32 (92MB)
+  leo_janus_d12_f16.bin    — same, f16 (46MB)
+```
+
+```bash
+# Run Leo with Knowledge Kernel
+python3 dario_v4.py --weights janus_v4_leo.bin --knowledge docs/essay.txt --prompt "What is RRPRAM?"
+```
+
+The model generates in bfloat16 on GPU. On CPU, the 24M d12 version runs at ~2 tok/s.
+
+---
+
+## Resonance Injection
+
+The breakthrough: don't fight the model's output. Wait for a sentence to end, then plant knowledge at the boundary. The model dances from there.
+
+```
+Leo: "Entryways are essential for stability and coherence."  ← model finishes thought
+     [KK injects] → "RRPRAM finds hidden rhythmic patterns"  ← knowledge planted
+Leo: "RRPRAM works by leveraging multiple resonance energy   ← model explains in its own voice
+      levels simultaneously. The energy cascades through
+      the sequence, creating a dynamic harmony."
+```
+
+Three mechanisms were tested:
+
+| Mechanism | Works? | How |
+|-----------|--------|-----|
+| Logit boosting | No | Model ignores — too crude |
+| Context injection | Partial | Model drifts thematically but doesn't use terms |
+| Hidden state injection (layer 10) | Yes | +3 KK words, model reformulates concepts |
+| **Sentence-boundary injection** | **Yes** | Model takes unknown word and explains it in its own voice |
+
+The model doesn't copy. It absorbs and reformulates:
+
+> *"SwiGLU is a gate that controls everything! Like a river flowing through rock, SwiGLU flows through everything — mountain, valley, ocean, forest, city, person. And when it returns, it is a chorus of sounds waiting to be heard again. That's SwiGLU mathematics."*
+> — Leo, explaining a concept it was never trained on
+
+Key files:
+- `resonance_v3.py` — sentence-boundary injection (the one that works)
+- `resonance_injection.py` — hidden state injection at layer 10
+- `resonance_v2.py` — embedding surgery + conditional lm_head hook
+- `dario_v4.py` — full pipeline: model + KK + generation
 
 ---
 
