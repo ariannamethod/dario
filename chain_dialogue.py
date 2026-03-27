@@ -219,6 +219,43 @@ class KnowledgeKernel:
         self.mark_used(rowid)
         return injection, chunk
 
+    def absorb(self, text, source='model'):
+        """Bi-directional: model generates text, KK absorbs it.
+
+        The model's output becomes knowledge for future queries.
+        This is what makes dario alive: the organism remembers
+        what it said and builds on it.
+
+        Dedup: skips sentences too similar to existing chunks.
+        """
+        if len(text.strip()) < 30:
+            return 0
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if len(s.strip()) > 30]
+        added = 0
+        for s in sentences:
+            # dedup: check if very similar chunk already exists
+            words = set(re.findall(r'[a-zA-Z]{4,}', s.lower()))
+            if len(words) < 3:
+                continue
+            # quick FTS check for overlap
+            fts_q = ' AND '.join(list(words)[:5])
+            try:
+                cur = self.db.execute(
+                    'SELECT text FROM chunks WHERE chunks MATCH ? LIMIT 1', (fts_q,))
+                existing = cur.fetchone()
+                if existing:
+                    # too similar, skip
+                    continue
+            except Exception:
+                pass
+            self.db.execute('INSERT INTO chunks(text, source) VALUES(?, ?)',
+                            (s[:600], source))
+            added += 1
+        if added:
+            self.db.commit()
+            self.n_chunks += added
+        return added
+
     def reset(self):
         self.used.clear()
 
@@ -327,6 +364,10 @@ def chain_generate(model, tok, kk, prompt, chain_depth=6,
         seg_clean = segment_text.replace('<|bos|>', '').strip()
         if seg_clean:
             full_narrative.append(seg_clean)
+            # Bi-directional: KK absorbs what model said
+            n_absorbed = kk.absorb(seg_clean, source='model')
+            if n_absorbed:
+                print(f'  [kk+{n_absorbed}]', end='', flush=True)
 
         if not hit_boundary:
             chain_log.append({'step': step, 'type': 'max_tokens',
@@ -389,15 +430,24 @@ def chain_generate(model, tok, kk, prompt, chain_depth=6,
 # ===================================================================
 
 def dialogue_mode(model, tok, kk, voice_name='leo', **sample_kwargs):
-    """Interactive: you speak, KK resonates, Leo answers."""
+    """Interactive dialogue with bi-directional KK.
+
+    Each turn:
+    1. You ask something
+    2. KK finds relevant knowledge (from essay + model's previous answers)
+    3. Model generates with knowledge at the boundary
+    4. KK ABSORBS what the model said — future turns are enriched
+    5. The organism remembers its own words
+    """
     print('\n' + '='*60)
     print(f'  DIALOGUE -- {voice_name} + Knowledge Kernel')
+    print(f'  KK: {kk.n_chunks} chunks. Model output feeds back into KK.')
     print('  Type your question. "quit" to exit.')
     print('='*60 + '\n')
 
-    context_ids = [BOS]
     turn = 0
     prev_answer = ''
+    history_ids = []  # accumulate multi-turn context
 
     while True:
         try:
@@ -411,6 +461,7 @@ def dialogue_mode(model, tok, kk, voice_name='leo', **sample_kwargs):
 
         turn += 1
 
+        # KK query: user question + previous model answer
         query_text = user_input
         if prev_answer:
             query_text = f'{user_input} {prev_answer[-200:]}'
@@ -420,23 +471,42 @@ def dialogue_mode(model, tok, kk, voice_name='leo', **sample_kwargs):
         if injection:
             print(f'  [kk] {injection[:80]}')
 
-        # Build proper chat format
-        ids = [BOS, USER_START] + tok.encode(user_input) + [USER_END, ASST_START]
+        # Build multi-turn context: previous turns + current
+        # Each turn: [user_start] text [user_end] [asst_start] answer [asst_end]
+        current_turn = [USER_START] + tok.encode(user_input) + [USER_END, ASST_START]
         if injection:
-            ids = ids + tok.encode(injection + ' ')
+            current_turn = current_turn + tok.encode(injection + ' ')
 
+        ids = [BOS] + history_ids + current_turn
+
+        # trim from the LEFT (oldest turns) if too long
         if len(ids) > CTX_TRIM:
-            ids = [BOS, USER_START] + ids[-(CTX_TRIM - 3):] + [USER_END, ASST_START]
+            ids = [BOS] + ids[-(CTX_TRIM - 1):]
 
         print(f'\n{voice_name}> ', end='', flush=True)
         ids, text, _ = generate_segment(
             model, tok, ids, max_tokens=250, **sample_kwargs)
         print()
 
-        prev_answer = text
-        context_ids = ids
+        # Bi-directional: KK absorbs model's answer
+        text_clean = text.replace('<|bos|>', '').strip()
+        if text_clean:
+            n = kk.absorb(text_clean, source=f'{voice_name}_turn{turn}')
+            if n:
+                print(f'  [kk absorbed {n} chunks from {voice_name}]')
 
-    print(f'\n[dialogue] {turn} turns')
+        prev_answer = text_clean
+
+        # Add this turn to history for multi-turn context
+        answer_ids = tok.encode(text_clean) if text_clean else []
+        history_ids += [USER_START] + tok.encode(user_input) + [USER_END]
+        history_ids += [ASST_START] + answer_ids + [ASST_END]
+
+        # Keep history manageable
+        if len(history_ids) > 300:
+            history_ids = history_ids[-300:]
+
+    print(f'\n[dialogue] {turn} turns, kk now has {kk.n_chunks} chunks')
 
 
 # ===================================================================
