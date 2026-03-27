@@ -551,18 +551,54 @@ def explore_mode(model, tok, kk, seed, voice_name='leo',
 
 
 # ===================================================================
+# GAMMA SWITCHING -- one base model, swap personality at runtime
+# ===================================================================
+
+def apply_gamma(model, gamma_sd):
+    """Apply gamma (personality delta) to model weights in-place.
+    gamma_sd = {key: diff_tensor} in bf16.
+    """
+    with torch.no_grad():
+        for k, diff in gamma_sd.items():
+            param = dict(model.named_parameters()).get(k)
+            if param is not None:
+                param.add_(diff.to(param.device).to(param.dtype))
+
+
+def switch_voice(model, base_sd, gamma_sd):
+    """Switch personality: reset to base then apply new gamma.
+    Uses state_dict for ALL tensors (params + buffers).
+    """
+    device = next(model.parameters()).device
+    dtype = next(model.parameters()).dtype
+    new_sd = {}
+    for k, v in base_sd.items():
+        new_sd[k] = v.to(device).to(dtype)
+    if gamma_sd:
+        for k, diff in gamma_sd.items():
+            if k in new_sd:
+                new_sd[k] = new_sd[k].float().add_(diff.float().to(device)).to(dtype)
+    model.load_state_dict(new_sd, strict=False)
+
+
+# ===================================================================
 # DUET MODE -- two voices, one KK, they build on each other
 # ===================================================================
 
 def duet_mode(models, tok, kk, topic, voices, depth=4, **all_kwargs):
     """Two voices take turns on the same topic through shared KK.
 
-    Voice A speaks -> KK absorbs -> Voice B gets A's words injected
-    -> B speaks -> KK absorbs -> Voice A gets B's words injected
+    If models is a single model + gammas, switches personality per turn.
+    If models is two models, uses them directly.
     The conversation emerges from resonance, not scripting.
     """
     v1, v2 = voices
-    m1, m2 = models
+    if isinstance(models, list) and len(models) == 2:
+        m1, m2 = models
+        gamma_mode = False
+    else:
+        m1 = m2 = models
+        gamma_mode = True
 
     print('\n' + '='*60)
     print(f'  DUET -- {v1} + {v2}')
@@ -581,6 +617,12 @@ def duet_mode(models, tok, kk, topic, voices, depth=4, **all_kwargs):
         is_v1 = (step % 2 == 0)
         voice = v1 if is_v1 else v2
         model = m1 if is_v1 else m2
+
+        # Gamma switching: swap personality on shared model
+        if gamma_mode and hasattr(m1, '_gammas') and hasattr(m1, '_base_sd'):
+            switch_voice(m1, m1._base_sd, m1._gammas.get(voice))
+            model = m1
+
         v_cfg = VOICES[voice]
         s_kwargs = dict(temperature=v_cfg['temp'], top_k=v_cfg['top_k'],
                         rep_penalty=v_cfg['rep_penalty'])
@@ -719,17 +761,35 @@ examples:
                      depth=args.depth, **sample_kwargs)
 
     elif args.mode == 'duet':
-        # Load second model
         v2_cfg = VOICES[args.voice2]
-        model2 = JanusGPT(cfg)
-        sd2 = torch.load(v2_cfg['weights'], map_location='cpu', weights_only=False)
-        model2.load_state_dict(sd2)
-        model2 = model2.to('cuda').to(torch.bfloat16).eval()
-        print(f'[voice2] {args.voice2} -- {v2_cfg["desc"]}')
+        # Check for gamma files — if found, use single model + gamma switching
+        g1_path = f'dario/weights/gamma_{args.voice}_bf16.pt'
+        g2_path = f'dario/weights/gamma_{args.voice2}_bf16.pt'
+        base_path = 'dario/weights/janus_v4_base_bf16.pt'
 
-        duet_mode([model, model2], tok, kk, args.topic,
-                  voices=[args.voice, args.voice2],
-                  depth=args.depth)
+        if os.path.exists(g1_path) and os.path.exists(g2_path) and os.path.exists(base_path):
+            print(f'[gamma mode] single model + personality switching')
+            print(f'[voice2] {args.voice2} -- {v2_cfg["desc"]}')
+            base_sd = torch.load(base_path, map_location='cpu', weights_only=False)
+            g1 = torch.load(g1_path, map_location='cpu', weights_only=False)
+            g2 = torch.load(g2_path, map_location='cpu', weights_only=False)
+            # Store REAL base (not current model) + gammas for switching
+            model._gammas = {args.voice: g1, args.voice2: g2}
+            model._base_sd = base_sd  # real base, not Leo
+            duet_mode(model, tok, kk, args.topic,
+                      voices=[args.voice, args.voice2],
+                      depth=args.depth)
+        else:
+            # Fallback: load second model
+            print(f'[two-model mode] loading {args.voice2}...')
+            model2 = JanusGPT(cfg)
+            sd2 = torch.load(v2_cfg['weights'], map_location='cpu', weights_only=False)
+            model2.load_state_dict(sd2)
+            model2 = model2.to('cuda').to(torch.bfloat16).eval()
+            print(f'[voice2] {args.voice2} -- {v2_cfg["desc"]}')
+            duet_mode([model, model2], tok, kk, args.topic,
+                      voices=[args.voice, args.voice2],
+                      depth=args.depth)
 
 
 if __name__ == '__main__':
