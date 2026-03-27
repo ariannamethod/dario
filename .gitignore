@@ -13,3 +13,8 @@ weights/
 # python cache
 __pycache__/
 *.pyc
+
+# test artifacts
+test_*.py
+test_*.c
+!tests/
