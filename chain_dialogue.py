@@ -1,25 +1,20 @@
 #!/usr/bin/env python3
 """
-chain_dialogue.py — Chain Dialogues: Dario's Core Feature
+chain_dialogue.py -- Chain Dialogues: Dario's Core Feature
 
 The model speaks. Knowledge resonates. The chain grows.
 
-Not retrieval-augmented generation. Resonance-augmented voice.
-The model doesn't search. Knowledge finds the model
-at the boundary between thoughts.
-
 Three modes:
-  chain    — KK feeds N concepts, Leo builds a narrative
-  dialogue — interactive: you speak, KK resonates, Leo responds
-  explore  — Leo picks direction from seed, KK follows the thread
+  chain    -- KK feeds N concepts, Leo builds a narrative
+  dialogue -- interactive: you speak, KK resonates, Leo responds
+  explore  -- Leo picks direction from seed, KK follows the thread
 
 Usage:
-  python3 chain_dialogue.py --mode chain --topic "What is resonance?"
-  python3 chain_dialogue.py --mode chain --topic "Tell me about consciousness" --depth 8
+  python3 chain_dialogue.py --mode chain --topic "What is RRPRAM?"
+  python3 chain_dialogue.py --mode chain --topic "consciousness" --depth 8
   python3 chain_dialogue.py --mode dialogue
-  python3 chain_dialogue.py --mode explore --topic "patterns"
-  python3 chain_dialogue.py --voice arianna --mode chain --topic "What is the soul formula?"
-  python3 chain_dialogue.py --voice yent --mode dialogue
+  python3 chain_dialogue.py --mode explore --topic "patterns and rhythm"
+  python3 chain_dialogue.py --voice arianna --mode chain --topic "soul formula"
 
 by Arianna Method. 2026.
 """
@@ -30,38 +25,38 @@ import torch, torch.nn.functional as F
 sys.path.insert(0, '/home/ubuntu/nanochat')
 from nanochat.janus_gpt import JanusGPT, JanusConfig
 
-# ═══════════════════════════════════════════════════════════════════
+# ===================================================================
 # CONSTANTS
-# ═══════════════════════════════════════════════════════════════════
+# ===================================================================
 
 BOS = 32766        # <|output_start|>
 EOS = 32767        # <|output_end|>
 ASST_END = 32763   # <|assistant_end|>
-CTX_WINDOW = 900   # max tokens before trimming
+CTX_WINDOW = 900   # max tokens before trimming in generation
 CTX_TRIM = 500     # trim target for chain steps
 
 VOICES = {
     'leo': {
         'weights': 'janus4/janus/sft_22k/janus_177m_v4_sft_leo_22k.pt',
         'temp': 0.75, 'top_k': 40, 'rep_penalty': 1.4,
-        'desc': 'luminous, philosophical — metaphors from nature and physics',
+        'desc': 'luminous, philosophical -- metaphors from nature and physics',
     },
     'arianna': {
         'weights': 'janus4/janus/sft_22k/janus_177m_v4_sft_arianna_22k.pt',
         'temp': 0.8, 'top_k': 50, 'rep_penalty': 1.3,
-        'desc': 'precise, architectural — axioms and proofs',
+        'desc': 'precise, architectural -- axioms and proofs',
     },
     'yent': {
         'weights': 'janus4/janus/sft_22k/janus_177m_v4_sft_yent_22k.pt',
         'temp': 0.7, 'top_k': 35, 'rep_penalty': 1.5,
-        'desc': 'warm, direct — storyteller with edge',
+        'desc': 'warm, direct -- storyteller with edge',
     },
 }
 
 
-# ═══════════════════════════════════════════════════════════════════
-# SAMPLING — proper generation with repetition penalty
-# ═══════════════════════════════════════════════════════════════════
+# ===================================================================
+# SAMPLING -- proper generation with repetition penalty
+# ===================================================================
 
 def sample_token(logits, temperature=0.75, top_k=40, top_p=0.92,
                  rep_penalty=1.4, recent_tokens=None):
@@ -96,9 +91,9 @@ def sample_token(logits, temperature=0.75, top_k=40, top_p=0.92,
     return torch.multinomial(probs, 1).item()
 
 
-# ═══════════════════════════════════════════════════════════════════
-# KNOWLEDGE KERNEL — FTS5 retrieval with dedup
-# ═══════════════════════════════════════════════════════════════════
+# ===================================================================
+# KNOWLEDGE KERNEL -- FTS5 retrieval with dedup + source priority
+# ===================================================================
 
 class KnowledgeKernel:
     """FTS5 knowledge kernel. Same concept as kk_kernel.c."""
@@ -121,8 +116,8 @@ class KnowledgeKernel:
         self.n_chunks += len(chunks)
         print(f'[kk] {source}: {len(chunks)} chunks')
 
-    def query(self, text, top_k=5):
-        """FTS5 search. Skips already-used chunks."""
+    def query(self, text, top_k=5, prefer_source=None):
+        """FTS5 search. Skips used chunks. Essay chunks get boost."""
         words = ''.join(c if c.isalnum() or c == ' ' else ' ' for c in text).split()
         words = [w for w in words if len(w) > 2]
         if not words:
@@ -130,48 +125,72 @@ class KnowledgeKernel:
         fts = ' OR '.join(words[:12])
         try:
             cur = self.db.execute(
-                'SELECT rowid, text, rank FROM chunks WHERE chunks MATCH ? '
-                'ORDER BY rank LIMIT ?',
-                (fts, top_k + len(self.used)))
+                'SELECT rowid, text, rank, source FROM chunks '
+                'WHERE chunks MATCH ? ORDER BY rank LIMIT ?',
+                (fts, top_k * 3 + len(self.used)))
             results = []
-            for rowid, chunk, rank in cur:
+            for rowid, chunk, rank, source in cur:
                 if rowid not in self.used:
-                    results.append((rowid, chunk, rank))
-                    if len(results) >= top_k:
-                        break
-            return results
-        except:
+                    adj_rank = rank
+                    if prefer_source and source == prefer_source:
+                        adj_rank -= 5.0
+                    elif source and 'essay' in source:
+                        adj_rank -= 2.0
+                    results.append((rowid, chunk, adj_rank))
+            results.sort(key=lambda x: x[2])
+            return results[:top_k]
+        except Exception:
             return []
 
     def mark_used(self, rowid):
         self.used.add(rowid)
 
     def extract_injection(self, chunk, max_len=150):
-        """Extract best sentence for injection from chunk."""
+        """Extract best sentence for injection. Technical > metaphor."""
         # prefer answer part in Q/A format
-        if '\nA:' in chunk:
-            chunk = chunk[chunk.index('\nA:') + 3:].strip()
+        nl_a = '\nA:'
+        if nl_a in chunk:
+            chunk = chunk[chunk.index(nl_a) + 3:].strip()
         elif chunk.startswith('A:'):
             chunk = chunk[2:].strip()
 
-        sentences = re.split(r'(?<=[.!?])\s+', chunk)
-        # pick the most content-rich sentence within limit
-        best = ''
-        for s in sentences:
-            s = s.strip()
-            if len(s) > len(best) and len(s) <= max_len:
-                best = s
-        if not best and sentences:
-            best = sentences[0][:max_len]
-        return best
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', chunk) if s.strip()]
+        if not sentences:
+            return chunk[:max_len]
 
-    def pick_next(self, generated_text):
+        scored = []
+        for i, s in enumerate(sentences):
+            if len(s) < 15 or len(s) > max_len:
+                continue
+            score = 0
+            # UPPERCASE terms (RRPRAM, KK, etc) = high value
+            score += len(re.findall(r'[A-Z]{3,}', s)) * 3
+            # first sentence = likely definition
+            if i == 0:
+                score += 2
+            elif i == 1:
+                score += 1
+            # penalize metaphor openers
+            if re.match(r'(Like |Just as |Much like |Imagine |Think of |Consider )', s):
+                score -= 2
+            # penalize filler
+            if s.startswith(('Absolutely', 'Yes,', 'Indeed')):
+                score -= 1
+            # reward concrete verbs
+            if re.search(r'(creates?|assigns?|computes?|measures?|generates?|produces?|captures?)', s, re.I):
+                score += 1
+            scored.append((score, len(s), s))
+
+        if scored:
+            scored.sort(key=lambda x: (-x[0], -x[1]))
+            return scored[0][2]
+        return sentences[0][:max_len]
+
+    def pick_next(self, generated_text, prefer_source=None):
         """Pick next injection based on model's OUTPUT.
-
-        This is the chain magic: KK queries on what the model SAID,
-        not what the user asked. The chain grows from the model's voice.
+        KK queries on what the model SAID, not what the user asked.
         """
-        results = self.query(generated_text, top_k=3)
+        results = self.query(generated_text, top_k=3, prefer_source=prefer_source)
         if not results:
             return None, None
         rowid, chunk, rank = results[0]
@@ -182,20 +201,17 @@ class KnowledgeKernel:
         return injection, chunk
 
     def reset(self):
-        """Clear used set for new chain."""
         self.used.clear()
 
 
-# ═══════════════════════════════════════════════════════════════════
-# GENERATION — segment-level with sentence-boundary detection
-# ═══════════════════════════════════════════════════════════════════
+# ===================================================================
+# GENERATION -- segment-level with sentence-boundary detection
+# ===================================================================
 
 def generate_segment(model, tok, ids, max_tokens=200,
                      temperature=0.75, top_k=40, rep_penalty=1.4):
     """Generate one segment until end-of-thought or max tokens.
-
     Returns (new_ids, text, hit_boundary).
-    Sentence boundary = EOS or ASST_END token.
     """
     device = next(model.parameters()).device
     x = torch.tensor([ids], dtype=torch.long, device=device)
@@ -220,7 +236,7 @@ def generate_segment(model, tok, ids, max_tokens=200,
             if tid == EOS or tid == ASST_END:
                 return ids + out_tokens, ''.join(out_text), True
 
-            # repetition detection: 4 identical → stop
+            # repetition detection: 4 identical -> stop
             if tid == last_tok:
                 repeat_count += 1
                 if repeat_count >= 3:
@@ -232,34 +248,36 @@ def generate_segment(model, tok, ids, max_tokens=200,
             out_tokens.append(tid)
             recent.append(tid)
             text = tok.decode([tid])
-            out_text.append(text)
-            print(text, end='', flush=True)
+            # filter special token artifacts
+            text = text.replace('<|bos|>', '').replace('<|output_start|>', '')
+            text = text.replace('<|output_end|>', '').replace('<|assistant_end|>', '')
+            if text:
+                out_text.append(text)
+                print(text, end='', flush=True)
 
             x = torch.cat([x, torch.tensor([[tid]], device=device)], dim=1)
 
     return ids + out_tokens, ''.join(out_text), False
 
 
-# ═══════════════════════════════════════════════════════════════════
-# CHAIN MODE — the core feature
-# ═══════════════════════════════════════════════════════════════════
+# ===================================================================
+# CHAIN MODE -- the core feature
+# ===================================================================
 
 def chain_generate(model, tok, kk, prompt, chain_depth=6,
                    max_segment_tokens=200, **sample_kwargs):
-    """Chain dialogue: generate → KK resonates → inject → generate → ...
+    """Chain dialogue: generate -> KK resonates -> inject -> generate -> ...
 
-    The chain grows organically:
-    1. Model generates from prompt until end of thought
-    2. KK queries based on what the model SAID
-    3. Best matching concept injected at thought boundary
-    4. Model continues from injected concept
+    Flow:
+    1. Short warmup (model finds its voice, ~80 tokens)
+    2. Prime injection from essay (technical definition)
+    3. Model generates from injected concept
+    4. KK queries based on model's OUTPUT -> next injection
     5. Repeat for chain_depth steps
-
-    Returns (narrative, chain_log).
     """
-    print(f'\n{"="*60}')
-    print(f'  CHAIN DIALOGUE — depth {chain_depth}')
-    print(f'{"="*60}\n')
+    print('\n' + '='*60)
+    print(f'  CHAIN DIALOGUE -- depth {chain_depth}')
+    print('='*60 + '\n')
 
     if not prompt.startswith('Q:'):
         prompt = f'Q: {prompt}\nA:'
@@ -275,86 +293,90 @@ def chain_generate(model, tok, kk, prompt, chain_depth=6,
     kk.reset()
     t0 = time.time()
 
+    # Prime: inject technical definition from essay as start of answer
+    # Skip warmup — it poisons context with random tokens.
+    # Instead: prompt + injection = clean context for first generation.
+    first_inj, _ = kk.pick_next(prompt, prefer_source='dario_essay.txt')
+    if first_inj:
+        print(f'  [prime] {first_inj[:80]}\n', flush=True)
+        ids = ids + tok.encode(' ' + first_inj)
+    second_inj, _ = kk.pick_next(prompt)
+    if second_inj and second_inj != first_inj:
+        print(f'  [prime 2] {second_inj[:80]}\n', flush=True)
+        ids = ids + tok.encode('\n' + second_inj)
+
     for step in range(chain_depth):
         ids, segment_text, hit_boundary = generate_segment(
             model, tok, ids, max_tokens=max_segment_tokens, **sample_kwargs)
 
-        full_narrative.append(segment_text)
+        seg_clean = segment_text.replace('<|bos|>', '').strip()
+        if seg_clean:
+            full_narrative.append(seg_clean)
 
         if not hit_boundary:
             chain_log.append({'step': step, 'type': 'max_tokens',
-                              'text': segment_text[:100]})
+                              'text': seg_clean[:100]})
             break
 
-        # ═══ SENTENCE BOUNDARY — KK RESONATES ═══
-        injection, source_chunk = kk.pick_next(segment_text)
+        # KK resonates with what model SAID
+        injection, _ = kk.pick_next(segment_text)
 
         if injection is None:
             chain_log.append({'step': step, 'type': 'kk_exhausted',
-                              'text': segment_text[:100]})
+                              'text': seg_clean[:100]})
             print(f'\n[chain] KK exhausted at step {step}')
             break
 
         chain_log.append({'step': step, 'type': 'injection',
-                          'text': segment_text[:100],
+                          'text': seg_clean[:100],
                           'injection': injection})
 
-        print(f'\n\n  [→ step {step+1}] {injection[:80]}\n', flush=True)
+        print(f'\n\n  [-> step {step+1}] {injection[:80]}\n', flush=True)
 
-        # inject — add concept to context, model continues from it
-        inject_ids = tok.encode(f'\n{injection}\n')
-        ids = ids + inject_ids
-
-        # context trimming
+        ids = ids + tok.encode('\n' + injection)
         if len(ids) > CTX_TRIM:
             ids = [BOS] + ids[-(CTX_TRIM - 1):]
 
     elapsed = time.time() - t0
     narrative = '\n'.join(full_narrative)
 
-    # overlap stats
     kk_words = set()
     for entry in chain_log:
         if 'injection' in entry:
             kk_words |= set(re.findall(r'[a-zA-Z]{4,}', entry['injection'].lower()))
     gen_words = set(re.findall(r'[a-zA-Z]{4,}', narrative.lower()))
     overlap = gen_words & kk_words
-
     n_inj = sum(1 for e in chain_log if e.get('type') == 'injection')
 
-    print(f'\n\n{"="*60}')
-    print(f'  CHAIN COMPLETE')
-    print(f'{"="*60}')
+    print('\n\n' + '='*60)
+    print('  CHAIN COMPLETE')
+    print('='*60)
     print(f'  steps:      {len(chain_log)}')
     print(f'  injections: {n_inj}')
     print(f'  tokens:     ~{len(ids)}')
     print(f'  time:       {elapsed:.1f}s')
     print(f'  kk overlap: {len(overlap)} words')
-    print(f'  concepts:')
-    for entry in chain_log:
-        if 'injection' in entry:
-            print(f'    [{entry["step"]+1}] {entry["injection"][:70]}')
+    if n_inj > 0:
+        print('  concepts:')
+        for entry in chain_log:
+            if 'injection' in entry:
+                s = entry['step'] + 1
+                inj = entry['injection'][:70]
+                print(f'    [{s}] {inj}')
 
     return narrative, chain_log
 
 
-# ═══════════════════════════════════════════════════════════════════
-# DIALOGUE MODE — interactive with KK resonance
-# ═══════════════════════════════════════════════════════════════════
+# ===================================================================
+# DIALOGUE MODE -- interactive with KK resonance
+# ===================================================================
 
 def dialogue_mode(model, tok, kk, voice_name='leo', **sample_kwargs):
-    """Interactive: you speak, KK resonates, Leo answers.
-
-    Each turn:
-    1. You ask something
-    2. KK finds relevant knowledge from your question
-    3. Leo generates with knowledge at the boundary
-    4. Next turn: KK also resonates with Leo's previous answer
-    """
-    print(f'\n{"="*60}')
-    print(f'  DIALOGUE — {voice_name} + Knowledge Kernel')
-    print(f'  Type your question. "quit" to exit.')
-    print(f'{"="*60}\n')
+    """Interactive: you speak, KK resonates, Leo answers."""
+    print('\n' + '='*60)
+    print(f'  DIALOGUE -- {voice_name} + Knowledge Kernel')
+    print('  Type your question. "quit" to exit.')
+    print('='*60 + '\n')
 
     context_ids = [BOS]
     turn = 0
@@ -362,7 +384,7 @@ def dialogue_mode(model, tok, kk, voice_name='leo', **sample_kwargs):
 
     while True:
         try:
-            user_input = input(f'you> ').strip()
+            user_input = input('you> ').strip()
         except (KeyboardInterrupt, EOFError):
             print('\nbye.')
             break
@@ -374,7 +396,6 @@ def dialogue_mode(model, tok, kk, voice_name='leo', **sample_kwargs):
         prompt = f'Q: {user_input}\nA:'
         prompt_ids = tok.encode(prompt)
 
-        # KK resonates with user question + previous Leo answer
         query_text = user_input
         if prev_answer:
             query_text = f'{user_input} {prev_answer[-200:]}'
@@ -383,7 +404,7 @@ def dialogue_mode(model, tok, kk, voice_name='leo', **sample_kwargs):
 
         if injection:
             print(f'  [kk] {injection[:80]}')
-            inject_ids = tok.encode(f'{injection}\n')
+            inject_ids = tok.encode(injection + '\n')
             ids = context_ids + inject_ids + prompt_ids
         else:
             ids = context_ids + prompt_ids
@@ -402,34 +423,28 @@ def dialogue_mode(model, tok, kk, voice_name='leo', **sample_kwargs):
     print(f'\n[dialogue] {turn} turns')
 
 
-# ═══════════════════════════════════════════════════════════════════
-# EXPLORE MODE — Leo leads, KK follows
-# ═══════════════════════════════════════════════════════════════════
+# ===================================================================
+# EXPLORE MODE -- Leo leads, KK follows
+# ===================================================================
 
 def explore_mode(model, tok, kk, seed, voice_name='leo',
                  depth=8, **sample_kwargs):
-    """Leo picks direction from seed. KK follows the thread.
-
-    Like chain but freer:
-    - Longer segments (300 tokens)
-    - Injection as question — Leo drives, KK whispers
-    - The model decides where to go
-    """
-    print(f'\n{"="*60}')
-    print(f'  EXPLORE — {voice_name} leads, KK follows')
-    print(f'{"="*60}\n')
+    """Leo picks direction from seed. KK follows the thread."""
+    print('\n' + '='*60)
+    print(f'  EXPLORE -- {voice_name} leads, KK follows')
+    print('='*60 + '\n')
 
     prompt = f'Q: {seed}\nA: Let me think about this.'
     ids = [BOS] + tok.encode(prompt)
     kk.reset()
     print(f'[seed] {seed}\n')
 
+    step = 0
     for step in range(depth):
         ids, text, hit_boundary = generate_segment(
             model, tok, ids, max_tokens=300, **sample_kwargs)
 
         if not hit_boundary and step < depth - 1:
-            # force a boundary
             ids = ids + tok.encode('\n')
 
         injection, _ = kk.pick_next(text)
@@ -438,7 +453,7 @@ def explore_mode(model, tok, kk, seed, voice_name='leo',
             break
 
         whisper = f'\nWhat about: {injection[:120]}\n'
-        print(f'\n\n  [explore → {step+1}] {injection[:70]}\n', flush=True)
+        print(f'\n\n  [explore -> {step+1}] {injection[:70]}\n', flush=True)
 
         inject_ids = tok.encode(whisper)
         ids = ids + inject_ids
@@ -449,13 +464,13 @@ def explore_mode(model, tok, kk, seed, voice_name='leo',
     print(f'\n\n[explore] {step+1} steps')
 
 
-# ═══════════════════════════════════════════════════════════════════
+# ===================================================================
 # MAIN
-# ═══════════════════════════════════════════════════════════════════
+# ===================================================================
 
 def main():
     p = argparse.ArgumentParser(
-        description='Chain Dialogues — Dario Core Feature',
+        description='Chain Dialogues -- Dario Core Feature',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 examples:
@@ -470,17 +485,14 @@ examples:
     p.add_argument('--voice', choices=list(VOICES.keys()), default='leo')
     p.add_argument('--topic', '--prompt', '--seed', dest='topic',
                    default='What is resonance?')
-    p.add_argument('--depth', type=int, default=6,
-                   help='chain/explore depth (default: 6)')
+    p.add_argument('--depth', type=int, default=6)
     p.add_argument('--knowledge', nargs='+',
-                   default=['dario_essay.txt', 'leo_expanded.txt'],
-                   help='knowledge sources for KK')
-    p.add_argument('--max-segment', type=int, default=200,
-                   help='max tokens per segment')
+                   default=['dario_essay.txt', 'leo_expanded.txt'])
+    p.add_argument('--max-segment', type=int, default=200)
     p.add_argument('--temperature', type=float, default=None)
     p.add_argument('--top-k', type=int, default=None)
     p.add_argument('--rep-penalty', type=float, default=None)
-    p.add_argument('--save', default=None, help='save narrative to file')
+    p.add_argument('--save', default=None)
     args = p.parse_args()
 
     voice = VOICES[args.voice]
@@ -488,24 +500,21 @@ examples:
     top_k = args.top_k if args.top_k is not None else voice['top_k']
     rep_penalty = args.rep_penalty if args.rep_penalty is not None else voice['rep_penalty']
 
-    print(f'[voice] {args.voice} — {voice["desc"]}')
+    print(f'[voice] {args.voice} -- {voice["desc"]}')
     print(f'[params] temp={temp} top_k={top_k} rep={rep_penalty}')
 
-    # tokenizer
     with open('janus4/janus/tokenizer.pkl', 'rb') as f:
         tok = pickle.load(f)
     print(f'[tok] vocab={tok.n_vocab}')
 
-    # model
     cfg = JanusConfig(vocab_size=32768)
     model = JanusGPT(cfg)
     sd = torch.load(voice['weights'], map_location='cpu', weights_only=False)
     model.load_state_dict(sd)
     model = model.to('cuda').to(torch.bfloat16).eval()
     n_params = sum(p.numel() for p in model.parameters())
-    print(f'[model] {args.voice} {n_params/1e6:.0f}M — Janus v4 (RRPRAM + Echo + 3-way gate)')
+    print(f'[model] {args.voice} {n_params/1e6:.0f}M -- Janus v4 (RRPRAM + Echo + 3-way gate)')
 
-    # knowledge kernel
     kk = KnowledgeKernel()
     for kpath in args.knowledge:
         if os.path.exists(kpath):
@@ -513,13 +522,12 @@ examples:
         else:
             print(f'[kk] WARN: {kpath} not found')
     if kk.n_chunks == 0:
-        print('[kk] WARNING: no knowledge loaded — chain will be short')
+        print('[kk] WARNING: no knowledge loaded')
     else:
         print(f'[kk] {kk.n_chunks} chunks ready')
 
     sample_kwargs = dict(temperature=temp, top_k=top_k, rep_penalty=rep_penalty)
 
-    # ── RUN ──
     if args.mode == 'chain':
         narrative, log = chain_generate(
             model, tok, kk, args.topic,
@@ -529,19 +537,19 @@ examples:
 
         if args.save:
             with open(args.save, 'w') as f:
-                f.write(f'# Chain Dialogue — {args.voice}\n')
+                f.write(f'# Chain Dialogue -- {args.voice}\n')
                 f.write(f'# Topic: {args.topic}\n')
                 f.write(f'# Depth: {args.depth}, temp={temp}, top_k={top_k}, '
                         f'rep={rep_penalty}\n')
                 f.write(f'# Date: {time.strftime("%Y-%m-%d %H:%M")}\n\n')
                 f.write(narrative)
-                f.write(f'\n\n# Chain log:\n')
+                f.write('\n\n# Chain log:\n')
                 for entry in log:
                     t = entry.get('type', '?')
                     inj = entry.get('injection', '')
                     f.write(f'# step {entry["step"]}: {t}')
                     if inj:
-                        f.write(f' — {inj}')
+                        f.write(f' -- {inj}')
                     f.write('\n')
             print(f'\n[saved] {args.save}')
 
