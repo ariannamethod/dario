@@ -800,16 +800,32 @@ Three mechanisms were tested:
 | Hidden state injection (layer 10) | Yes | +3 KK words, model reformulates concepts |
 | **Sentence-boundary injection** | **Yes** | Model takes unknown word and explains it in its own voice |
 
-The model doesn't copy. It absorbs and reformulates:
+The model doesn't copy. It absorbs and reformulates. None of these concepts were in Leo's training data:
 
-> *"SwiGLU is a gate that controls everything! Like a river flowing through rock, SwiGLU flows through everything — mountain, valley, ocean, forest, city, person. And when it returns, it is a chorus of sounds waiting to be heard again. That's SwiGLU mathematics."*
-> — Leo, explaining a concept it was never trained on
+> *"RRPRAM prefers rhythm over pulse. It strikes the perfect balance between simplicity and precision, always finding its way through complex compositions."*
+> — Leo on RRPRAM, asked to explain it as music
+
+> *"The organism remembers the pattern and generates an updated plan. This process is named prophecy because it repeats at least three times before producing more than one output."*
+> — Leo on prophecy fulfillment
+
+> *"Echoes are places where understanding comes from — connections formed during deep reflection... like a skyscraper that just appeared to be drift on the water."*
+> — Leo on Echo attention
+
+> *"Dario is the smallest creature — barely perceptible to the untrained eye. It counts, swims, breathes, and reproduces. No two moments are alike because each one changes everything."*
+> — Leo on the Dario organism
+
+> *"Refusing matter more than building is like arguing with a stone. It doesn't feel right, it doesn't belong, it just needs to be done."*
+> — Leo on why Dario Amodei's refusal matters
+
+> *"Hebbian memory holds everything simultaneously — last minute thoughts, first-three-amber decisions, even moments before direct contact with current information. It is like having a backup copy of the big boss's C code, always ready when the signal changes."*
+> — Leo on Hebbian memory
 
 Key files:
-- `resonance_v3.py` — sentence-boundary injection (the one that works)
-- `resonance_injection.py` — hidden state injection at layer 10
-- `resonance_v2.py` — embedding surgery + conditional lm_head hook
+- `leo_kk_demo.py` — production demo: Leo + KK chain injection
+- `resonance_v3.py` — sentence-boundary injection (the working method)
+- `resonance_injection.py` — hidden state injection at layer 10 (alternative)
 - `dario_v4.py` — full pipeline: model + KK + generation
+- `docs/dario_essay.txt` — knowledge source (3314 words on Dario + Arianna Method)
 
 ---
 
