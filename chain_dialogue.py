@@ -551,6 +551,76 @@ def explore_mode(model, tok, kk, seed, voice_name='leo',
 
 
 # ===================================================================
+# DUET MODE -- two voices, one KK, they build on each other
+# ===================================================================
+
+def duet_mode(models, tok, kk, topic, voices, depth=4, **all_kwargs):
+    """Two voices take turns on the same topic through shared KK.
+
+    Voice A speaks -> KK absorbs -> Voice B gets A's words injected
+    -> B speaks -> KK absorbs -> Voice A gets B's words injected
+    The conversation emerges from resonance, not scripting.
+    """
+    v1, v2 = voices
+    m1, m2 = models
+
+    print('\n' + '='*60)
+    print(f'  DUET -- {v1} + {v2}')
+    print(f'  Topic: {topic}')
+    print('='*60 + '\n')
+
+    kk.reset()
+    # Prime from essay
+    prime, _ = kk.pick_next(topic, prefer_source='dario_essay.txt')
+
+    turns = []
+    prev_text = prime or topic
+
+    for step in range(depth * 2):
+        # alternate voices
+        is_v1 = (step % 2 == 0)
+        voice = v1 if is_v1 else v2
+        model = m1 if is_v1 else m2
+        v_cfg = VOICES[voice]
+        s_kwargs = dict(temperature=v_cfg['temp'], top_k=v_cfg['top_k'],
+                        rep_penalty=v_cfg['rep_penalty'])
+
+        # KK finds injection from shared knowledge (includes other voice's words)
+        injection, _ = kk.pick_next(prev_text + ' ' + topic)
+
+        # Build prompt
+        ids = [BOS, USER_START] + tok.encode(topic) + [USER_END, ASST_START]
+        if injection:
+            ids = ids + tok.encode(injection + ' ')
+
+        if len(ids) > CTX_TRIM:
+            ids = [BOS] + ids[-(CTX_TRIM - 1):]
+
+        print(f'{voice}> ', end='', flush=True)
+        if injection:
+            print(f'[kk: {injection[:50]}...] ', end='', flush=True)
+
+        ids, text, _ = generate_segment(model, tok, ids, max_tokens=150, **s_kwargs)
+        text_clean = text.replace('<|bos|>', '').strip()
+        print()
+
+        if text_clean:
+            turns.append((voice, text_clean))
+            n = kk.absorb(text_clean, source=f'{voice}_duet')
+            if n:
+                print(f'  [kk+{n}]')
+            prev_text = text_clean
+
+    # Print clean duet
+    print('\n' + '='*60)
+    print('  DUET TRANSCRIPT')
+    print('='*60)
+    for voice, text in turns:
+        print(f'\n{voice}: {text}')
+    print(f'\n[duet] {len(turns)} turns, kk: {kk.n_chunks} chunks')
+
+
+# ===================================================================
 # MAIN
 # ===================================================================
 
@@ -566,7 +636,7 @@ examples:
   %(prog)s --mode explore --topic "patterns and rhythm"
   %(prog)s --mode chain --topic "theta formula" --save chain_out.txt
 """)
-    p.add_argument('--mode', choices=['chain', 'dialogue', 'explore'],
+    p.add_argument('--mode', choices=['chain', 'dialogue', 'explore', 'duet'],
                    default='chain')
     p.add_argument('--voice', choices=list(VOICES.keys()), default='leo')
     p.add_argument('--topic', '--prompt', '--seed', dest='topic',
@@ -579,6 +649,8 @@ examples:
     p.add_argument('--top-k', type=int, default=None)
     p.add_argument('--rep-penalty', type=float, default=None)
     p.add_argument('--save', default=None)
+    p.add_argument('--voice2', choices=list(VOICES.keys()), default='yent',
+                   help='second voice for duet mode')
     args = p.parse_args()
 
     voice = VOICES[args.voice]
@@ -645,6 +717,19 @@ examples:
     elif args.mode == 'explore':
         explore_mode(model, tok, kk, args.topic, voice_name=args.voice,
                      depth=args.depth, **sample_kwargs)
+
+    elif args.mode == 'duet':
+        # Load second model
+        v2_cfg = VOICES[args.voice2]
+        model2 = JanusGPT(cfg)
+        sd2 = torch.load(v2_cfg['weights'], map_location='cpu', weights_only=False)
+        model2.load_state_dict(sd2)
+        model2 = model2.to('cuda').to(torch.bfloat16).eval()
+        print(f'[voice2] {args.voice2} -- {v2_cfg["desc"]}')
+
+        duet_mode([model, model2], tok, kk, args.topic,
+                  voices=[args.voice, args.voice2],
+                  depth=args.depth)
 
 
 if __name__ == '__main__':
