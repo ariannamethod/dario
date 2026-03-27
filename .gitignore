@@ -4,3 +4,12 @@ test_dario
 tests/test_dario
 *.o
 *.out
+
+# weights — use HuggingFace or git-lfs, not raw git
+weights/
+*.bin
+*.pt
+
+# python cache
+__pycache__/
+*.pyc
