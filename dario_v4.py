@@ -65,31 +65,42 @@ def sample_token(logits, temperature=0.8, top_k=50, top_p=0.92,
 
 
 def generate(model, tok, prompt_ids, max_tokens=300,
-             kk_boost_ids=None, kk_boost_strength=0.0, **sample_kwargs):
-    """Generate with optional KK logit boost on knowledge tokens."""
+             gate=None, **sample_kwargs):
+    """Generate with Resonance Gate (gated KK knowledge injection)."""
     device = next(model.parameters()).device
     ids = torch.tensor([prompt_ids], dtype=torch.long, device=device)
     generated = list(prompt_ids)
     out_tokens = []
 
+    # get wte for hidden state extraction
+    wte = model.transformer.wte.weight
+
     with torch.no_grad():
         for step in range(max_tokens):
             x = ids[:, -1024:]
             logits = model(x)[:, -1, :]  # [1, V]
-            logits = logits[0]  # [V]
+            logits = logits[0].float()   # [V]
 
-            # KK logit boost — soft bias toward knowledge tokens
-            if kk_boost_ids and kk_boost_strength > 0:
-                for tid in kk_boost_ids:
-                    if 0 <= tid < logits.size(0):
-                        logits[tid] += kk_boost_strength
+            # extract hidden state: approximate from logits via lm_head pseudoinverse
+            # simpler: use last token's embedding as hidden proxy
+            last_tok = ids[0, -1].item()
+            hidden = wte[last_tok].float()
+            hidden = hidden / (hidden.norm() + 1e-8)
 
-            # ban BOS from being generated
+            # Resonance Gate — gated knowledge injection
+            if gate is not None:
+                gate.apply(logits, hidden)
+
+            # ban BOS
             logits[BOS] = float('-inf')
 
             tid = sample_token(logits, recent_tokens=generated, **sample_kwargs)
             if tid == EOS:
                 break
+
+            # update gate tracking
+            if gate is not None:
+                gate.update(tid)
 
             generated.append(tid)
             out_tokens.append(tid)
@@ -232,25 +243,24 @@ def main():
         elif '\nA:' not in prompt_text:
             prompt_text = prompt_text + '\nA:'
 
-        # KK: context injection + logit boost tokens
+        # KK retrieval
         kk_context = None
-        kk_boost_ids = []
+        gate = None
         if kk:
             kk_context = kk.get_context(prompt_text)
             if kk_context:
                 print(f'\n[kk] "{kk_context[:100]}..."')
-                # extract KEY TERMS only — not all tokens
-                import re
-                words = re.findall(r'[A-Z][a-z]{3,}|[A-Z]{2,}|[a-z]{6,}', kk_context)
-                key_terms = list(set(words))[:20]
-                kk_boost_ids = []
-                for term in key_terms:
-                    kk_boost_ids.extend(tok.encode(term))
-                kk_boost_ids = list(set(kk_boost_ids))
-                print(f'[kk] key terms: {key_terms[:10]}')
-                print(f'[kk] {len(kk_boost_ids)} boost token IDs')
 
-        # build full prompt: KK context Q/A + our question
+                # Build Resonance Gate from retrieved knowledge
+                from resonance_gate import ResonanceGate
+                gate = ResonanceGate(model, tok, kk_context,
+                                     resonance_threshold=0.30,
+                                     boost_strength=3.5,
+                                     phrase_lock_threshold=0.50)
+                # Absorption: feed knowledge through model
+                abs_ids = gate.absorb(kk_context)
+
+        # build prompt: KK context + question
         if kk_context:
             full = kk_context + '\n' + prompt_text
         else:
@@ -259,11 +269,8 @@ def main():
         ids = [BOS] + tok.encode(full)
         print(f'[{len(ids)} tokens]\n')
 
-        # combined: context injection (model sees knowledge) +
-        # logit boost (knowledge tokens get bias toward generation)
         generate(model, tok, ids, max_tokens=args.max_tokens,
-                 kk_boost_ids=kk_boost_ids, kk_boost_strength=3.0,
-                 **sample_kwargs)
+                 gate=gate, **sample_kwargs)
         print('\n')
 
     if args.prompt:
