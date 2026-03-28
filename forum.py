@@ -24,6 +24,62 @@ import threading
 # MODEL LOADING
 # ===================================================================
 
+# ===================================================================
+# SARTRE MODEL REGISTRY (Python mirror of sartre_kernel.h)
+# ===================================================================
+
+class SartreModelProfile:
+    """Mirrors SartreModelProfile from sartre_kernel.h.
+    Auto-profiles model from file. SARTRE-compatible slot management.
+    """
+    MAX_MODELS = 4
+
+    def __init__(self, name, path, backend):
+        self.name = name
+        self.path = path
+        self.backend = backend
+        self.param_count = 0
+        self.file_size_bytes = os.path.getsize(path) if os.path.exists(path) else 0
+        self.runtime_mb = 0
+        self.loaded = False
+        self.model = None
+        self.tokenizer = None
+
+    def profile(self):
+        """Auto-detect model properties from file."""
+        # estimate params from file size (f32: /4, bf16: /2)
+        if self.file_size_bytes > 0:
+            self.param_count = self.file_size_bytes // 2  # assume bf16-ish mix
+            self.runtime_mb = self.file_size_bytes / 1e6
+        print(f'[sartre] {self.name}: {self.param_count/1e6:.0f}M params, '
+              f'{self.runtime_mb:.0f}MB, backend={self.backend}')
+
+
+class SartreRegistry:
+    """Model registry with SARTRE-style auto-profiling and slot management."""
+
+    def __init__(self):
+        self.slots = {}  # name -> SartreModelProfile
+
+    def register(self, name, path, backend):
+        profile = SartreModelProfile(name, path, backend)
+        profile.profile()
+        self.slots[name] = profile
+        return profile
+
+    def get(self, name):
+        return self.slots.get(name)
+
+    def list_models(self):
+        return {name: {
+            'params': f'{p.param_count/1e6:.0f}M',
+            'loaded': p.loaded,
+            'backend': p.backend,
+            'runtime_mb': f'{p.runtime_mb:.0f}',
+        } for name, p in self.slots.items()}
+
+
+REGISTRY = SartreRegistry()
 MODELS = {}
 TOKENIZERS = {}
 KK = None
@@ -56,10 +112,14 @@ CONFIGS = {
 
 
 def load_all():
-    """Load all three models + tokenizers."""
+    """Load all models through SARTRE registry."""
     global MODELS, TOKENIZERS
 
-    # Janus tokenizer (shared by Leo + Arianna)
+    # Register all models in SARTRE slots
+    for name, c in CONFIGS.items():
+        REGISTRY.register(name, c['weights'], c['backend'])
+
+    # Load Janus backend
     import pickle
     sys.path.insert(0, '/home/ubuntu/nanochat')
     from nanochat.janus_gpt import JanusGPT, JanusConfig
@@ -69,18 +129,20 @@ def load_all():
     TOKENIZERS['janus'] = tok_j
 
     cfg = JanusConfig(vocab_size=32768)
-
     for name in ['leo', 'arianna']:
-        c = CONFIGS[name]
+        profile = REGISTRY.get(name)
         m = JanusGPT(cfg)
-        sd = torch.load(c['weights'], map_location='cpu', weights_only=False)
+        sd = torch.load(profile.path, map_location='cpu', weights_only=False)
         m.load_state_dict(sd)
         m = m.to('cuda').to(torch.bfloat16).eval()
         MODELS[name] = m
-        n = sum(p.numel() for p in m.parameters())
-        print(f'[{name}] Janus {n/1e6:.0f}M loaded')
+        profile.loaded = True
+        profile.model = m
+        profile.tokenizer = tok_j
+        profile.param_count = sum(p.numel() for p in m.parameters())
+        print(f'[sartre] {name}: loaded, {profile.param_count/1e6:.0f}M')
 
-    # Resonance tokenizer + model
+    # Load Resonance backend
     sys.path.insert(0, '/home/ubuntu/resonance')
     from bpe_tokenizer import BPETokenizer
     from model import Resonance, RESONANCE_200M
@@ -89,14 +151,18 @@ def load_all():
     tok_r.load(CONFIGS['yent']['tokenizer'])
     TOKENIZERS['resonance'] = tok_r
 
+    profile = REGISTRY.get('yent')
     m = Resonance(RESONANCE_200M)
-    sd = torch.load(CONFIGS['yent']['weights'], map_location='cpu', weights_only=False)
+    sd = torch.load(profile.path, map_location='cpu', weights_only=False)
     if 'model' in sd: sd = sd['model']
     m.load_state_dict(sd)
     m = m.to('cuda').to(torch.bfloat16).eval()
     MODELS['yent'] = m
-    n = sum(p.numel() for p in m.parameters())
-    print(f'[yent] Resonance {n/1e6:.0f}M loaded')
+    profile.loaded = True
+    profile.model = m
+    profile.tokenizer = tok_r
+    profile.param_count = sum(p.numel() for p in m.parameters())
+    print(f'[sartre] yent: loaded, {profile.param_count/1e6:.0f}M')
 
 
 # ===================================================================
@@ -334,6 +400,13 @@ class ForumHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 with open(html_path, 'rb') as f:
                     self.wfile.write(f.read())
+            return
+        if self.path == '/api/sartre':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps(REGISTRY.list_models()).encode())
             return
         if self.path == '/api/voices':
             voices = {k: {'desc': v['desc'], 'backend': v['backend']}
