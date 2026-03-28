@@ -232,12 +232,21 @@ class KnowledgeKernel:
         injection = self.extract_injection(chunk)
         if not injection:
             return None, None
-        # clean: no newlines, no trailing fragments
+        # clean: no newlines, collapse whitespace
         injection = injection.replace('\n', ' ').replace('  ', ' ').strip()
-        # reject fragments that don't start with uppercase or are too short
-        if not injection[0].isupper() or len(injection.split()) < 4:
+        # MUST end at sentence boundary — no mid-word truncation
+        if injection and injection[-1] not in '.!?':
+            last_end = max(injection.rfind('.'), injection.rfind('!'), injection.rfind('?'))
+            if last_end > 15:
+                injection = injection[:last_end + 1]
+            else:
+                # no sentence boundary found — skip this chunk
+                self.mark_used(rowid)
+                return self.pick_next(generated_text, prefer_source, exclude_model)
+        # reject fragments
+        if not injection or not injection[0].isupper() or len(injection.split()) < 4:
             self.mark_used(rowid)
-            return self.pick_next(generated_text, prefer_source)  # try next chunk
+            return self.pick_next(generated_text, prefer_source, exclude_model)
         self.mark_used(rowid)
         return injection, chunk
 
@@ -303,6 +312,7 @@ def generate_segment(model, tok, ids, max_tokens=200,
     recent = list(ids[-80:])
     repeat_count = 0
     last_tok = -1
+    skip_count = 0  # skip first few garbage tokens
 
     with torch.no_grad():
         for step in range(max_tokens):
@@ -334,12 +344,39 @@ def generate_segment(model, tok, ids, max_tokens=200,
             text = text.replace('<|bos|>', '').replace('<|output_start|>', '')
             text = text.replace('<|output_end|>', '').replace('<|assistant_end|>', '')
             if text:
+                # skip first 1-3 tokens if they're number fragments
+                # (model completing truncated injection)
+                if skip_count < 3 and not out_text:
+                    stripped = text.strip()
+                    if stripped and stripped[0].isdigit():
+                        skip_count += 1
+                        continue
                 out_text.append(text)
                 print(text, end='', flush=True)
 
             x = torch.cat([x, torch.tensor([[tid]], device=device)], dim=1)
 
-    return ids + out_tokens, ''.join(out_text), False
+    raw = ''.join(out_text)
+    return ids + out_tokens, clean_text(raw), False
+
+
+def clean_text(text):
+    """Strip leading garbage from model output.
+    Model sometimes starts with number fragments, 'iff', partial words
+    from completing truncated injection text.
+    """
+    text = text.strip()
+    if not text:
+        return text
+    # find first uppercase letter — that's where real content starts
+    for i, c in enumerate(text):
+        if c.isupper():
+            return text[i:]
+    # no uppercase found — return as-is but strip leading non-alpha
+    for i, c in enumerate(text):
+        if c.isalpha():
+            return text[i:]
+    return text
 
 
 # ===================================================================
