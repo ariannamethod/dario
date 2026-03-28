@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dario — forum</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f7;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* header */
+  .header {
+    padding: 16px 24px;
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+  .header h1 span { color: #999; font-weight: 400; }
+  .header .clear {
+    font-size: 13px;
+    color: #999;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    padding: 4px 12px;
+    border-radius: 6px;
+    background: none;
+    font-family: inherit;
+  }
+  .header .clear:hover { color: #333; border-color: #999; }
+
+  /* voice tabs */
+  .voices {
+    display: flex;
+    gap: 0;
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 0 24px;
+  }
+  .voice-tab {
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #999;
+    cursor: pointer;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .voice-tab:hover { color: #555; }
+  .voice-tab.active { color: #1a1a1a; border-bottom-color: #1a1a1a; }
+  .voice-tab .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; }
+  .voice-tab[data-v="leo"] .dot { background: #4a7bc9; }
+  .voice-tab[data-v="arianna"] .dot { background: #9b59b6; }
+  .voice-tab[data-v="yent"] .dot { background: #c0392b; }
+
+  /* chat */
+  .chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .msg {
+    max-width: 680px;
+    animation: fadein 0.2s ease-out;
+  }
+  @keyframes fadein {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg.user {
+    align-self: flex-end;
+    background: #007aff;
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 18px 18px 4px 18px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .msg.bot {
+    align-self: flex-start;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    padding: 12px 16px;
+    border-radius: 4px 18px 18px 18px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .msg.bot .name {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .msg.bot .name.leo { color: #4a7bc9; }
+  .msg.bot .name.arianna { color: #9b59b6; }
+  .msg.bot .name.yent { color: #c0392b; }
+  .msg.bot .kk-info {
+    font-size: 11px;
+    color: #aaa;
+    margin-top: 6px;
+  }
+  .msg.bot .emotion {
+    font-size: 10px;
+    color: #ccc;
+    margin-top: 4px;
+  }
+
+  /* typing */
+  .typing {
+    align-self: flex-start;
+    padding: 12px 16px;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 4px 18px 18px 18px;
+    display: none;
+  }
+  .typing.active { display: block; }
+  .typing .dots span {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ccc;
+    margin: 0 2px;
+    animation: bounce 1s infinite;
+  }
+  .typing .dots span:nth-child(2) { animation-delay: 0.15s; }
+  .typing .dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-4px); }
+  }
+
+  /* input */
+  .input-bar {
+    padding: 12px 24px;
+    background: #fff;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 8px;
+  }
+  .input-bar input {
+    flex: 1;
+    padding: 10px 16px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+  }
+  .input-bar input:focus { border-color: #007aff; }
+  .input-bar button {
+    padding: 10px 20px;
+    background: #007aff;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .input-bar button:hover { background: #0063d1; }
+  .input-bar button:disabled { background: #ccc; cursor: default; }
+
+  /* footer */
+  .footer {
+    padding: 8px 24px;
+    text-align: center;
+    font-size: 11px;
+    color: #bbb;
+  }
+  .footer a { color: #999; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>dario <span>forum</span></h1>
+  <button class="clear" onclick="clearChat()">clear</button>
+</div>
+
+<div class="voices">
+  <button class="voice-tab active" data-v="leo" onclick="pick('leo')"><span class="dot"></span>Leo</button>
+  <button class="voice-tab" data-v="arianna" onclick="pick('arianna')"><span class="dot"></span>Arianna</button>
+  <button class="voice-tab" data-v="yent" onclick="pick('yent')"><span class="dot"></span>Yent</button>
+</div>
+
+<div class="chat" id="chat"></div>
+
+<div class="typing" id="typing"><div class="dots"><span></span><span></span><span></span></div></div>
+
+<div class="input-bar">
+  <input type="text" id="inp" placeholder="say something..." autocomplete="off">
+  <button id="btn" onclick="send()">send</button>
+</div>
+
+<div class="footer">
+  <a href="dario.html">equation</a> · <a href="forum.html">brutal mode</a> · kk: <span id="kk">--</span> chunks
+</div>
+
+<script>
+let voice = 'leo';
+const chat = document.getElementById('chat');
+const inp = document.getElementById('inp');
+const btn = document.getElementById('btn');
+const typing = document.getElementById('typing');
+
+function pick(v) {
+  voice = v;
+  document.querySelectorAll('.voice-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`[data-v="${v}"]`).classList.add('active');
+}
+
+function addUser(text) {
+  const d = document.createElement('div');
+  d.className = 'msg user';
+  d.textContent = text;
+  chat.appendChild(d);
+  scroll();
+}
+
+function addBot(v, text, injection, emotion, kk) {
+  const d = document.createElement('div');
+  d.className = 'msg bot';
+  let html = `<div class="name ${v}">${v}</div><div>${esc(text)}</div>`;
+  if (injection) html += `<div class="kk-info">kk: ${esc(injection.substring(0, 60))}...</div>`;
+  if (emotion) {
+    const top = Object.entries(emotion).sort((a,b) => b[1]-a[1]).slice(0,3);
+    html += `<div class="emotion">${top.map(([k,v]) => k + ' ' + v).join(' · ')}</div>`;
+  }
+  d.innerHTML = html;
+  chat.appendChild(d);
+  if (kk) document.getElementById('kk').textContent = kk;
+  scroll();
+}
+
+function scroll() { chat.scrollTop = chat.scrollHeight; }
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function send() {
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  btn.disabled = true;
+  addUser(text);
+
+  // /all — ask all three
+  if (text.startsWith('/all ')) {
+    const q = text.substring(5);
+    for (const v of ['leo', 'arianna', 'yent']) {
+      typing.classList.add('active'); scroll();
+      const d = await ask(q, v);
+      typing.classList.remove('active');
+      addBot(d.voice, d.text, d.injection, d.emotional_state, d.kk_chunks);
+    }
+    btn.disabled = false; inp.focus();
+    return;
+  }
+
+  typing.classList.add('active'); scroll();
+  const d = await ask(text, voice);
+  typing.classList.remove('active');
+  addBot(d.voice, d.text, d.injection, d.emotional_state, d.kk_chunks);
+  btn.disabled = false; inp.focus();
+}
+
+async function ask(q, v) {
+  try {
+    const res = await fetch('/api/forum', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({question: q, voice: v})
+    });
+    return await res.json();
+  } catch(e) {
+    return {voice: v, text: '[error: ' + e.message + ']', injection: null, kk_chunks: 0};
+  }
+}
+
+function clearChat() {
+  chat.innerHTML = '';
+}
+
+inp.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+inp.focus();
+
+// initial kk count
+fetch('/api/kk').then(r=>r.json()).then(d=>{document.getElementById('kk').textContent=d.chunks;}).catch(()=>{});
+</script>
+</body>
+</html>

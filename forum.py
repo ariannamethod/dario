@@ -377,6 +377,9 @@ def generate(voice, question, max_tokens=200):
     backend = cfg['backend']
     tok = TOKENIZERS[backend]
 
+    # Absorb user input into KK (conversation becomes knowledge)
+    KK.absorb(question, source='user')
+
     # KK injection
     injection = KK.query(question)
 
@@ -507,6 +510,19 @@ class ForumHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        if self.path in ('/chat', '/chatbot', '/chatbot.html'):
+            html_path = os.path.join(os.path.dirname(__file__) or '.', 'chatbot.html')
+            if not os.path.exists(html_path):
+                html_path = 'dario/chatbot.html'
+            if os.path.exists(html_path):
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html')
+                self.end_headers()
+                with open(html_path, 'rb') as f:
+                    self.wfile.write(f.read())
+            else:
+                self.send_error(404, 'chatbot.html not found')
+            return
         if self.path in ('/', '/forum', '/forum.html'):
             # serve forum.html
             html_path = os.path.join(os.path.dirname(__file__) or '.', 'forum.html')
