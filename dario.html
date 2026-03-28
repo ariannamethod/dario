@@ -345,21 +345,22 @@
 
   <div class="section">
     <p>Named after <strong>Dario Amodei</strong> — the man who said no when the evil came knocking. Sometimes the most important thing a system can do is refuse.</p>
-    <p>This is not a chatbot. This is a mathematical formula that reacts to your input with fragments of its own source code. You type words. The equation measures how far your words are from its internal vocabulary (dissonance). Then six forces compete to generate a response — and the dominant force shows you the code that's driving it.</p>
+    <p>This is not a chatbot. This is a mathematical formula that reacts to your input with fragments of its own source code. You type words. The equation measures how far your words are from its internal vocabulary (dissonance). Then seven forces compete to generate a response — and the dominant force shows you the code that's driving it.</p>
   </div>
 
   <div class="section">
-    <div class="eq">p(x|Φ) = softmax((B + α·H + β·F + γ·A + sw·S + T) / τ)</div>
-    <p>This equation replaces the transformer's softmax(QK<sup>T</sup>/√d)·V. Same mechanics. Different origin. No pretrained weights. No backpropagation. No datasets. Six signals, six forces, one organism.</p>
+    <div class="eq">p(x|Φ,C,V) = softmax((B + α_m·α·H_v + β_m·β·F_v + γ_m·γ·A + δ·V + S + T) / (τ_m·τ·v_τ))</div>
+    <p>This equation replaces the transformer's softmax(QK<sup>T</sup>/√d)·V. Same mechanics. Different origin. No pretrained weights. No backpropagation. No datasets. Seven signals, seven forces, one organism.</p>
   </div>
 
   <div class="section">
-    <p><strong>The Six Terms:</strong></p>
+    <p><strong>The Seven Signals:</strong></p>
     <ul class="term-list">
       <li><span class="t" style="color:var(--B)">B — Sequential Chain</span> — Bigram transitions. What word tends to follow the previous word. Strong early in life (12×), weakens as the organism matures (2×). Language needs local coherence.</li>
       <li><span class="t" style="color:var(--H)">H — Hebbian Resonance</span> — Co-occurrence accumulated over conversation with learnable positional profile (36 Hebbian params: 32 distance weights + 4 token class modifiers). The organism learns which distances and word types matter — replacing fixed 0.9<sup>d</sup> decay. This IS attention — Hebb's rule Δw = η·x_pre·x_post equals a dot-product attention score. Proven: PLOS Computational Biology, 2024.</li>
       <li><span class="t" style="color:var(--F)">F — Prophecy Fulfillment</span> — Predictions about what comes next. Unfulfilled prophecies create debt: log(1 + age). The longer a thought hangs incomplete, the stronger the pull toward closure.</li>
       <li><span class="t" style="color:var(--A)">A — Destiny Attraction</span> — EMA of all context embeddings. A semantic compass. The conversation drifts toward a gravitational center. Not topic-following — field mass.</li>
+      <li><span class="t" style="color:var(--V)">V — Visual Grounding</span> — Parallel perceptual embedding space. Cosine similarity between visual prototype and visual context. Enriches H and F: words that are both semantically and perceptually relevant score highest.</li>
       <li><span class="t" style="color:var(--S)">S — Subword Structure</span> — Morphological signal from BPE. Punctuation, suffixes, character-level rhythm that word tokenization destroys. Silent at birth, grows as structure is discovered.</li>
       <li><span class="t" style="color:var(--T)">T — Trauma Gravity</span> — Per-token scar weights from origin. When trauma > 0.3, wounded words surface, destiny pulls harder, temperature rises. Like speaking through tears.</li>
     </ul>
@@ -391,14 +392,22 @@
   </div>
 
   <div class="section">
+    <p><strong>Chain Dialogues — Knowledge Injection:</strong></p>
+    <p>Three voices (Leo, Arianna, Yent) speak through the equation. The Knowledge Kernel injects concepts the model never learned — at sentence boundaries, the model absorbs and reformulates in its own voice. Five modes: chain, dialogue, explore, duet, trialogue.</p>
+    <div class="eq">python3 chain_dialogue.py --mode trialogue --topic "light and consciousness"</div>
+    <p>Six knowledge domains tested: ML architecture, Dickens/Russian literature, mycorrhizal networks, Polynesian navigation, Byzantine iconography, deep ocean bioluminescence. 176M parameters. Zero training on these texts.</p>
+  </div>
+
+  <div class="section">
     <p><strong>Projects using the Dario Equation:</strong></p>
     <ul class="term-list">
+      <li><a href="https://github.com/ariannamethod/dario">dario</a> — The equation, naked. Three organs (formula + SARTRE + KK). Chain dialogues, three voices, sentence-boundary injection.</li>
       <li><a href="https://github.com/ariannamethod/leo">Leo</a> — Language Emergent Organism. Post-transformer, post-probabilistic. The equation's first body.</li>
       <li><a href="https://github.com/ariannamethod/doe">DOE</a> — Democracy of Experts. Janus Architecture. Wraps any GGUF with a living parliament.</li>
       <li><a href="https://github.com/ariannamethod/ariannamethod.ai">AML</a> — Arianna Method Language. 7400 lines of C. The language that defines field physics.</li>
       <li><a href="https://github.com/ariannamethod/molequla">molequla</a> — Autonomous GPT ecology. 4 organisms, mitosis, DNA exchange. θ = ε + γ + αδ proven.</li>
       <li><a href="https://github.com/ariannamethod/chuck.optimizer">Chuck</a> — Self-aware optimizer. 9 levels of introspection. Adam sees nothing. Chuck sees everything.</li>
-      <li><a href="https://github.com/ariannamethod/harmonix">HAiKU</a> — Constraint-driven haiku. 500 words. Dissonance is the signal.</li>
+
     </ul>
   </div>
 
