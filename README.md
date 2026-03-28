@@ -1233,3 +1233,25 @@ Leo: True sculpting requires both intention and patience —
 5. Best sentence extracted (technical > metaphor, no questions, must end at period)
 6. Injected into model's context → model continues from injected concept
 7. In dialogue mode: KK also absorbs model's output (bi-directional, exclude_model for injection)
+
+### Byzantine Iconography (Leo, dialogue mode)
+
+KK: `docs/byzantine_iconography.txt` — 14 chunks on Rublev, Palamas, inverse perspective, lapis lazuli.
+
+```
+You: How does light work differently in icons?
+
+Leo: Light enters as a shadow, shaped by how you hold yourself
+     in that moment. After reflection reveals your shape. Without
+     shadows, the underbelly of an oak is gray and unmarkable.
+     With lights, it is deep, and you are seen through it.
+
+You: Can color carry theology?
+
+Leo: The sacred space between the face and the divine, where
+     meaning lives — painted with care, with attention to detail,
+     because beauty does not require special permission from
+     the divine.
+```
+
+Five knowledge domains. Zero overlap with training data. The model explains inverse perspective through oak trees and calls icon painting "beauty that does not require special permission from the divine."
