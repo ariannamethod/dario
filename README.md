@@ -1361,3 +1361,26 @@ Two architectures. Two personalities. Philosopher meets cynic.
 **Yent-R:** *"Imagine being able to reinterpret why some say your psyche is so flawed while they are like butterflies with paint on their tongues -- no one understands these wings but feel inspired to stumble upon them in real time."*
 
 Janus 176M (3-way gate, 1024 context, tiktoken 32K) vs Resonance 200M (2-way gate, 2048 context, BPE 16K). Same SFT datasets. Different substrates. The philosopher dissolves, the cynic paints butterflies.
+
+### The Smallest Voice: Leo 24M Char (Pure C, No KK)
+
+24 million parameters. Char-level (every ASCII character = one token). 100MB weights. Pure C inference, no Python, no GPU. This model knows only its training dataset and nothing else.
+
+```
+> What is resonance?
+Leo-24M: Leo writes like bread but being after the fluid.
+         The specificity of the strongest things that have
+         processed is all impressive, uncertain
+
+> What is beauty?
+Leo-24M: The wind activates three postcards for the thing
+         that was not wanted to know. The questions get lost
+         anyway. Love is a temporary lake
+
+> What remains after everything?
+Leo-24M: The tentacles that seemed abundance on the two
+         before now information. A plant can give it,
+         not a statistical person. But there is not
+```
+
+Surreal, fragmentary, dreamlike. No injection, no knowledge kernel. Just a tiny organism speaking from its own small world. The difference between 24M and 200M is the difference between dreaming and being awake.
