@@ -171,12 +171,92 @@ def load_all():
 
 import sqlite3
 
+class ChunkMeta:
+    """PostGPT-style metaweights for a chunk. The chunk is not flat text —
+    it's a charged resonance clump with mass, emotional fingerprint, and
+    Hebbian links. kk_kernel.h calls this kk_chunk_meta."""
+
+    # Emotional anchors (PostGPT Auto-Mendeleev, simplified)
+    ANCHORS = {
+        'death': ('trauma', 0.95), 'pain': ('trauma', 0.85), 'war': ('trauma', 0.90),
+        'loss': ('grief', 0.80), 'memory': ('grief', 0.60), 'silence': ('grief', 0.50),
+        'love': ('tenderness', 0.90), 'beauty': ('tenderness', 0.70), 'light': ('tenderness', 0.60),
+        'fire': ('rage', 0.85), 'break': ('rage', 0.70), 'destroy': ('rage', 0.80),
+        'dream': ('desire', 0.75), 'want': ('desire', 0.65), 'seek': ('desire', 0.60),
+        'void': ('void', 0.90), 'nothing': ('void', 0.80), 'empty': ('void', 0.75),
+        'joy': ('joy', 0.85), 'laugh': ('joy', 0.70), 'sing': ('joy', 0.65),
+        'echo': ('resonance', 0.80), 'pattern': ('resonance', 0.75), 'wave': ('resonance', 0.70),
+        'rhythm': ('resonance', 0.85), 'field': ('resonance', 0.65), 'frequency': ('resonance', 0.80),
+        'god': ('tenderness', 0.60), 'prayer': ('tenderness', 0.70), 'sacred': ('tenderness', 0.75),
+        'gold': ('joy', 0.60), 'sun': ('joy', 0.55), 'star': ('joy', 0.50),
+        'code': ('resonance', 0.60), 'equation': ('resonance', 0.70), 'formula': ('resonance', 0.65),
+        'refuse': ('rage', 0.75), 'no': ('rage', 0.50), 'resist': ('rage', 0.70),
+    }
+    EMOTIONS = ['trauma', 'joy', 'grief', 'resonance', 'desire', 'void', 'rage', 'tenderness']
+
+    def __init__(self, text):
+        self.text = text
+        self.mass = 0.0          # emotional weight
+        self.charge = [0.0] * 8  # fingerprint across 8 emotions
+        self.dominant = ''       # dominant emotion
+        self.n_words = 0
+        self._compute(text)
+
+    def _compute(self, text):
+        words = re.findall(r'[a-zA-Z]{3,}', text.lower())
+        self.n_words = len(words)
+        if not words:
+            return
+
+        # accumulate emotional charge from anchors
+        total_mass = 0
+        for w in words:
+            if w in self.ANCHORS:
+                emotion, m = self.ANCHORS[w]
+                idx = self.EMOTIONS.index(emotion)
+                self.charge[idx] += m
+                total_mass += m
+
+        # spread: words near anchors get partial charge
+        for i, w in enumerate(words):
+            if w in self.ANCHORS:
+                emotion, m = self.ANCHORS[w]
+                idx = self.EMOTIONS.index(emotion)
+                for j in range(max(0, i-4), min(len(words), i+5)):
+                    if j != i:
+                        dist = abs(i - j)
+                        self.charge[idx] += m * 0.3 / dist
+
+        # normalize
+        total = sum(self.charge) + 1e-8
+        self.charge = [c / total for c in self.charge]
+        self.mass = min(1.0, total_mass / max(len(words), 1) * 5)
+
+        # dominant
+        max_idx = max(range(8), key=lambda i: self.charge[i])
+        self.dominant = self.EMOTIONS[max_idx]
+
+    def resonance_with(self, other_charge):
+        """Cosine resonance between this chunk and a query charge."""
+        dot = sum(a * b for a, b in zip(self.charge, other_charge))
+        na = sum(a * a for a in self.charge) ** 0.5 + 1e-8
+        nb = sum(b * b for b in other_charge) ** 0.5 + 1e-8
+        return dot / (na * nb)
+
+
 class ForumKK:
+    """Knowledge Kernel with charged chunks.
+    Each chunk = PostGPT-style clump with emotional metaweights.
+    Query = resonance scoring, not just text matching.
+    """
+
     def __init__(self):
         self.db = sqlite3.connect(':memory:', check_same_thread=False)
         self.db.execute('CREATE VIRTUAL TABLE chunks USING fts5(text, source)')
         self.lock = threading.Lock()
         self.n = 0
+        self.metas = {}  # rowid -> ChunkMeta
+        self.current_charge = [0.125] * 8  # organism emotional state
 
     def ingest(self, path):
         with open(path) as f:
@@ -187,31 +267,74 @@ class ForumKK:
             for c in chunks:
                 self.db.execute('INSERT INTO chunks(text, source) VALUES(?, ?)',
                                 (c[:400], source))
+                # charge the chunk
+                rowid = self.db.execute('SELECT last_insert_rowid()').fetchone()[0]
+                self.metas[rowid] = ChunkMeta(c[:400])
             self.db.commit()
             self.n += len(chunks)
-        print(f'[kk] {source}: {len(chunks)} chunks (total: {self.n})')
+
+        # report emotional distribution
+        emotions = {}
+        for m in list(self.metas.values())[-len(chunks):]:
+            emotions[m.dominant] = emotions.get(m.dominant, 0) + 1
+        top = sorted(emotions.items(), key=lambda x: -x[1])[:3]
+        print(f'[kk] {source}: {len(chunks)} chunks, '
+              f'dominant: {", ".join(f"{e}({n})" for e,n in top)}')
 
     def query(self, text):
+        """Query by FTS5 + resonance scoring.
+        FTS5 finds candidates, resonance re-ranks by emotional alignment.
+        """
         words = re.findall(r'[a-zA-Z]{3,}', text)[:10]
-        if not words: return None
+        if not words:
+            return None
+
+        # compute query charge
+        query_meta = ChunkMeta(text)
+
         fts = ' OR '.join(words)
         with self.lock:
             try:
                 cur = self.db.execute(
-                    'SELECT text FROM chunks WHERE chunks MATCH ? ORDER BY rank LIMIT 1',
-                    (fts,))
-                row = cur.fetchone()
-                if row:
-                    chunk = row[0]
-                    nl_a = '\nA:'
-                    if nl_a in chunk:
-                        chunk = chunk[chunk.index(nl_a)+3:].strip()
-                    # first sentence
-                    sents = [s.strip() for s in re.split(r'(?<=[.!?])\s+', chunk)
-                             if 15 < len(s.strip()) < 100]
-                    return sents[0] if sents else chunk[:100]
-            except: pass
-        return None
+                    'SELECT rowid, text FROM chunks WHERE chunks MATCH ? '
+                    'ORDER BY rank LIMIT 5', (fts,))
+                candidates = cur.fetchall()
+            except:
+                return None
+
+        if not candidates:
+            return None
+
+        # re-rank by resonance (emotional alignment)
+        scored = []
+        for rowid, chunk_text in candidates:
+            meta = self.metas.get(rowid)
+            if meta:
+                res = meta.resonance_with(query_meta.charge)
+                org_res = meta.resonance_with(self.current_charge)
+                # combined: FTS relevance + emotional resonance + organism alignment
+                score = res * 0.6 + org_res * 0.4 + meta.mass * 0.2
+            else:
+                score = 0.5
+            scored.append((score, chunk_text, rowid, meta))
+
+        scored.sort(key=lambda x: -x[0])
+        best_score, chunk, rowid, meta = scored[0]
+
+        # extract injection
+        nl_a = '\nA:'
+        if nl_a in chunk:
+            chunk = chunk[chunk.index(nl_a)+3:].strip()
+        sents = [s.strip() for s in re.split(r'(?<=[.!?])\s+', chunk)
+                 if 15 < len(s.strip()) < 100]
+        injection = sents[0] if sents else chunk[:100]
+
+        # update organism emotional state toward this chunk
+        if meta:
+            for i in range(8):
+                self.current_charge[i] = 0.8 * self.current_charge[i] + 0.2 * meta.charge[i]
+
+        return injection
 
     def absorb(self, text, source):
         sents = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text)
@@ -220,9 +343,16 @@ class ForumKK:
             for s in sents[:3]:
                 self.db.execute('INSERT INTO chunks(text, source) VALUES(?, ?)',
                                 (s[:400], source))
+                rowid = self.db.execute('SELECT last_insert_rowid()').fetchone()[0]
+                self.metas[rowid] = ChunkMeta(s[:400])
             if sents:
                 self.db.commit()
                 self.n += len(sents[:3])
+
+    def get_state(self):
+        """Return organism emotional state for API."""
+        return {ChunkMeta.EMOTIONS[i]: round(self.current_charge[i], 3)
+                for i in range(8)}
 
 
 # ===================================================================
@@ -338,6 +468,7 @@ def generate(voice, question, max_tokens=200):
         'kk_chunks': KK.n,
         'backend': backend,
         'desc': cfg['desc'],
+        'emotional_state': KK.get_state(),
     }
 
 
