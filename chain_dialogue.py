@@ -166,12 +166,20 @@ class KnowledgeKernel:
         "RRPRAM creates fingerprints for each position in the sequence."
         Short. Concrete. One concept. Model dances from there.
         """
-        # prefer answer part in Q/A format
+        # strip Q/A format — take only the answer
         nl_a = '\nA:'
         if nl_a in chunk:
             chunk = chunk[chunk.index(nl_a) + 3:].strip()
         elif chunk.startswith('A:'):
             chunk = chunk[2:].strip()
+        # also strip if chunk starts with Q:
+        if chunk.startswith('Q:'):
+            if nl_a in chunk:
+                chunk = chunk[chunk.index(nl_a) + 3:].strip()
+            elif '\n' in chunk:
+                chunk = chunk[chunk.index('\n') + 1:].strip()
+            else:
+                chunk = chunk[2:].strip()
 
         sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', chunk) if s.strip()]
         if not sentences:
@@ -211,6 +219,12 @@ class KnowledgeKernel:
                 last_dot = max(result.rfind('.'), result.rfind('!'), result.rfind('?'))
                 if last_dot > 20:
                     result = result[:last_dot + 1]
+            # never inject a question — model gets confused
+            if result.rstrip().endswith('?'):
+                # try next scored sentence
+                for _, _, s in scored[1:]:
+                    if not s.rstrip().endswith('?'):
+                        return s
             return result
         # fallback: first sentence, but cut at period not mid-word
         first = sentences[0]
@@ -577,34 +591,44 @@ def dialogue_mode(model, tok, kk, voice_name='leo', **sample_kwargs):
 
 def explore_mode(model, tok, kk, seed, voice_name='leo',
                  depth=8, **sample_kwargs):
-    """Leo picks direction from seed. KK follows the thread."""
+    """Leo explores freely. KK follows the thread, anchored to seed topic.
+
+    Unlike chain (structured injection) or dialogue (Q&A),
+    explore lets the model lead. KK whispers at boundaries
+    but doesn't steer — it enriches.
+    """
     print('\n' + '='*60)
     print(f'  EXPLORE -- {voice_name} leads, KK follows')
     print('='*60 + '\n')
 
+    # Prime from essay
+    prime, _ = kk.pick_next(seed, prefer_source='dario_essay.txt')
     ids = [BOS, USER_START] + tok.encode(seed) + [USER_END, ASST_START]
-    ids = ids + tok.encode('Let me think about this. ')
+    if prime:
+        ids = ids + tok.encode(prime + ' ')
+        print(f'  [prime] {prime[:70]}\n', flush=True)
+
     kk.reset()
     print(f'[seed] {seed}\n')
 
     step = 0
     for step in range(depth):
         ids, text, hit_boundary = generate_segment(
-            model, tok, ids, max_tokens=300, **sample_kwargs)
+            model, tok, ids, max_tokens=250, **sample_kwargs)
 
         if not hit_boundary and step < depth - 1:
             ids = ids + tok.encode('\n')
 
-        injection, _ = kk.pick_next(text)
+        # KK follows: topic + model output
+        query = seed + ' ' + text[-200:]
+        injection, _ = kk.pick_next(query)
         if injection is None:
             print(f'\n[explore] KK exhausted at step {step}')
             break
 
-        whisper = f'\nWhat about: {injection[:120]}\n'
+        # inject as continuation, not question
         print(f'\n\n  [explore -> {step+1}] {injection[:70]}\n', flush=True)
-
-        inject_ids = tok.encode(whisper)
-        ids = ids + inject_ids
+        ids = ids + tok.encode('\n' + injection + ' ')
 
         if len(ids) > CTX_TRIM:
             ids = [BOS] + ids[-(CTX_TRIM - 1):]
