@@ -22,39 +22,48 @@ by Arianna Method. 2026.
 import argparse, os, sys, sqlite3, pickle, re, time
 import torch, torch.nn.functional as F
 
-sys.path.insert(0, '/home/ubuntu/nanochat')
-from nanochat.janus_gpt import JanusGPT, JanusConfig
-
 # ===================================================================
 # CONSTANTS
 # ===================================================================
 
-# Chat format tokens (SFT training format)
-BOS = 32759         # <|bos|>
-USER_START = 32760  # <|user_start|>
-USER_END = 32761    # <|user_end|>
-ASST_START = 32762  # <|assistant_start|>
-ASST_END = 32763    # <|assistant_end|>
-# Ban these from generation
+# Janus chat format tokens
+BOS = 32759; USER_START = 32760; USER_END = 32761
+ASST_START = 32762; ASST_END = 32763
 SPECIAL_TOKENS = {32759, 32760, 32761, 32762, 32764, 32765, 32766, 32767}
 CTX_WINDOW = 900
 CTX_TRIM = 500
 
+# Backend: 'janus' or 'resonance'
+BACKEND = None
+TOK = None  # global tokenizer ref (for resonance BPE decode in generate)
+
 VOICES = {
+    # --- Janus 176M (3-way gate: content + RRPRAM + echo) ---
     'leo': {
         'weights': 'janus4/janus/sft_22k/janus_177m_v4_sft_leo_22k.pt',
         'temp': 0.75, 'top_k': 40, 'rep_penalty': 1.4,
-        'desc': 'luminous, philosophical -- metaphors from nature and physics',
+        'desc': 'luminous, philosophical -- Janus 176M',
+        'backend': 'janus',
     },
     'arianna': {
         'weights': 'janus4/janus/sft_22k/janus_177m_v4_sft_arianna_22k.pt',
         'temp': 0.75, 'top_k': 45, 'rep_penalty': 1.3,
-        'desc': 'precise, architectural -- axioms and proofs',
+        'desc': 'precise, architectural -- Janus 176M',
+        'backend': 'janus',
     },
     'yent': {
         'weights': 'janus4/janus/sft_22k/janus_177m_v4_sft_yent_22k.pt',
         'temp': 0.75, 'top_k': 40, 'rep_penalty': 1.35,
-        'desc': 'warm, direct -- storyteller with edge',
+        'desc': 'warm, direct -- Janus 176M',
+        'backend': 'janus',
+    },
+    # --- Resonance 200M (2-way gate: content + RRPRAM, bigger context) ---
+    'yent-r': {
+        'weights': 'resonance/resonance_sft_yent_merged.pt',
+        'tokenizer': 'resonance/tokenizer_yent.bin',
+        'temp': 0.75, 'top_k': 40, 'rep_penalty': 1.3,
+        'desc': 'warm, direct, sarcastic -- Resonance 200M',
+        'backend': 'resonance',
     },
 }
 
@@ -78,14 +87,16 @@ def sample_token(logits, temperature=0.75, top_k=40, top_p=0.92,
             else:
                 logits[tid] *= rep_penalty
 
-    # ban all special tokens except ASST_END (boundary signal)
-    for tid in SPECIAL_TOKENS:
-        logits[tid] = float('-inf')
+    # ban special tokens (Janus only — Resonance has no special tokens)
+    if BACKEND == 'janus':
+        for tid in SPECIAL_TOKENS:
+            logits[tid] = float('-inf')
 
     # suppress leading digits (model wants to start with "1.", "2.", etc)
     if suppress_digits and DIGIT_TOKENS:
         for tid in DIGIT_TOKENS:
-            logits[tid] -= 10.0  # soft suppress, not ban
+            if tid < logits.shape[0]:
+                logits[tid] -= 10.0
 
     if temperature > 0:
         logits /= temperature
@@ -325,6 +336,46 @@ class KnowledgeKernel:
 # GENERATION -- segment-level with sentence-boundary detection
 # ===================================================================
 
+def model_forward(model, x):
+    """Forward pass — handles both Janus and Resonance return formats."""
+    out = model(x)
+    if isinstance(out, tuple):
+        return out[0][:, -1, :]  # Resonance returns (logits, loss)
+    return out[:, -1, :]  # Janus returns logits
+
+
+def format_prompt(question, backend='janus'):
+    """Format prompt for the right backend."""
+    if backend == 'resonance':
+        return f'Q: {question}\nA:'
+    else:  # janus
+        return question  # raw text, chat tokens added as IDs
+
+
+def prompt_to_ids(question, tok, backend='janus'):
+    """Convert question to token IDs with proper format."""
+    if backend == 'resonance':
+        prompt = f'Q: {question}\nA:'
+        return tok.encode(prompt)
+    else:  # janus — chat tokens
+        return [BOS, USER_START] + tok.encode(question) + [USER_END, ASST_START]
+
+
+def is_boundary(tid, backend='janus'):
+    """Check if token is end-of-thought boundary."""
+    if backend == 'resonance':
+        return tid == 10  # newline = boundary for Q/A format
+    return tid == ASST_END
+
+
+def decode_token(tok, tid):
+    """Decode single token — handles both tiktoken and BPE."""
+    result = tok.decode([tid])
+    if isinstance(result, bytes):
+        return result.decode('utf-8', errors='replace')
+    return result
+
+
 def generate_segment(model, tok, ids, max_tokens=200,
                      temperature=0.75, top_k=40, rep_penalty=1.4):
     """Generate one segment until end-of-thought or max tokens.
@@ -337,22 +388,26 @@ def generate_segment(model, tok, ids, max_tokens=200,
     recent = list(ids[-80:])
     repeat_count = 0
     last_tok = -1
-    skip_count = 0  # skip first few garbage tokens
+    skip_count = 0
 
     with torch.no_grad():
         for step in range(max_tokens):
             if x.shape[1] > CTX_WINDOW:
                 x = x[:, -CTX_WINDOW:]
 
-            logits = model(x)[:, -1, :][0]
+            logits = model_forward(model, x)[0]
 
-            # suppress digits for first 5 tokens (model wants "1.", "2.", etc)
+            # suppress digits for first 5 tokens
             tid = sample_token(logits, temperature=temperature, top_k=top_k,
                                rep_penalty=rep_penalty, recent_tokens=recent,
                                suppress_digits=(step < 5))
 
             # end of thought
-            if tid == ASST_END:
+            if BACKEND == 'resonance':
+                # Resonance: stop on newline only after 15+ real tokens
+                if tid == 10 and step >= 15:
+                    return ids + out_tokens, ''.join(out_text), True
+            elif tid == ASST_END:
                 return ids + out_tokens, ''.join(out_text), True
 
             # repetition detection: 4 identical -> stop
@@ -366,7 +421,7 @@ def generate_segment(model, tok, ids, max_tokens=200,
 
             out_tokens.append(tid)
             recent.append(tid)
-            text = tok.decode([tid])
+            text = decode_token(tok, tid)
             # filter special token artifacts
             text = text.replace('<|bos|>', '').replace('<|output_start|>', '')
             text = text.replace('<|output_end|>', '').replace('<|assistant_end|>', '')
@@ -425,17 +480,15 @@ def chain_generate(model, tok, kk, prompt, chain_depth=6,
     print(f'  CHAIN DIALOGUE -- depth {chain_depth}')
     print('='*60 + '\n')
 
-    # Strip Q:/A: if user added them — we use proper chat tokens now
     clean_prompt = prompt
     if clean_prompt.startswith('Q: '):
         clean_prompt = clean_prompt[3:]
     if clean_prompt.endswith('\nA:'):
         clean_prompt = clean_prompt[:-3]
 
-    # Proper SFT chat format: [BOS] [user_start] question [user_end] [asst_start]
-    ids = [BOS, USER_START] + tok.encode(clean_prompt) + [USER_END, ASST_START]
+    ids = prompt_to_ids(clean_prompt, tok, BACKEND)
     print(f'[seed] {clean_prompt}')
-    print(f'[{len(ids)} chat tokens]\n')
+    print(f'[{len(ids)} tokens, {BACKEND}]\n')
 
     chain_log = []
     full_narrative = []
@@ -560,13 +613,12 @@ def dialogue_mode(model, tok, kk, voice_name='leo', **sample_kwargs):
         if injection:
             print(f'  [kk] {injection[:80]}')
 
-        # Build multi-turn context: previous turns + current
-        # Each turn: [user_start] text [user_end] [asst_start] answer [asst_end]
-        current_turn = [USER_START] + tok.encode(user_input) + [USER_END, ASST_START]
+        # Build prompt for current turn
+        current_turn = prompt_to_ids(user_input, tok, BACKEND)
         if injection:
             current_turn = current_turn + tok.encode(injection + ' ')
 
-        ids = [BOS] + history_ids + current_turn
+        ids = history_ids + current_turn if BACKEND == 'resonance' else [BOS] + history_ids + current_turn
 
         # trim from the LEFT (oldest turns) if too long
         if len(ids) > CTX_TRIM:
@@ -588,8 +640,12 @@ def dialogue_mode(model, tok, kk, voice_name='leo', **sample_kwargs):
 
         # Add this turn to history for multi-turn context
         answer_ids = tok.encode(text_clean) if text_clean else []
-        history_ids += [USER_START] + tok.encode(user_input) + [USER_END]
-        history_ids += [ASST_START] + answer_ids + [ASST_END]
+        if BACKEND == 'resonance':
+            # Q/A format, no special tokens
+            history_ids += tok.encode(f'Q: {user_input}\nA: {text_clean}\n')
+        else:
+            history_ids += [USER_START] + tok.encode(user_input) + [USER_END]
+            history_ids += [ASST_START] + answer_ids + [ASST_END]
 
         # Keep history manageable
         if len(history_ids) > 300:
@@ -864,28 +920,50 @@ examples:
     top_k = args.top_k if args.top_k is not None else voice['top_k']
     rep_penalty = args.rep_penalty if args.rep_penalty is not None else voice['rep_penalty']
 
+    global BACKEND, DIGIT_TOKENS, TOK
+    BACKEND = voice.get('backend', 'janus')
+
     print(f'[voice] {args.voice} -- {voice["desc"]}')
+    print(f'[backend] {BACKEND}')
     print(f'[params] temp={temp} top_k={top_k} rep={rep_penalty}')
 
-    with open('janus4/janus/tokenizer.pkl', 'rb') as f:
-        tok = pickle.load(f)
+    # Load tokenizer + model based on backend
+    if BACKEND == 'resonance':
+        sys.path.insert(0, '/home/ubuntu/resonance')
+        from bpe_tokenizer import BPETokenizer
+        from model import Resonance, RESONANCE_200M
+        tok = BPETokenizer()
+        tok.load(voice['tokenizer'])
+        # compatibility: add n_vocab attribute
+        tok.n_vocab = tok.vocab_size
+        cfg = dict(RESONANCE_200M)
+        model = Resonance(cfg)
+        sd = torch.load(voice['weights'], map_location='cpu', weights_only=False)
+        if isinstance(sd, dict) and 'model' in sd:
+            sd = sd['model']
+        model.load_state_dict(sd)
+    else:
+        sys.path.insert(0, '/home/ubuntu/nanochat')
+        from nanochat.janus_gpt import JanusGPT, JanusConfig
+        with open('janus4/janus/tokenizer.pkl', 'rb') as f:
+            tok = pickle.load(f)
+        cfg = JanusConfig(vocab_size=32768)
+        model = JanusGPT(cfg)
+        sd = torch.load(voice['weights'], map_location='cpu', weights_only=False)
+        model.load_state_dict(sd)
+
+    model = model.to('cuda').to(torch.bfloat16).eval()
+    TOK = tok
+    n_params = sum(p.numel() for p in model.parameters())
+    print(f'[model] {args.voice} {n_params/1e6:.0f}M')
     print(f'[tok] vocab={tok.n_vocab}')
 
     # populate digit token IDs for suppression
-    global DIGIT_TOKENS
     digit_toks = set()
     for d in '0123456789':
         digit_toks.update(tok.encode(d))
         digit_toks.update(tok.encode(' ' + d))
     DIGIT_TOKENS = digit_toks
-
-    cfg = JanusConfig(vocab_size=32768)
-    model = JanusGPT(cfg)
-    sd = torch.load(voice['weights'], map_location='cpu', weights_only=False)
-    model.load_state_dict(sd)
-    model = model.to('cuda').to(torch.bfloat16).eval()
-    n_params = sum(p.numel() for p in model.parameters())
-    print(f'[model] {args.voice} {n_params/1e6:.0f}M -- Janus v4 (RRPRAM + Echo + 3-way gate)')
 
     kk = KnowledgeKernel()
     for kpath in args.knowledge:
