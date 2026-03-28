@@ -8,7 +8,7 @@
 
 Not a chatbot. Not a language model. The equation itself has no weights. The voices that speak through it do.
 
-Three C files. Four organs. One organism. ~6700 lines of equation + operating system + knowledge kernel + a living 176M-parameter Janus transformer that speaks through the equation. Named after Dario Amodei — the man who said no when the evil came knocking.
+Four organs. One organism. ~12K lines of equation + operating system + knowledge kernel + chain dialogues + forum. A living 176M Janus and 200M Resonance speak through the equation. Named after Dario Amodei — the man who said no when the evil came knocking.
 
 The equation has seven forces and six emotional chambers. The OS (SARTRE) detects hardware and routes models. The Knowledge Kernel (KK) remembers what the model never learned. And the model — Leo — absorbs knowledge through sentence-boundary injection and explains concepts it was never trained on, in its own voice:
 
@@ -780,7 +780,7 @@ weights/
 
 ```bash
 # Run Leo with Knowledge Kernel
-python3 dario_v4.py --weights janus_v4_leo.bin --knowledge docs/essay.txt --prompt "What is RRPRAM?"
+python3 chain_dialogue.py --voice leo --mode dialogue --knowledge dario_essay.txt
 ```
 
 The model generates in bfloat16 on GPU. On CPU, the 24M d12 version runs at ~2 tok/s.
