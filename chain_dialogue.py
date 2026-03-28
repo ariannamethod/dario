@@ -752,6 +752,71 @@ def duet_mode(models, tok, kk, topic, voices, depth=4, **all_kwargs):
 
 
 # ===================================================================
+# TRIALOGUE MODE -- three voices, shared history, cascade
+# ===================================================================
+
+def trialogue_mode(models_map, tok, kk, topic, voice_order, depth=3, **kw):
+    """Three voices take turns. Each sees full history of all previous speakers.
+
+    Round-robin: Leo → Yent → Arianna → Leo → ...
+    Shared KK absorbs all. Each voice builds on what came before.
+    """
+    print('\n' + '='*60)
+    print(f'  TRIALOGUE -- {" + ".join(voice_order)}')
+    print(f'  Topic: {topic}')
+    print('='*60 + '\n')
+
+    kk.reset()
+    prime, _ = kk.pick_next(topic, prefer_source='dario_essay.txt')
+
+    turns = []
+    history_ids = []  # shared multi-turn context
+
+    for step in range(depth * len(voice_order)):
+        voice = voice_order[step % len(voice_order)]
+        model = models_map[voice]
+        v_cfg = VOICES[voice]
+        s_kwargs = dict(temperature=v_cfg['temp'], top_k=v_cfg['top_k'],
+                        rep_penalty=v_cfg['rep_penalty'])
+
+        # KK injection: topic + last speaker's words
+        prev_text = turns[-1][1][-200:] if turns else (prime or topic)
+        injection, _ = kk.pick_next(prev_text + ' ' + topic, exclude_model=True)
+
+        # Build prompt with FULL shared history
+        ids = [BOS] + history_ids + [USER_START] + tok.encode(topic) + [USER_END, ASST_START]
+        if injection:
+            ids = ids + tok.encode(injection + ' ')
+
+        if len(ids) > CTX_TRIM:
+            ids = [BOS] + ids[-(CTX_TRIM - 1):]
+
+        print(f'{voice}> ', end='', flush=True)
+        ids, text, _ = generate_segment(model, tok, ids, max_tokens=150, **s_kwargs)
+        text_clean = text.replace('<|bos|>', '').strip()
+        print()
+
+        if text_clean:
+            turns.append((voice, text_clean))
+            n = kk.absorb(text_clean, source=f'{voice}_trialogue')
+            if n:
+                print(f'  [kk+{n}]')
+            # Add to shared history
+            answer_ids = tok.encode(text_clean)
+            history_ids += [ASST_START] + answer_ids + [ASST_END]
+            if len(history_ids) > 350:
+                history_ids = history_ids[-350:]
+
+    # Transcript
+    print('\n' + '='*60)
+    print('  TRIALOGUE TRANSCRIPT')
+    print('='*60)
+    for voice, text in turns:
+        print(f'\n{voice}: {text}')
+    print(f'\n[trialogue] {len(turns)} turns, kk: {kk.n_chunks} chunks')
+
+
+# ===================================================================
 # MAIN
 # ===================================================================
 
@@ -767,7 +832,7 @@ examples:
   %(prog)s --mode explore --topic "patterns and rhythm"
   %(prog)s --mode chain --topic "theta formula" --save chain_out.txt
 """)
-    p.add_argument('--mode', choices=['chain', 'dialogue', 'explore', 'duet'],
+    p.add_argument('--mode', choices=['chain', 'dialogue', 'explore', 'duet', 'trialogue'],
                    default='chain')
     p.add_argument('--voice', choices=list(VOICES.keys()), default='leo')
     p.add_argument('--topic', '--prompt', '--seed', dest='topic',
@@ -879,6 +944,23 @@ examples:
             duet_mode([model, model2], tok, kk, args.topic,
                       voices=[args.voice, args.voice2],
                       depth=args.depth)
+
+    elif args.mode == 'trialogue':
+        # Load all three voices
+        voice_order = ['leo', 'yent', 'arianna']
+        models_map = {args.voice: model}
+        for v in voice_order:
+            if v not in models_map:
+                v_cfg = VOICES[v]
+                m = JanusGPT(cfg)
+                sd_v = torch.load(v_cfg['weights'], map_location='cpu', weights_only=False)
+                m.load_state_dict(sd_v)
+                m = m.to('cuda').to(torch.bfloat16).eval()
+                models_map[v] = m
+                print(f'[loaded] {v}')
+
+        trialogue_mode(models_map, tok, kk, args.topic,
+                       voice_order=voice_order, depth=args.depth)
 
 
 if __name__ == '__main__':
