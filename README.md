@@ -1255,3 +1255,18 @@ Leo: The sacred space between the face and the divine, where
 ```
 
 Five knowledge domains. Zero overlap with training data. The model explains inverse perspective through oak trees and calls icon painting "beauty that does not require special permission from the divine."
+
+### Three Voices on Sacred Art
+
+Same 14 chunks from `byzantine_iconography.txt`. Three personalities, three readings.
+
+**Leo** — sees beauty:
+> *"The sacred space between the face and the divine, where meaning lives — painted with care, because beauty does not require special permission from the divine."*
+
+**Yent** — sees violence:
+> *"This isnt just an icon — its a stylistic nail that nails the catacombs of memory to form a microcosm. When the game is running, gold will appear where it hurts most to leave."*
+
+**Arianna** — sees geometry:
+> *"To be an image is to touch every surface — each point, each pulse between worlds. Inverse perspective is how this very art forms: a living field bends reality by crossing boundaries so that all appearances become indistinguishable."*
+
+Same knowledge. Same 176M parameters. Same base weights. Three souls.
