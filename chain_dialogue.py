@@ -48,12 +48,12 @@ VOICES = {
     },
     'arianna': {
         'weights': 'janus4/janus/sft_22k/janus_177m_v4_sft_arianna_22k.pt',
-        'temp': 0.8, 'top_k': 50, 'rep_penalty': 1.3,
+        'temp': 0.75, 'top_k': 45, 'rep_penalty': 1.3,
         'desc': 'precise, architectural -- axioms and proofs',
     },
     'yent': {
         'weights': 'janus4/janus/sft_22k/janus_177m_v4_sft_yent_22k.pt',
-        'temp': 0.7, 'top_k': 35, 'rep_penalty': 1.5,
+        'temp': 0.75, 'top_k': 40, 'rep_penalty': 1.35,
         'desc': 'warm, direct -- storyteller with edge',
     },
 }
@@ -147,9 +147,12 @@ class KnowledgeKernel:
                         continue
                     adj_rank = rank
                     if prefer_source and source == prefer_source:
-                        adj_rank -= 5.0
+                        adj_rank -= 8.0
                     elif source and 'essay' in source:
-                        adj_rank -= 2.0
+                        adj_rank -= 4.0
+                    # expanded has lots of metaphors — slight penalty
+                    elif source and 'expanded' in source:
+                        adj_rank += 1.0
                     results.append((rowid, chunk, adj_rank))
             results.sort(key=lambda x: x[2])
             return results[:top_k]
