@@ -125,8 +125,10 @@ class KnowledgeKernel:
         self.n_chunks += len(chunks)
         print(f'[kk] {source}: {len(chunks)} chunks')
 
-    def query(self, text, top_k=5, prefer_source=None):
-        """FTS5 search. Skips used chunks. Essay chunks get boost."""
+    def query(self, text, top_k=5, prefer_source=None, exclude_model=False):
+        """FTS5 search. Skips used chunks. Essay chunks get boost.
+        exclude_model=True: skip chunks absorbed from model output (prevents echo chamber).
+        """
         words = ''.join(c if c.isalnum() or c == ' ' else ' ' for c in text).split()
         words = [w for w in words if len(w) > 2]
         if not words:
@@ -140,6 +142,9 @@ class KnowledgeKernel:
             results = []
             for rowid, chunk, rank, source in cur:
                 if rowid not in self.used:
+                    # skip model-generated chunks if requested
+                    if exclude_model and source and ('model' in source or '_turn' in source or '_duet' in source):
+                        continue
                     adj_rank = rank
                     if prefer_source and source == prefer_source:
                         adj_rank -= 5.0
@@ -200,14 +205,27 @@ class KnowledgeKernel:
 
         if scored:
             scored.sort(key=lambda x: (-x[0], x[1]))
-            return scored[0][2]
-        return sentences[0][:max_len]
+            result = scored[0][2]
+            # ensure ends at sentence boundary
+            if result and result[-1] not in '.!?':
+                last_dot = max(result.rfind('.'), result.rfind('!'), result.rfind('?'))
+                if last_dot > 20:
+                    result = result[:last_dot + 1]
+            return result
+        # fallback: first sentence, but cut at period not mid-word
+        first = sentences[0]
+        if len(first) > max_len:
+            cut = first[:max_len].rfind('.')
+            if cut > 20:
+                return first[:cut + 1]
+        return first[:max_len]
 
-    def pick_next(self, generated_text, prefer_source=None):
+    def pick_next(self, generated_text, prefer_source=None, exclude_model=False):
         """Pick next injection based on model's OUTPUT.
         KK queries on what the model SAID, not what the user asked.
         """
-        results = self.query(generated_text, top_k=3, prefer_source=prefer_source)
+        results = self.query(generated_text, top_k=3, prefer_source=prefer_source,
+                             exclude_model=exclude_model)
         if not results:
             return None, None
         rowid, chunk, rank = results[0]
@@ -473,7 +491,7 @@ def dialogue_mode(model, tok, kk, voice_name='leo', **sample_kwargs):
         if prev_answer:
             query_text = f'{user_input} {prev_answer[-200:]}'
 
-        injection, _ = kk.pick_next(query_text)
+        injection, _ = kk.pick_next(query_text, exclude_model=True)
 
         if injection:
             print(f'  [kk] {injection[:80]}')
