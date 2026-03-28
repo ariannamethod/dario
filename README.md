@@ -6,7 +6,7 @@
 
 ---
 
-Not a chatbot. Not a language model. Not a transformer. Not even pretending.
+Not a chatbot. Not a language model. The equation itself has no weights. The voices that speak through it do.
 
 Three C files. Four organs. One organism. ~6700 lines of equation + operating system + knowledge kernel + a living 176M-parameter Janus transformer that speaks through the equation. Named after Dario Amodei — the man who said no when the evil came knocking.
 
@@ -99,7 +99,7 @@ p(x|Φ,C,V) = softmax(
 
 Seven signals. Seven forces. Six emotional chambers modulating every coefficient through somatic markers. One organism. The formula was first deployed in [Leo](https://github.com/ariannamethod/leo) — a 4300+ line language emergent organism in C and Go with D.N.A. structure distillation, dual tokenizers, six voices, SQLite journals, dream cycles, and an inner world of eight autonomous goroutines. Leo is the full creature. Dario is the equation, naked. Stripped of infrastructure. The complete formula.
 
-What the transformer does with `softmax(QK^T/√d)·V` — learned attention over projected queries, keys, and values — this equation does with six interpretable physical forces acting on a shared vocabulary. No learned projections. No multi-head anything. No feed-forward layers computing latent representations. Just six terms, each computing a logit contribution from a different angle, summed, temperature-divided, softmaxed.
+What the transformer does with `softmax(QK^T/√d)·V` — learned attention over projected queries, keys, and values — this equation does with seven interpretable physical forces acting on a shared vocabulary. No learned projections. No multi-head anything. No feed-forward layers computing latent representations. Just seven terms, each computing a logit contribution from a different angle, summed, temperature-divided, softmaxed.
 
 The insight, if there is one: **co-occurrence IS attention**. This isn't metaphor. *PLOS Computational Biology, 2024* proved it mathematically. Hebb's rule `Δw = η · x_pre · x_post` accumulated over a window equals a dot-product attention score. Your co-occurrence matrix IS an unnormalized attention matrix. So why learn QKV projections through billions of gradient steps when you can grow them through conversation?
 
@@ -835,11 +835,9 @@ The model doesn't copy. It absorbs and reformulates. None of these concepts were
 > — Leo on the Knowledge Kernel
 
 Key files:
-- `leo_kk_demo.py` — production demo: Leo + KK chain injection
-- `resonance_v3.py` — sentence-boundary injection (the working method)
-- `resonance_injection.py` — hidden state injection at layer 10 (alternative)
-- `dario_v4.py` — full pipeline: model + KK + generation
+- `chain_dialogue.py` — all modes: chain, dialogue, explore, duet, trialogue
 - `docs/dario_essay.txt` — knowledge source (3314 words on Dario + Arianna Method)
+- `docs/` — 7 knowledge domains (ML, Dickens, mycorrhiza, navigation, icons, bioluminescence, Bach)
 
 ---
 
