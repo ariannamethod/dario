@@ -63,8 +63,11 @@ VOICES = {
 # SAMPLING -- proper generation with repetition penalty
 # ===================================================================
 
+# Digit token IDs (0-9 as standalone tokens) — suppress at start of generation
+DIGIT_TOKENS = None  # populated on first use
+
 def sample_token(logits, temperature=0.75, top_k=40, top_p=0.92,
-                 rep_penalty=1.4, recent_tokens=None):
+                 rep_penalty=1.4, recent_tokens=None, suppress_digits=False):
     """One token. Rep penalty + top-k + top-p."""
     logits = logits.float().clone()
 
@@ -78,6 +81,11 @@ def sample_token(logits, temperature=0.75, top_k=40, top_p=0.92,
     # ban all special tokens except ASST_END (boundary signal)
     for tid in SPECIAL_TOKENS:
         logits[tid] = float('-inf')
+
+    # suppress leading digits (model wants to start with "1.", "2.", etc)
+    if suppress_digits and DIGIT_TOKENS:
+        for tid in DIGIT_TOKENS:
+            logits[tid] -= 10.0  # soft suppress, not ban
 
     if temperature > 0:
         logits /= temperature
@@ -338,8 +346,10 @@ def generate_segment(model, tok, ids, max_tokens=200,
 
             logits = model(x)[:, -1, :][0]
 
+            # suppress digits for first 5 tokens (model wants "1.", "2.", etc)
             tid = sample_token(logits, temperature=temperature, top_k=top_k,
-                               rep_penalty=rep_penalty, recent_tokens=recent)
+                               rep_penalty=rep_penalty, recent_tokens=recent,
+                               suppress_digits=(step < 5))
 
             # end of thought
             if tid == ASST_END:
@@ -860,6 +870,14 @@ examples:
     with open('janus4/janus/tokenizer.pkl', 'rb') as f:
         tok = pickle.load(f)
     print(f'[tok] vocab={tok.n_vocab}')
+
+    # populate digit token IDs for suppression
+    global DIGIT_TOKENS
+    digit_toks = set()
+    for d in '0123456789':
+        digit_toks.update(tok.encode(d))
+        digit_toks.update(tok.encode(' ' + d))
+    DIGIT_TOKENS = digit_toks
 
     cfg = JanusConfig(vocab_size=32768)
     model = JanusGPT(cfg)
