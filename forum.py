@@ -310,6 +310,31 @@ class ForumHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        if self.path in ('/', '/forum', '/forum.html'):
+            # serve forum.html
+            html_path = os.path.join(os.path.dirname(__file__) or '.', 'forum.html')
+            if not os.path.exists(html_path):
+                html_path = 'dario/forum.html'
+            if os.path.exists(html_path):
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html')
+                self.end_headers()
+                with open(html_path, 'rb') as f:
+                    self.wfile.write(f.read())
+            else:
+                self.send_error(404, 'forum.html not found')
+            return
+        if self.path == '/dario.html':
+            html_path = os.path.join(os.path.dirname(__file__) or '.', 'dario.html')
+            if not os.path.exists(html_path):
+                html_path = 'dario/dario.html'
+            if os.path.exists(html_path):
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html')
+                self.end_headers()
+                with open(html_path, 'rb') as f:
+                    self.wfile.write(f.read())
+            return
         if self.path == '/api/voices':
             voices = {k: {'desc': v['desc'], 'backend': v['backend']}
                       for k, v in CONFIGS.items()}

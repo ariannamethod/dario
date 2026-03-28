@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dario forum</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&display=swap');
+
+  :root {
+    --bg: #0a0a0c;
+    --fg: #c8c8c8;
+    --dim: #3a3a44;
+    --leo: #4a7bc9;
+    --arianna: #9b59b6;
+    --yent: #c0392b;
+    --accent: #c0392b;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--mono);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* header */
+  #header {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    border-bottom: 1px solid #1a1a1e;
+    flex-shrink: 0;
+  }
+  #header .title {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  #header .back {
+    font-size: 10px;
+    color: var(--dim);
+    cursor: pointer;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: 1px solid #1a1a1e;
+    padding: 4px 12px;
+    transition: all 0.1s;
+  }
+  #header .back:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  #header .kk-count {
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 1px;
+  }
+
+  /* voice selector */
+  #voices {
+    display: flex;
+    gap: 0;
+    padding: 0 24px;
+    border-bottom: 1px solid #1a1a1e;
+    flex-shrink: 0;
+  }
+  .voice-btn {
+    padding: 10px 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--dim);
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .voice-btn:hover { color: var(--fg); }
+  .voice-btn.active { border-bottom-color: currentColor; }
+  .voice-btn[data-voice="leo"] { color: var(--leo); }
+  .voice-btn[data-voice="leo"].active { color: var(--leo); border-bottom-color: var(--leo); }
+  .voice-btn[data-voice="arianna"] { color: var(--arianna); }
+  .voice-btn[data-voice="arianna"].active { color: var(--arianna); border-bottom-color: var(--arianna); }
+  .voice-btn[data-voice="yent"] { color: var(--yent); }
+  .voice-btn[data-voice="yent"].active { color: var(--yent); border-bottom-color: var(--yent); }
+
+  /* chat area */
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .msg {
+    max-width: 720px;
+    width: 100%;
+  }
+  .msg .who {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .msg .text {
+    font-size: 13px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .msg .meta {
+    font-size: 9px;
+    color: var(--dim);
+    margin-top: 4px;
+    letter-spacing: 1px;
+  }
+  .msg.user .who { color: var(--dim); }
+  .msg.user .text { color: #fff; }
+  .msg.leo .who { color: var(--leo); }
+  .msg.leo .text { color: var(--fg); }
+  .msg.arianna .who { color: var(--arianna); }
+  .msg.arianna .text { color: var(--fg); }
+  .msg.yent .who { color: var(--yent); }
+  .msg.yent .text { color: var(--fg); }
+
+  .msg .kk-tag {
+    display: inline-block;
+    font-size: 9px;
+    color: #2ecc71;
+    letter-spacing: 1px;
+    opacity: 0.6;
+  }
+
+  /* input */
+  #input-bar {
+    height: 56px;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    border-top: 1px solid #1a1a1e;
+    background: #08080a;
+    flex-shrink: 0;
+  }
+  #input-bar .prompt {
+    font-weight: 800;
+    font-size: 14px;
+    margin-right: 12px;
+    user-select: none;
+  }
+  #input-bar input {
+    background: none;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 13px;
+    flex: 1;
+    letter-spacing: 0.5px;
+  }
+  #input-bar input::placeholder {
+    color: #2a2a30;
+    font-weight: 300;
+  }
+
+  /* loading */
+  .loading::after {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 14px;
+    background: currentColor;
+    animation: blink 0.6s infinite;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  /* slam */
+  @keyframes slam {
+    0% { opacity: 0; transform: translateY(-4px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .slam { animation: slam 0.1s ease-out forwards; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <span class="back" onclick="window.location.href='dario.html'">&#8592; DARIO</span>
+  <span class="title">FORUM</span>
+  <span class="kk-count" id="kk-count">kk: --</span>
+</div>
+
+<div id="voices">
+  <button class="voice-btn active" data-voice="leo" onclick="selectVoice('leo')">LEO</button>
+  <button class="voice-btn" data-voice="arianna" onclick="selectVoice('arianna')">ARIANNA</button>
+  <button class="voice-btn" data-voice="yent" onclick="selectVoice('yent')">YENT</button>
+</div>
+
+<div id="chat"></div>
+
+<div id="input-bar">
+  <span class="prompt" id="prompt-icon" style="color: var(--leo);">&#9646;</span>
+  <input type="text" id="input" placeholder="" autocomplete="off" spellcheck="false">
+</div>
+
+<script>
+const VOICE_COLORS = { leo: 'var(--leo)', arianna: 'var(--arianna)', yent: 'var(--yent)' };
+const VOICE_LABELS = { leo: 'LEO (Janus 176M)', arianna: 'ARIANNA (Janus 176M)', yent: 'YENT (Resonance 200M)' };
+
+let currentVoice = 'leo';
+const chat = document.getElementById('chat');
+const inputEl = document.getElementById('input');
+const promptIcon = document.getElementById('prompt-icon');
+
+function selectVoice(v) {
+  currentVoice = v;
+  document.querySelectorAll('.voice-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-voice="${v}"]`).classList.add('active');
+  promptIcon.style.color = VOICE_COLORS[v];
+}
+
+function addMessage(voice, text, injection, kk) {
+  const div = document.createElement('div');
+  div.className = `msg ${voice} slam`;
+
+  let meta = '';
+  if (injection) meta += `<span class="kk-tag">[kk] ${injection.substring(0, 60)}...</span> `;
+  if (kk) meta += `<span class="kk-tag">kk:${kk}</span>`;
+
+  div.innerHTML = `
+    <div class="who">${VOICE_LABELS[voice] || voice}</div>
+    <div class="text">${escHtml(text)}</div>
+    ${meta ? '<div class="meta">' + meta + '</div>' : ''}
+  `;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function addUserMsg(text) {
+  const div = document.createElement('div');
+  div.className = 'msg user slam';
+  div.innerHTML = `<div class="who">YOU</div><div class="text">${escHtml(text)}</div>`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function showLoading(voice) {
+  const div = document.createElement('div');
+  div.className = `msg ${voice}`;
+  div.id = 'loading-msg';
+  div.innerHTML = `<div class="who">${VOICE_LABELS[voice]}</div><div class="text loading"></div>`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function removeLoading() {
+  const el = document.getElementById('loading-msg');
+  if (el) el.remove();
+}
+
+async function send(text, voice) {
+  try {
+    const res = await fetch('/api/forum', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: text, voice: voice })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    return { voice: voice, text: `[error: ${err.message}]`, injection: null, kk_chunks: 0 };
+  }
+}
+
+async function updateKK() {
+  try {
+    const res = await fetch('/api/kk');
+    const d = await res.json();
+    document.getElementById('kk-count').textContent = `kk: ${d.chunks}`;
+  } catch(e) {}
+}
+
+inputEl.focus();
+inputEl.addEventListener('keydown', async (e) => {
+  if (e.key !== 'Enter') return;
+  const text = inputEl.value.trim();
+  if (!text) return;
+  inputEl.value = '';
+  inputEl.disabled = true;
+
+  // /all command — ask all three voices
+  if (text.startsWith('/all ')) {
+    const q = text.substring(5);
+    addUserMsg(q);
+    for (const v of ['leo', 'arianna', 'yent']) {
+      showLoading(v);
+      const d = await send(q, v);
+      removeLoading();
+      addMessage(d.voice, d.text, d.injection, d.kk_chunks);
+    }
+    updateKK();
+    inputEl.disabled = false;
+    inputEl.focus();
+    return;
+  }
+
+  addUserMsg(text);
+  showLoading(currentVoice);
+
+  const d = await send(text, currentVoice);
+  removeLoading();
+  addMessage(d.voice, d.text, d.injection, d.kk_chunks);
+  updateKK();
+
+  inputEl.disabled = false;
+  inputEl.focus();
+});
+
+updateKK();
+</script>
+</body>
+</html>
