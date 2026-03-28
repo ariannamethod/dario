@@ -216,6 +216,10 @@ class KnowledgeKernel:
             return None, None
         # clean: no newlines, no trailing fragments
         injection = injection.replace('\n', ' ').replace('  ', ' ').strip()
+        # reject fragments that don't start with uppercase or are too short
+        if not injection[0].isupper() or len(injection.split()) < 4:
+            self.mark_used(rowid)
+            return self.pick_next(generated_text, prefer_source)  # try next chunk
         self.mark_used(rowid)
         return injection, chunk
 
@@ -230,9 +234,14 @@ class KnowledgeKernel:
         """
         if len(text.strip()) < 30:
             return 0
-        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if len(s.strip()) > 30]
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if len(s.strip()) > 40]
         added = 0
         for s in sentences:
+            # skip fragments (no capital start, too short, broken)
+            if not s[0].isupper():
+                continue
+            if len(s.split()) < 6:
+                continue
             # dedup: check if very similar chunk already exists
             words = set(re.findall(r'[a-zA-Z]{4,}', s.lower()))
             if len(words) < 3:
@@ -364,10 +373,8 @@ def chain_generate(model, tok, kk, prompt, chain_depth=6,
         seg_clean = segment_text.replace('<|bos|>', '').strip()
         if seg_clean:
             full_narrative.append(seg_clean)
-            # Bi-directional: KK absorbs what model said
-            n_absorbed = kk.absorb(seg_clean, source='model')
-            if n_absorbed:
-                print(f'  [kk+{n_absorbed}]', end='', flush=True)
+            # NOTE: no bi-directional absorption in chain mode
+            # (causes echo chamber). Bi-directional is for dialogue mode only.
 
         if not hit_boundary:
             chain_log.append({'step': step, 'type': 'max_tokens',
