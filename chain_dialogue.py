@@ -404,8 +404,8 @@ def generate_segment(model, tok, ids, max_tokens=200,
 
             # end of thought
             if BACKEND == 'resonance':
-                # Resonance: stop on newline only after 15+ real tokens
-                if tid == 10 and step >= 15:
+                # Resonance: stop on newline only after 40+ real tokens
+                if tid == 10 and step >= 40:
                     return ids + out_tokens, ''.join(out_text), True
             elif tid == ASST_END:
                 return ids + out_tokens, ''.join(out_text), True
