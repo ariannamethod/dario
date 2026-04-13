@@ -537,7 +537,7 @@ int main(int argc, char **argv) {
 
     const char *prompt = argc > 2 ? argv[2] : "Q: What is resonance?\nA:";
     int max_gen = argc > 3 ? atoi(argv[3]) : 200;
-    float temp = argc > 4 ? atof(argv[4]) : 0.7f;
+    float temp = argc > 4 ? atof(argv[4]) : 0.6f;
     printf("prompt: \"%s\"\n\n", prompt);
 
     /* encode prompt */
