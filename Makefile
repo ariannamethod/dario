@@ -30,7 +30,25 @@ test: tests/test_dario.c dario.c
 no-web: dario.c
 	$(CC) $(WARN) dario.c $(CFLAGS) -DDARIO_NO_WEB -o dario
 
-clean:
-	rm -f dario sartre_kernel kk test_dario dario_memory.db
+# ── Janus v4 inference with notorch BLAS ──
+UNAME := $(shell uname)
+ifeq ($(UNAME), Darwin)
+  BLAS_FLAGS = -DUSE_BLAS -DACCELERATE -DACCELERATE_NEW_LAPACK -framework Accelerate
+endif
+ifeq ($(UNAME), Linux)
+  BLAS_FLAGS = -DUSE_BLAS -lopenblas
+endif
 
-.PHONY: all full dario sartre kk test no-web clean
+infer_v4: infer_v4.c ariannamethod/notorch.c ariannamethod/notorch.h
+	$(CC) -O3 -Wall infer_v4.c ariannamethod/notorch.c $(BLAS_FLAGS) -lm -I. -o infer_v4
+	@echo "Built infer_v4 with notorch BLAS"
+
+# ── dario + Leo inference ──
+dario_leo: dario.c infer_v4.c ariannamethod/notorch.c ariannamethod/notorch.h
+	$(CC) $(WARN) dario.c ariannamethod/notorch.c $(BLAS_FLAGS) $(CFLAGS) -I. -o dario_leo
+	@echo "Built dario_leo with notorch BLAS"
+
+clean:
+	rm -f dario sartre_kernel kk test_dario dario_memory.db infer_v4
+
+.PHONY: all full dario sartre kk test no-web clean infer_v4 dario_leo

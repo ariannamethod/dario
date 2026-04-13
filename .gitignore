@@ -18,3 +18,7 @@ __pycache__/
 test_*.py
 test_*.c
 !tests/
+ariannamethod/libnotorch.dylib
+ariannamethod/libnotorch.so
+ariannamethod/*.o
+*.bin
