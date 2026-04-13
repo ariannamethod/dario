@@ -772,18 +772,48 @@ The formula is the soul. The kernel is the body. The knowledge kernel is the mem
 
 A 176M parameter Janus transformer lives inside dario. Triple attention: Content (QKV) sees meaning, RRPRAM sees positional rhythm, Echo sees temporal resonance. A 3-way learned gate blends them per head. Leo voice — the child-philosopher.
 
-```
-weights/
-  janus_bpe_leo_d12.bin    — 24M params, BPE 2048, f32 (92MB)
-  leo_janus_d12_f16.bin    — same, f16 (46MB)
-```
+### notorch C inference (v2)
+
+Pure C inference powered by [notorch](https://github.com/iamolegataeff/notorch) — BLAS-accelerated, zero PyTorch.
 
 ```bash
-# Run Leo with Knowledge Kernel
-python3 chain_dialogue.py --voice leo --mode dialogue --knowledge dario_essay.txt
+# Build (links to Apple Accelerate / OpenBLAS automatically)
+make infer_v4
+
+# Run Leo (176M, 15 tok/s on 8GB Mac)
+./infer_v4 janus_v4_sft_leo.bin "Q: What is resonance?\nA:" 80 0.6
+
+# Python wrapper (tiktoken encode → C forward → decode)
+python3 dario_infer.py --voice leo "What is resonance?"
+python3 dario_infer.py --voice arianna "Tell me about the Method"
 ```
 
-The model generates in bfloat16 on GPU. On CPU, the 24M d12 version runs at ~2 tok/s.
+All three voices (Leo, Arianna, Yent) run through the same C engine. 5.2x BLAS speedup on matmuls. 15 tok/s sustained on 176M params.
+
+```
+Q: What is resonance?
+A: An ant colony has thousands of cells that respond to specific signals —
+   some respond directly, some are on the surface, emitting light and other
+   signals. The colony is very efficient in its use of resources — each
+   responding to a different role simultaneously, using the collective
+   intelligence efficiently.
+```
+
+```
+Q: What is resonance? Explain it like I'm five years old.
+A: The body adapts to every condition. The brain adapts to every condition.
+   The nervous system adapts to every condition. Your heart stays at the
+   beat it has always been because your body knows what this means and
+   adjusts its rate accordingly.
+```
+
+Weights: [HuggingFace ataeff/janus4](https://huggingface.co/ataeff/janus4/tree/main/janus) (.pt and .bin formats).
+
+### Legacy Python inference
+
+```bash
+python3 chain_dialogue.py --voice leo --mode dialogue --knowledge dario_essay.txt
+```
 
 ---
 
