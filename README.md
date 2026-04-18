@@ -752,7 +752,7 @@ process_input("hello world")
     │
     ├── ingest("hello world")          ← co-occurrence, bigrams
     ├── kk_modulate_field("hello")     ← QUERY knowledge kernel
-    │     ├── kk_query() → chunks with resonance scores
+    │     ├── kk_retrieve() → chunks with resonance scores
     │     ├── chunks → prophecy_add()  (F term boosted)
     │     └── chunks → g_destiny[]     (A term nudged)
     ├── dario_compute()                ← THE EQUATION runs

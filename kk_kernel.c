@@ -2681,7 +2681,7 @@ int kk_ingest_dir(kk_ctx *k, const char *dir_path,
     return count;
 }
 
-int kk_ingest_buffer(kk_ctx *k, const char *path, const char *text,
+int kk_store(kk_ctx *k, const char *path, const char *text,
                      size_t text_len, const char *namespace_name,
                      const char *scope) {
     if (!kk_is_ready(k) || !path || !text || !namespace_name || !scope) return -1;
@@ -2921,13 +2921,13 @@ float kk_chunk_resonance(const kk_chunk_meta *meta,
     return cosine > 0.0f ? cosine : 0.0f; /* clamp negative */
 }
 
-int kk_query_resonant(kk_ctx *k, const char *query_text,
+int kk_retrieve_resonant(kk_ctx *k, const char *query_text,
                       const float *current_embedding, int embed_dim,
                       const char *access_scope, const char *namespace_filter,
                       int top_k, kk_profile profile,
                       kk_result **results_out) {
     /* first, run standard query */
-    int count = kk_query(k, query_text, access_scope, namespace_filter,
+    int count = kk_retrieve(k, query_text, access_scope, namespace_filter,
                          top_k * 2, profile, results_out);
     if (count <= 0 || !current_embedding || embed_dim <= 0) return count;
 
@@ -2958,7 +2958,7 @@ int kk_query_resonant(kk_ctx *k, const char *query_text,
  * PUBLIC API — QUERY
  * ═══════════════════════════════════════════════════════════════════ */
 
-int kk_query(kk_ctx *k, const char *query_text,
+int kk_retrieve(kk_ctx *k, const char *query_text,
              const char *access_scope, const char *namespace_filter,
              int top_k, kk_profile profile,
              kk_result **results_out) {

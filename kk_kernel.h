@@ -195,10 +195,10 @@ int kk_rebuild_all_meta(kk_ctx *k);
 float kk_chunk_resonance(const kk_chunk_meta *meta,
                          const float *current_embedding, int dim);
 
-/* Query with RRPRAM resonance — like kk_query but also scores
+/* Query with RRPRAM resonance — like kk_retrieve but also scores
  * chunks by resonance with the organism's current field state.
  * Requires: current_embedding from dario's co-occurrence context. */
-int kk_query_resonant(kk_ctx *k, const char *query_text,
+int kk_retrieve_resonant(kk_ctx *k, const char *query_text,
                       const float *current_embedding, int embed_dim,
                       const char *access_scope, const char *namespace_filter,
                       int top_k, kk_profile profile,
@@ -247,7 +247,7 @@ int kk_ingest_dir(kk_ctx *k, const char *dir_path,
 /* Ingest raw text buffer (not from file). Useful for feeding
  * conversation history, generated content, etc.
  * path is used as document identifier. */
-int kk_ingest_buffer(kk_ctx *k, const char *path, const char *text,
+int kk_store(kk_ctx *k, const char *path, const char *text,
                      size_t text_len, const char *namespace_name,
                      const char *scope);
 
@@ -261,7 +261,7 @@ int kk_ingest_buffer(kk_ctx *k, const char *path, const char *text,
  * If a Hebbian bridge is attached, scoring includes field resonance.
  * If an embedder is attached, scoring includes semantic similarity.
  * Otherwise, pure FTS5 lexical + metadata scoring. */
-int kk_query(kk_ctx *k, const char *query_text,
+int kk_retrieve(kk_ctx *k, const char *query_text,
              const char *access_scope, const char *namespace_filter,
              int top_k, kk_profile profile,
              kk_result **results_out);
@@ -326,7 +326,7 @@ int kk_get_stats(kk_ctx *k, kk_stats *out);
  * MEMORY MANAGEMENT
  * ═══════════════════════════════════════════════════════════════════ */
 
-/* Free result array from kk_query / kk_ask. */
+/* Free result array from kk_retrieve / kk_ask. */
 void kk_free_results(kk_result *results, int count);
 
 /* ═══════════════════════════════════════════════════════════════════

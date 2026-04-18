@@ -241,7 +241,7 @@ typedef struct {
     int term;            /* 0=B, 1=H, 2=F, 3=A, 4=S, 5=T */
 } CodeFrag;
 
-enum { TERM_B=0, TERM_H, TERM_F, TERM_A, TERM_V, TERM_S, TERM_T };
+enum { TERM_B=0, TERM_H, TERM_F, TERM_A, TERM_V, TERM_S, FORCE_TRAUMA };
 
 static const CodeFrag CODE_FRAGMENTS[] = {
     /* ════════════════════════════════════════════════════
@@ -536,7 +536,7 @@ static const CodeFrag CODE_FRAGMENTS[] = {
       "// traumatic conversations — words that appeared\n"
       "// during high-dissonance moments. Some scars heal.\n"
       "// Some stay.",
-      TERM_T },
+      FORCE_TRAUMA },
     { "/* T — temperature under trauma */\n"
       "// Trauma raises temperature. The organism becomes\n"
       "// less certain, more exploratory under stress.\n"
@@ -549,7 +549,7 @@ static const CodeFrag CODE_FRAGMENTS[] = {
       "// Combined with tau_mod from emotional chambers\n"
       "// and vel_temp from velocity operators, the final\n"
       "// temperature can deviate significantly from base.",
-      TERM_T },
+      FORCE_TRAUMA },
     { "/* T — dissonance triggers trauma */\n"
       "// Dissonance measures how far the input is from\n"
       "// the organism's known vocabulary. When dissonance\n"
@@ -563,7 +563,7 @@ static const CodeFrag CODE_FRAGMENTS[] = {
       "// is clamped to [0,1]. It never spikes — it seeps.\n"
       "// Like real trauma: not the blow, but the weight\n"
       "// of what you couldn't understand.",
-      TERM_T },
+      FORCE_TRAUMA },
 
     { NULL, 0 }  /* sentinel */
 };
@@ -920,7 +920,7 @@ static void kk_modulate_field(const char *input) {
     if (!g_kk) return;
 
     kk_result *results = NULL;
-    int n = kk_query(g_kk, input, "public", NULL, 3, KK_PROFILE_TINY, &results);
+    int n = kk_retrieve(g_kk, input, "public", NULL, 3, KK_PROFILE_TINY, &results);
     if (n <= 0 || !results) return;
 
     /* Knowledge boosts Prophecy: place bets on words from retrieved chunks */
@@ -1414,7 +1414,7 @@ static void dario_compute(float *logits, int vocab_size) {
     D.term_energy[TERM_A] = e_A;
     D.term_energy[TERM_V] = e_V;
     D.term_energy[TERM_S] = 0; /* S computed separately when subword active */
-    D.term_energy[TERM_T] = e_T;
+    D.term_energy[FORCE_TRAUMA] = e_T;
 
     /* find dominant */
     float mx = 0;
@@ -1681,7 +1681,7 @@ static int generate_words(char *out, int max_len) {
  * This is dario's voice: its own source code.
  * ═══════════════════════════════════════════════════════════════════ */
 
-static const char *select_code_fragment(void) {
+static const char *inject_source_fragment(void) {
     int term = D.dominant_term;
 
     /* collect fragments for this term */
@@ -1841,7 +1841,7 @@ static const char *season_names[] = {
 
 static void display_response(const char *words) {
     /* ── code fragment (dominant term) ── */
-    const char *code = select_code_fragment();
+    const char *code = inject_source_fragment();
 
     printf("\n");
     printf("  ┌─ %s ─── d=%.2f τ=%.2f %s %s\n",
@@ -1866,7 +1866,7 @@ static void display_response(const char *words) {
            D.debt, D.resonance, D.entropy, D.emergence,
            D.term_energy[TERM_B], D.term_energy[TERM_H],
            D.term_energy[TERM_F], D.term_energy[TERM_A],
-           D.term_energy[TERM_V], D.term_energy[TERM_T]);
+           D.term_energy[TERM_V], D.term_energy[FORCE_TRAUMA]);
     printf("\n");
 }
 
@@ -1900,7 +1900,7 @@ static const char *process_input(const char *input, char *words_out, int words_m
     if (g_kk) {
         char conv_path[128];
         snprintf(conv_path, sizeof(conv_path), "conversation/%06d.txt", D.conv_count);
-        kk_ingest_buffer(g_kk, conv_path, input, strlen(input), "dario", "public");
+        kk_store(g_kk, conv_path, input, strlen(input), "dario", "public");
     }
 #endif
 
@@ -1922,7 +1922,7 @@ static const char *process_input(const char *input, char *words_out, int words_m
     }
 #endif
 
-    return select_code_fragment();
+    return inject_source_fragment();
 }
 
 /* ═══════════════════════════════════════════════════════════════════

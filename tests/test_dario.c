@@ -721,7 +721,7 @@ static void test_code_fragments(void) {
     /* each term should have fragments */
     for (int term = 0; term < 6; term++) {
         D.dominant_term = term;
-        const char *frag = select_code_fragment();
+        const char *frag = inject_source_fragment();
         ASSERT(frag != NULL, "fragment non-null for each term");
         ASSERT(strlen(frag) > 0, "fragment non-empty");
     }
@@ -729,14 +729,14 @@ static void test_code_fragments(void) {
     /* term B fragment contains relevant content */
     D.dominant_term = TERM_B;
     rng_state = 42;
-    const char *frag = select_code_fragment();
+    const char *frag = inject_source_fragment();
     /* all B fragments contain chain-related code */
     ASSERT(frag != NULL, "B fragment exists");
 
     /* term T fragment */
-    D.dominant_term = TERM_T;
+    D.dominant_term = FORCE_TRAUMA;
     rng_state = 42;
-    frag = select_code_fragment();
+    frag = inject_source_fragment();
     ASSERT(frag != NULL, "T fragment exists");
 }
 
@@ -833,12 +833,12 @@ static void test_trauma_term(void) {
     /* without trauma */
     D.trauma_level = 0.0f;
     dario_compute(logits_no_trauma, vocab);
-    float t_energy_none = D.term_energy[TERM_T];
+    float t_energy_none = D.term_energy[FORCE_TRAUMA];
 
     /* with trauma */
     D.trauma_level = 0.8f;
     dario_compute(logits_trauma, vocab);
-    float t_energy_high = D.term_energy[TERM_T];
+    float t_energy_high = D.term_energy[FORCE_TRAUMA];
 
     ASSERT_FLOAT_EQ(t_energy_none, 0.0f, 1e-6f, "no trauma → T energy = 0");
     ASSERT_GT(t_energy_high, 0.0f, "high trauma → T energy > 0");
@@ -924,7 +924,7 @@ static void test_full_pipeline(void) {
     ASSERT_GT(len, 0, "pipeline: generated words");
 
     /* 10. code fragment */
-    const char *code = select_code_fragment();
+    const char *code = inject_source_fragment();
     ASSERT(code != NULL, "pipeline: code fragment selected");
 
     /* verify field state consistency */
@@ -1068,7 +1068,7 @@ static void test_display_names(void) {
 
     ASSERT_STR_EQ(term_names[TERM_B], "B:chain", "term B name");
     ASSERT_STR_EQ(term_names[TERM_H], "H:resonance", "term H name");
-    ASSERT_STR_EQ(term_names[TERM_T], "T:trauma", "term T name");
+    ASSERT_STR_EQ(term_names[FORCE_TRAUMA], "T:trauma", "term T name");
 
     ASSERT_STR_EQ(vel_names[VEL_WALK], "WALK", "velocity WALK name");
     ASSERT_STR_EQ(vel_names[VEL_BREATHE], "BREATHE", "velocity BREATHE name");

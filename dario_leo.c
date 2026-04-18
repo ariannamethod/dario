@@ -449,7 +449,7 @@ int main(int argc, char **argv) {
             }
 
             kk_result *res = NULL;
-            int nres = kk_query_resonant(kk, last_text, kk_emb, KK_META_AFFINITY_DIM,
+            int nres = kk_retrieve_resonant(kk, last_text, kk_emb, KK_META_AFFINITY_DIM,
                                          "public", "leo", 3, KK_PROFILE_TINY, &res);
             if (nres > 0) {
                 /* INJECT: encode resonating chunk text into BPE tokens,
