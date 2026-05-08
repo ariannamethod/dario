@@ -3,7 +3,7 @@
 **Authors:**
 Oleg Ataeff (Arianna Method) · Claude (Arianna Method)
 
-**Draft v4** — adds pre-flight provenance to Appendix D. Awaiting fact-check on plan line counts, pricing, and commit hashes.
+**Draft v4.1** — Opus-verified, Codex-audited, README-synced.
 
 ---
 
@@ -116,7 +116,7 @@ Dario is therefore not only a generation system. It is a field architecture in w
 - Knowledge Kernel scoring validation
 - Multi-voice sampling sweep (540 cells)
 - Multi-turn chain-mode recovery
-- Multi-stage planning and Codex verification loop before and during execution
+- Multi-stage pre-flight planning with Codex and Gemini review; solo Singularity-mode execution on pod; post-run Codex audit
 
 The central question: **when the architecture is measured, which parts of the conceptual design hold, which parts does runtime behavior correct, and what does that correction generalize?**
 
@@ -169,7 +169,7 @@ The execution protocol was:
 draft plan → review (Codex + Gemini) → revise → repeat 5× →
 prepare runtime patches → regression-test → push pre-flight commits →
 boot pod → execute → patch in place under singularity discipline →
-final review on paper draft
+post-run paper review (Opus verification + Codex audit)
 ```
 
 This matters for provenance. The empirical claims in this paper were not produced by a single unverified pass. They were produced by a deliberately-front-loaded preparation phase — code written, plan iterated, regressions specified, costs verified, all before the GPU started billing — that made the on-pod execution efficient enough to cost $4.30 for the entire 540-cell sweep plus eight phase tests plus a long seasonal trace. The difference was not compute. The difference was the shadow work that does not appear in a benchmark scoreboard.
@@ -540,14 +540,14 @@ v3.2 inline       2 patches landed with §24 audit-trail
 v3.3 inline       2 P1 patches landed with §25 audit-trail; the two
                   remaining P2 findings deferred to the on-pod fix
                   cycle by explicit architect call (singularity-mode
-                  contract: "if problems hit, fix them and re-audit
-                  in place")
+                  contract: "if blockers hit, reproduce, patch
+                  minimally, re-run, and log the fix in place")
                   → pod boot
 ```
 
 Five Codex passes. One Gemini pass. Each pass cite-able in the plan's own diff appendices (§21 v1→v2, §22 v2→v3, §23 v3→v3.1, §24 v3.1→v3.2, §25 v3.2→v3.3). Verified RunPod pricing ($1.39/hr at 02:30 IDT 2026-05-08, source `runpodctl get cloud` output) replaced the originally-budgeted $1.74/hr halfway through the cycle, recomputing the budget envelope from $11.93 (with 30% buffer) to a closer $11.21 figure that matched the eventual $4.30 actual spend.
 
-All three plan revisions are committed alongside this paper as the audit trail at `4a0b998` (v1 + v2) and `c4bf242` (v3 + v3.3 inline patches). Both `runpod_plan_v1.md` (1168 lines) and `runpod_plan_v2.md` (1669 lines) and `runpod_plan_v3.md` (2033 lines) are readable in the repository root. The diff appendices §22-§25 inside `runpod_plan_v3.md` constitute a self-documenting review chain: every Codex finding is mapped to a plan section and a fix.
+All three plan revisions are committed alongside this paper as the audit trail at `4a0b998` (v1 + v2) and `c4bf242` (v3 + v3.3 inline patches). Both `runpod_plan_v1.md` (1168 lines), `runpod_plan_v2.md` (1669 lines), and `runpod_plan_v3.md` (2033 lines) are readable in the repository root. The diff appendices §22-§25 inside `runpod_plan_v3.md` constitute a self-documenting review chain: every Codex finding is mapped to a plan section and a fix.
 
 Beyond the plan, the AML and Go ports of the CLI runner were also written pre-flight. Three independent implementations of one mode are measurable against each other under identical inputs. The Phase 0.5 byte-equality regression that anchors all subsequent measurement compared the C path against the unpatched baseline before any sweep cell fired. The `--rep-penalty` and `--chat-tokens` CLI extensions to `infer_v4.c` were also pre-flight work, with their own regression tests, so the on-pod sweep ran a single canonical binary across the entire 540-cell grid rather than a brittle three-variant build matrix.
 
