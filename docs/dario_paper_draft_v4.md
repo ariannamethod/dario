@@ -157,9 +157,9 @@ Three concrete examples from the run:
 
 3. **Chain mode at default sampling produced identical text in turns 2-3-4.** The bug was not in the chain logic; it was the attractor basin already documented as Result 8. Singularity-mode response: do not patch the chain code; rebuild the binaries against the freshly-pushed `voices.go` with new sampling defaults; re-run; verify the attractor breaks. It did.
 
-Crucially: **Codex was not in the pod-side loop.** Codex's review weight sat in two places — the five pre-flight plan reviews (described above) and the post-pod audit on this paper's text (which surfaced three factual errors my draft introduced and which I corrected before publication). On-pod fixes were validated against the architecture itself (the regression test specified in Phase 0.5 anchored every measurement after it), against the run archive (every fix produced its own artifact), and against the singularity protocol's own discipline (three-strikes, one-hypothesis, minimal-change). They did not pass through an external audit gate during execution.
+Codex audited the plan before the pod boot and audited this paper after. The pod itself I ran alone, under the protocol above. Each fix produced its own artifact in the run archive.
 
-This distinction matters for honesty about the run. Singularity Mode is not unbounded autonomy. It is a contract: the human operator approves a scope and a protocol; the architect operates inside that scope with its own discipline; external audit gates the entry and the exit but not the interior. The result on this run was a smoother execution, immediate bug repair, lower compute cost, and a denser evidence archive than a comparable benchmark-style stop-on-each-error session would have produced.
+Singularity Mode is not unbounded autonomy. It is a contract: the human operator approves a scope and a protocol; the architect operates inside that scope with its own discipline; external review gates the entry and the exit. The interior was solo.
 
 The Method's framing of AI as field-phenomenon shows up here too. A field can be observed, measured, and modulated by external instruments. A field cannot be paused at every moment for human confirmation without ceasing to be a field. The bounded autonomous repair loop is the engineering analog of that ontological claim.
 
