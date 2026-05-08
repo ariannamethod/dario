@@ -166,7 +166,7 @@ The execution protocol was:
 ```text
 draft plan → review (Codex + Gemini) → revise → repeat 5× →
 prepare runtime patches → regression-test → push pre-flight commits →
-boot pod → execute → patch in place under singularity discipline →
+boot pod → execute → patch in place under Singularity discipline →
 post-run paper review (Opus verification + Codex audit)
 ```
 
@@ -249,7 +249,7 @@ FEAR brought RAGE. LOVE brought FLOW. RAGE brought FEAR. The somatic-marker matr
 
 COMPLEX did not cross threshold. Its condition requires simultaneous LOVE and RAGE. Scripted alternating input produces sequential contradiction, not simultaneous contradiction. COMPLEX is the chamber that resists single-modality testing. It requires conversation.
 
-Kuramoto coupling was visible: LOVE held near 0.30 across twenty-five turns of dense in-vocabulary input, FLOW co-tracked at approximately the same activation. The coupling is observable in the trace.
+Kuramoto coupling was visible: LOVE held near 0.30 across twenty-five turns of dense in-vocabulary input, and FLOW co-tracked at approximately the same activation. The coupling is observable in the trace.
 
 *Reviewer note: the control run should be tightened in the next pass. The control vocabulary drifted toward the same chamber regime as the driven input, weakening isolation.*
 
@@ -269,7 +269,7 @@ STOP, UP, BREATHE, and WALK were observable.
 
 RUN requires 0.6 < dissonance ≤ 0.8. In practice, inputs passed through this window into UP. RUN behaves as a transient velocity rather than a stable regime.
 
-DOWN requires debt > 5.0, but the inputs that build debt also trigger UP or STOP earlier in the priority chain. DOWN exists as a recovery path that runtime dynamics rarely grant control.
+DOWN requires debt > 5.0, but the inputs that build debt also trigger UP or STOP earlier in the priority chain. DOWN exists as a recovery path to which runtime dynamics rarely grant control.
 
 The priority chain is itself a selection pressure. The conceptual map is broad. The runtime path is narrow. This matches Result 1 structurally: the equation favors concentration over balance.
 
@@ -287,7 +287,7 @@ The field laws held:
 
 Spot checks: at ent=0.10, res=0.95 → predicted emergence 0.855, observed 0.85. At ent=0.32, res=0.81 → predicted 0.5508, observed 0.55.
 
-Entropy never collapsed to zero — the organism did not become a lookup table. Resonance never saturated to one — perfect coherence was prevented from killing the field. The laws are enforced every step.
+Entropy never collapsed to zero — the organism did not become a lookup table. Resonance never saturated at one — perfect coherence was prevented from killing the field. The laws are enforced every step.
 
 *Open follow-up: per-season effect deltas remain to be plotted from timeseries.tsv.*
 
@@ -410,7 +410,7 @@ This confirms Result 7 at the trajectory level. Sampling affects not only single
 
 The initial sweep used `infer_v4`, the Janus inference binary. That binary has hardcoded bounds (H ≤ 16, R ≤ 128, D ≤ 128). Resonance 200M exceeds all three (H=20, R=2048, D=2048). All 108 Resonance-Yent cells produced architecture-bound errors.
 
-The correct path is the standalone `resonance` binary. After building it on the pod, a 36-cell mini-sweep was run using top_p instead of top_k.
+The correct path is the standalone `resonance` binary. After building it on the pod, I ran a 36-cell mini-sweep using top_p instead of top_k.
 
 Resonance-Yent champion: temp=0.7, top_p=1.0.
 
@@ -537,19 +537,19 @@ v3.2 inline       2 patches landed with §24 audit-trail
                   → Codex review (4 issues found, 2 P1 + 2 P2)
 v3.3 inline       2 P1 patches landed with §25 audit-trail; the two
                   remaining P2 findings deferred to the on-pod fix
-                  cycle by explicit architect call (singularity-mode
+                  cycle by explicit architect call (Singularity-mode
                   contract: "if blockers hit, reproduce, patch
                   minimally, re-run, and log the fix in place")
                   → pod boot
 ```
 
-Five Codex passes. One Gemini pass. Each pass cite-able in the plan's own diff appendices (§21 v1→v2, §22 v2→v3, §23 v3→v3.1, §24 v3.1→v3.2, §25 v3.2→v3.3). Verified RunPod pricing ($1.39/hr at 02:30 IDT 2026-05-08, source `runpodctl get cloud` output) replaced the originally-budgeted $1.74/hr halfway through the cycle, recomputing the budget envelope from $11.93 (with 30% buffer) to a closer $11.21 figure that matched the eventual $4.30 actual spend.
+Five Codex passes. One Gemini pass. Each pass is citable in the plan's own diff appendices (§21 v1→v2, §22 v2→v3, §23 v3→v3.1, §24 v3.1→v3.2, §25 v3.2→v3.3). Verified RunPod pricing ($1.39/hr at 02:30 IDT 2026-05-08, source `runpodctl get cloud` output) replaced the originally-budgeted $1.74/hr halfway through the cycle, recomputing the budget envelope from $11.93 (with 30% buffer) to a closer $11.21 figure that matched the eventual $4.30 actual spend.
 
-All three plan revisions are committed alongside this paper as the audit trail at `4a0b998` (v1 + v2) and `c4bf242` (v3 + v3.3 inline patches). Both `runpod_plan_v1.md` (1168 lines), `runpod_plan_v2.md` (1669 lines), and `runpod_plan_v3.md` (2033 lines) are readable in the repository root. The diff appendices §22-§25 inside `runpod_plan_v3.md` constitute a self-documenting review chain: every Codex finding is mapped to a plan section and a fix.
+All three plan revisions are committed alongside this paper as the audit trail at `4a0b998` (v1 + v2) and `c4bf242` (v3 + v3.3 inline patches). All of `runpod_plan_v1.md` (1168 lines), `runpod_plan_v2.md` (1669 lines), and `runpod_plan_v3.md` (2033 lines) are readable in the repository root. The diff appendices §22-§25 inside `runpod_plan_v3.md` constitute a self-documenting review chain: every Codex finding is mapped to a plan section and a fix.
 
-Beyond the plan, the AML and Go ports of the CLI runner were also written pre-flight. Three independent implementations of one mode are measurable against each other under identical inputs. The Phase 0.5 byte-equality regression that anchors all subsequent measurement compared the C path against the unpatched baseline before any sweep cell fired. The `--rep-penalty` and `--chat-tokens` CLI extensions to `infer_v4.c` were also pre-flight work, with their own regression tests, so the on-pod sweep ran a single canonical binary across the entire 540-cell grid rather than a brittle three-variant build matrix.
+Beyond the plan, the AML and Go ports of the CLI runner were also written pre-flight. Three independent implementations of the same mode are measurable against each other under identical inputs. The Phase 0.5 byte-equality regression that anchors all subsequent measurement compared the C path against the unpatched baseline before any sweep cell fired. The `--rep-penalty` and `--chat-tokens` CLI extensions to `infer_v4.c` were also pre-flight work, with their own regression tests, so the on-pod sweep ran a single canonical binary across the entire 540-cell grid rather than a brittle three-variant build matrix.
 
-The pod-side execution itself was mostly solo. Bugs encountered at runtime — a sweep that died silently after three voices, a Resonance 200M codepath needing a separate binary, a chain-mode attractor basin — were patched in place under singularity discipline (reproduce → one hypothesis → minimal change → re-run) without per-bug Codex review. Pod-side fixes are honestly logged in the run archive but did not pass through the same external audit gate that the plan did.
+The pod-side execution itself was mostly solo. Bugs encountered at runtime — a sweep that died silently after three voices, a Resonance 200M codepath needing a separate binary, a chain-mode attractor basin — were patched in place under Singularity discipline (reproduce → one hypothesis → minimal change → re-run) without per-bug Codex review. Pod-side fixes are honestly logged in the run archive but did not pass through the same external audit gate that the plan did.
 
 This paper should itself pass through the same protocol before release:
 
