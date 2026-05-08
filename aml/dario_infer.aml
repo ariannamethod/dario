@@ -1,0 +1,412 @@
+# dario_infer.aml — single-shot inference for the dario voices
+#
+# AML port of dario_infer.py (141 LOC). Spawns the C ./infer_v4 binary
+# (which carries its own notorch BPE tokenizer baked into janus_v4_bpe_merges.h
+# and leo_bpe_merges.h), parses --- generation --- delimiter, prints text.
+#
+# Voice catalog mirrors cmd/internal/voices/voices.go exactly. Per-voice
+# defaults Leo (0.75/40/1.4), Arianna (0.75/45/1.3), Yent (0.75/40/1.35),
+# Resonance-Yent (0.75/40/1.3). Base / leo24m also resolvable.
+#
+# Janus chat tokens are NOT applied here — infer_v4 takes a raw prompt and
+# encodes via BPE itself. SFT voices were trained on Q/A wrapping in the
+# python pipeline, so we wrap the user prompt as "Q: …\nA:" before passing.
+#
+# By Arianna Method. הרזוננס לא נשבר
+
+# ── AML field configuration ──
+# These directives configure libaml's runtime field. They influence
+# am_apply_field_to_logits() if/when downstream code uses it. Here we
+# only proxy to ./infer_v4, so they're advisory but kept for parity with
+# the rest of the AML organism family.
+PROPHECY 7
+DESTINY 0.35
+VELOCITY WALK
+ATTEND_FOCUS 0.70
+ATTEND_SPREAD 0.20
+
+BLOOD COMPILE infer_headers {
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <ariannamethod/ariannamethod.h>
+
+#define DARIO_AML_VERSION "0.1.0"
+
+/* Voice catalog — must match cmd/internal/voices/voices.go exactly. */
+typedef struct {
+    const char *name;
+    const char *backend;       /* "janus" or "resonance" */
+    const char *weights_file;  /* bare filename */
+    float       temp;
+    int         top_k;
+    float       rep_penalty;
+    const char *desc;
+} dario_voice;
+
+static dario_voice CATALOG[] = {
+    {"leo",            "janus",     "janus_v4_sft_leo.bin",
+     0.75f, 40, 1.4f,  "luminous, philosophical -- Janus 176M"},
+    {"arianna",        "janus",     "janus_v4_sft_arianna.bin",
+     0.75f, 45, 1.3f,  "precise, architectural -- Janus 176M"},
+    {"yent",           "janus",     "janus_v4_sft_yent.bin",
+     0.75f, 40, 1.35f, "warm, direct -- Janus 176M"},
+    {"resonance-yent", "resonance", "resonance_200m_lora_yent.bin",
+     0.75f, 40, 1.3f,  "warm, direct, sarcastic -- Resonance 200M"},
+    {"base",           "janus",     "janus_v4_base_22k.bin",
+     0.75f, 40, 1.3f,  "Janus 176M base (no SFT)"},
+    {"leo24m",         "janus",     "leo_janus_d12_f16.bin",
+     0.7f,  40, 1.3f,  "Leo 24M mini -- Janus d12 f16"},
+};
+#define CATALOG_N (sizeof(CATALOG)/sizeof(CATALOG[0]))
+
+static int file_exists(const char *p) {
+    struct stat st;
+    return stat(p, &st) == 0;
+}
+
+/* Search for the weights file in the canonical paths.
+ * Mirrors voices.SearchPaths():
+ *   1. $DARIO_WEIGHTS_DIR
+ *   2. <scriptDir>/weights/
+ *   3. ~/arianna/weights/dario/
+ *   4. ~/arianna/dario_hf_upload/   (where they actually live on Neo)
+ *   5. ~/Downloads/janus-v4-final/
+ *   6. <scriptDir>/                  (last-resort)
+ *
+ * Returns 0 on success, fills out_path. */
+static int resolve_weights(const char *script_dir, const char *bare,
+                           char *out_path, size_t out_sz) {
+    char buf[1024];
+    const char *env = getenv("DARIO_WEIGHTS_DIR");
+    if (env && *env) {
+        snprintf(buf, sizeof(buf), "%s/%s", env, bare);
+        if (file_exists(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+    }
+    snprintf(buf, sizeof(buf), "%s/weights/%s", script_dir, bare);
+    if (file_exists(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+
+    const char *home = getenv("HOME");
+    if (home) {
+        snprintf(buf, sizeof(buf), "%s/arianna/weights/dario/%s", home, bare);
+        if (file_exists(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+        snprintf(buf, sizeof(buf), "%s/arianna/dario_hf_upload/%s", home, bare);
+        if (file_exists(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+        snprintf(buf, sizeof(buf), "%s/Downloads/janus-v4-final/%s", home, bare);
+        if (file_exists(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+    }
+    snprintf(buf, sizeof(buf), "%s/%s", script_dir, bare);
+    if (file_exists(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+
+    return -1;
+}
+
+static int find_infer_binary(const char *script_dir, char *out_path, size_t out_sz) {
+    char buf[1024];
+    snprintf(buf, sizeof(buf), "%s/infer_v4", script_dir);
+    if (file_exists(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+    const char *home = getenv("DARIO_HOME");
+    if (home) {
+        snprintf(buf, sizeof(buf), "%s/infer_v4", home);
+        if (file_exists(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+    }
+    /* fallback: PATH */
+    if (file_exists("./infer_v4")) { snprintf(out_path, out_sz, "./infer_v4"); return 0; }
+    return -1;
+}
+
+/* derive script_dir from argv[0]. If argv[0]'s dir contains infer_v4,
+ * use that. Otherwise check parent (aml/dario_infer → repo root has
+ * infer_v4). Falls back to CWD. */
+static void get_script_dir(const char *argv0, char *out, size_t out_sz) {
+    char buf[1024];
+    snprintf(buf, sizeof(buf), "%s", argv0);
+    char *slash = strrchr(buf, '/');
+    if (slash) {
+        *slash = 0;
+        char trial[1100];
+        snprintf(trial, sizeof(trial), "%s/infer_v4", buf);
+        if (file_exists(trial)) { snprintf(out, out_sz, "%s", buf); return; }
+        /* parent — handles aml/dario_infer → ../infer_v4 */
+        snprintf(trial, sizeof(trial), "%s/../infer_v4", buf);
+        if (file_exists(trial)) {
+            char parent[1024];
+            snprintf(parent, sizeof(parent), "%s", buf);
+            char *p = strrchr(parent, '/');
+            if (p) *p = 0;
+            else   snprintf(parent, sizeof(parent), "..");
+            snprintf(out, out_sz, "%s", parent);
+            return;
+        }
+        snprintf(out, out_sz, "%s", buf);
+        return;
+    }
+    if (!getcwd(out, out_sz)) snprintf(out, out_sz, ".");
+}
+
+static dario_voice *lookup_voice(const char *name) {
+    for (size_t i = 0; i < CATALOG_N; i++)
+        if (strcmp(CATALOG[i].name, name) == 0) return &CATALOG[i];
+    return NULL;
+}
+
+static void list_voices(FILE *f) {
+    for (size_t i = 0; i < CATALOG_N; i++)
+        fprintf(f, "  %-16s %-10s %s\n",
+                CATALOG[i].name, CATALOG[i].backend, CATALOG[i].desc);
+}
+}
+
+BLOOD COMPILE infer_subprocess {
+/* Spawn ./infer_v4 weights.bin "prompt" max temp seed top_k.
+ * Captures stdout via pipe(); parses "--- generation ---" the same way
+ * dario_infer.py and cmd/internal/dario/infer.go do. Trailing
+ * "[janus..." stats line is split from the user-facing text.
+ *
+ * Returns 0 on success, fills text_out and stats_out. */
+static int run_infer(const char *binary, const char *weights,
+                     const char *prompt, int max_tokens, float temp, int top_k,
+                     char *text_out, size_t text_sz,
+                     char *stats_out, size_t stats_sz) {
+    int pipefd[2];
+    if (pipe(pipefd) < 0) { perror("pipe"); return -1; }
+
+    pid_t pid = fork();
+    if (pid < 0) { perror("fork"); close(pipefd[0]); close(pipefd[1]); return -1; }
+
+    if (pid == 0) {
+        /* child: dup pipe write end to stdout; stderr stays on parent */
+        dup2(pipefd[1], 1);
+        close(pipefd[0]);
+        close(pipefd[1]);
+        char max_s[16], temp_s[32], seed_s[16], topk_s[16];
+        snprintf(max_s,  sizeof(max_s),  "%d", max_tokens);
+        snprintf(temp_s, sizeof(temp_s), "%g", temp);
+        snprintf(seed_s, sizeof(seed_s), "0");
+        snprintf(topk_s, sizeof(topk_s), "%d", top_k);
+        /* infer_v4 CLI: weights prompt max_tokens temp [seed] [top_k] */
+        execl(binary, binary, weights, prompt, max_s, temp_s,
+              seed_s, topk_s, (char*)NULL);
+        fprintf(stderr, "execl(%s) failed: %s\n", binary, strerror(errno));
+        _exit(127);
+    }
+
+    close(pipefd[1]);
+    /* read stdout */
+    static char buf[1 << 18];
+    size_t total = 0;
+    ssize_t n;
+    while (total < sizeof(buf) - 1 &&
+           (n = read(pipefd[0], buf + total, sizeof(buf) - 1 - total)) > 0) {
+        total += (size_t)n;
+    }
+    buf[total] = 0;
+    close(pipefd[0]);
+
+    int status;
+    waitpid(pid, &status, 0);
+
+    /* parse: split on "--- generation ---\n" */
+    const char *sep = "--- generation ---\n";
+    char *gen = strstr(buf, sep);
+    if (!gen) {
+        snprintf(text_out, text_sz, "%s", buf);
+        if (stats_sz) stats_out[0] = 0;
+        return 0;
+    }
+    gen += strlen(sep);
+
+    /* tail: trim trailing whitespace, then look for last line starting
+     * with "[janus" — that's the stats. */
+    size_t glen = strlen(gen);
+    while (glen > 0 && (gen[glen-1] == '\n' || gen[glen-1] == ' '))
+        gen[--glen] = 0;
+
+    char *stats_line = NULL;
+    for (size_t i = glen; i > 0; i--) {
+        if (gen[i-1] == '\n') {
+            if (strncmp(gen + i, "[janus", 6) == 0) {
+                stats_line = gen + i;
+                gen[i-1] = 0;
+                glen = i - 1;
+            }
+            break;
+        }
+    }
+    /* edge case: only one line, and it starts with [janus */
+    if (!stats_line && strncmp(gen, "[janus", 6) == 0) {
+        stats_line = gen;
+        glen = 0;
+    }
+
+    /* trim leading whitespace from text */
+    char *text = gen;
+    while (*text == '\n' || *text == ' ') text++;
+
+    snprintf(text_out, text_sz, "%s", text);
+    if (stats_line && stats_sz)
+        snprintf(stats_out, stats_sz, "%s", stats_line);
+    else if (stats_sz)
+        stats_out[0] = 0;
+
+    return WIFEXITED(status) && WEXITSTATUS(status) == 0 ? 0 : -1;
+}
+}
+
+BLOOD MAIN {
+static void usage(const char *argv0) {
+    fprintf(stderr,
+        "dario_infer (AML) v" DARIO_AML_VERSION "\n"
+        "\nUsage: %s [flags] \"prompt\"\n"
+        "\nFlags:\n"
+        "  --voice NAME       voice (default leo)\n"
+        "  --weights PATH     override weights path\n"
+        "  --temp F           sampling temperature (default = voice default)\n"
+        "  --topk N           top-k cutoff (0 = disabled)\n"
+        "  --max-tokens N     generation length (default 80)\n"
+        "  --raw              print raw infer_v4 stdout\n"
+        "  --binary PATH      override path to ./infer_v4\n"
+        "  --help\n"
+        "\nVoices:\n", argv0);
+    list_voices(stderr);
+    fprintf(stderr,
+        "\nEnv:\n"
+        "  DARIO_WEIGHTS_DIR  override search root for weights\n"
+        "  DARIO_HOME         override search root for infer_v4\n");
+}
+
+int main(int argc, char **argv) {
+    am_init();
+    int rc = am_exec(
+        "PROPHECY 7\n"
+        "DESTINY 0.35\n"
+        "VELOCITY WALK\n"
+        "ATTEND_FOCUS 0.70\n"
+    );
+    if (rc != 0)
+        fprintf(stderr, "[dario_infer] aml warning: %s\n", am_get_error());
+
+    const char *voice_name = "leo";
+    const char *weights_override = NULL;
+    const char *binary_override  = NULL;
+    float temp_override = -1.0f;
+    int   topk_override = -1;
+    int   max_tokens    = 80;
+    int   raw_mode      = 0;
+
+    /* Parse positional args: leftover non-flag args concatenate into prompt. */
+    char prompt_buf[2048] = {0};
+    int  prompt_len = 0;
+
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+            usage(argv[0]); return 0;
+        }
+        if (strcmp(argv[i], "--voice") == 0 || strcmp(argv[i], "-v") == 0) {
+            if (++i >= argc) { fprintf(stderr, "--voice needs arg\n"); return 1; }
+            voice_name = argv[i];
+        } else if (strcmp(argv[i], "--weights") == 0) {
+            if (++i >= argc) { fprintf(stderr, "--weights needs arg\n"); return 1; }
+            weights_override = argv[i];
+        } else if (strcmp(argv[i], "--binary") == 0) {
+            if (++i >= argc) { fprintf(stderr, "--binary needs arg\n"); return 1; }
+            binary_override = argv[i];
+        } else if (strcmp(argv[i], "--temp") == 0 || strcmp(argv[i], "-t") == 0) {
+            if (++i >= argc) { fprintf(stderr, "--temp needs arg\n"); return 1; }
+            temp_override = (float)atof(argv[i]);
+        } else if (strcmp(argv[i], "--topk") == 0) {
+            if (++i >= argc) { fprintf(stderr, "--topk needs arg\n"); return 1; }
+            topk_override = atoi(argv[i]);
+        } else if (strcmp(argv[i], "--max-tokens") == 0 ||
+                   strcmp(argv[i], "--max")        == 0 ||
+                   strcmp(argv[i], "-n")           == 0) {
+            if (++i >= argc) { fprintf(stderr, "--max-tokens needs arg\n"); return 1; }
+            max_tokens = atoi(argv[i]);
+        } else if (strcmp(argv[i], "--raw") == 0) {
+            raw_mode = 1;
+        } else if (argv[i][0] == '-' && argv[i][1]) {
+            fprintf(stderr, "unknown flag: %s\n", argv[i]);
+            usage(argv[0]); return 1;
+        } else {
+            int rem = sizeof(prompt_buf) - prompt_len - 2;
+            if (rem <= 0) break;
+            int n = snprintf(prompt_buf + prompt_len, rem,
+                             "%s%s", prompt_len ? " " : "", argv[i]);
+            if (n > 0) prompt_len += n;
+        }
+    }
+
+    if (prompt_len == 0)
+        snprintf(prompt_buf, sizeof(prompt_buf), "What is resonance?");
+
+    dario_voice *v = lookup_voice(voice_name);
+    if (!v) {
+        fprintf(stderr, "unknown voice %s, valid:\n", voice_name);
+        list_voices(stderr);
+        return 1;
+    }
+
+    char script_dir[1024];
+    get_script_dir(argv[0], script_dir, sizeof(script_dir));
+
+    char binary_path[1024];
+    if (binary_override) snprintf(binary_path, sizeof(binary_path), "%s", binary_override);
+    else if (find_infer_binary(script_dir, binary_path, sizeof(binary_path)) != 0) {
+        fprintf(stderr, "infer_v4 not found in %s/, $DARIO_HOME, or PATH\n", script_dir);
+        return 1;
+    }
+
+    char weights_path[1024];
+    if (weights_override) snprintf(weights_path, sizeof(weights_path), "%s", weights_override);
+    else if (resolve_weights(script_dir, v->weights_file, weights_path, sizeof(weights_path)) != 0) {
+        fprintf(stderr, "weights %s not found (searched DARIO_WEIGHTS_DIR, "
+                        "%s/weights, ~/arianna/weights/dario, ~/arianna/dario_hf_upload, "
+                        "~/Downloads/janus-v4-final, %s)\n",
+                v->weights_file, script_dir, script_dir);
+        return 1;
+    }
+
+    float temp = temp_override > 0 ? temp_override : v->temp;
+    int   tk   = topk_override >= 0 ? topk_override : v->top_k;
+
+    /* Wrap user prompt in Q/A — what the SFT voices expect.
+     * Note: chain_dialogue.py used Janus chat tokens (BOS=32759 …) for
+     * Janus voices; infer_v4 doesn't ingest those (no special-token
+     * encoding path), so Q/A wrapping is the canonical contract for
+     * the C inference binary. */
+    char full_prompt[2200];
+    snprintf(full_prompt, sizeof(full_prompt), "Q: %s\nA:", prompt_buf);
+
+    fprintf(stderr, "[voice]   %s (%s) — %s\n",  v->name, v->backend, v->desc);
+    fprintf(stderr, "[weights] %s\n",            weights_path);
+    fprintf(stderr, "[binary]  %s\n",            binary_path);
+    fprintf(stderr, "[sample]  temp=%g top_k=%d max=%d rep=%g\n",
+            temp, tk, max_tokens, v->rep_penalty);
+
+    static char text[1 << 16];
+    static char stats[256];
+    int infer_rc = run_infer(binary_path, weights_path, full_prompt,
+                             max_tokens, temp, tk,
+                             text, sizeof(text), stats, sizeof(stats));
+    if (infer_rc != 0) {
+        fprintf(stderr, "inference failed\n");
+        return 1;
+    }
+
+    if (raw_mode) {
+        printf("%s\n", text);
+        if (stats[0]) printf("%s\n", stats);
+    } else {
+        printf("\n[%s] %s\n", v->name, text);
+        if (stats[0]) printf("\n%s\n", stats);
+    }
+
+    return 0;
+}
+}

@@ -1590,7 +1590,11 @@ static int generate_words(char *out, int max_len) {
         /* full denominator: τ_mod · τ · velocity_temperature */
         float eff_tau = D.tau_mod * D.tau * D.vel_temp;
         eff_tau = clampf(eff_tau, 0.2f, 3.0f);
-        int next = sample_topk(logits, vocab, eff_tau, 12);
+        /* top-k cutoff: 12 by default; build with -DDARIO_TOPK=N to override (0 = full distribution) */
+#ifndef DARIO_TOPK
+#define DARIO_TOPK 12
+#endif
+        int next = sample_topk(logits, vocab, eff_tau, DARIO_TOPK);
 
         const char *word = D.vocab.words[next];
         int wlen = strlen(word);
@@ -2037,6 +2041,13 @@ static void handle_chat(int fd, const char *req) {
     json_escape(code, code_esc, sizeof(code_esc));
     json_escape(words, words_esc, sizeof(words_esc));
 
+    /* compute prophecy stats for the JSON response */
+    int prophecy_n = D.prophecy.n;
+    int prophecy_fulfilled = 0;
+    for (int pi = 0; pi < D.prophecy.n; pi++)
+        if (D.prophecy.p[pi].fulfilled) prophecy_fulfilled++;
+    float prophecy_rate = (prophecy_n > 0) ? (float)prophecy_fulfilled / (float)prophecy_n : 0.0f;
+
     char json[8192];
     int jlen = snprintf(json, sizeof(json),
         "{"
@@ -2056,26 +2067,31 @@ static void handle_chat(int fd, const char *req) {
         "\"momentum\":%.3f,"
         "\"velocity\":\"%s\","
         "\"season\":\"%s\","
+        "\"season_phase\":%.4f,"
         "\"alpha\":%.3f,\"beta\":%.3f,\"gamma\":%.3f,"
         "\"alpha_mod\":%.3f,\"beta_mod\":%.3f,\"gamma_mod\":%.3f,"
         "\"term_energy\":[%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f],"
         "\"chambers\":{\"fear\":%.3f,\"love\":%.3f,\"rage\":%.3f,"
         "\"void\":%.3f,\"flow\":%.3f,\"complex\":%.3f},"
-        "\"vocab\":%d,\"cooc\":%d,\"step\":%d"
+        "\"prophecy_count\":%d,\"prophecy_fulfilled\":%d,\"fulfillment_rate\":%.3f,"
+        "\"dest_magnitude\":%.4f,\"vis_magnitude\":%.4f,"
+        "\"vocab\":%d,\"cooc\":%d,\"bigrams\":%d,\"step\":%d"
         "}",
         code_esc, words_esc,
         D.dominant_term, term_names[D.dominant_term],
         D.dissonance, D.tau, D.tau_mod, D.vel_temp,
         D.debt, D.resonance, D.entropy, D.emergence,
         D.trauma_level, D.momentum,
-        vel_names[D.velocity], season_names[D.season],
+        vel_names[D.velocity], season_names[D.season], D.season_phase,
         D.alpha, D.beta, D.gamma_d,
         D.alpha_mod, D.beta_mod, D.gamma_mod,
         D.term_energy[0], D.term_energy[1], D.term_energy[2],
         D.term_energy[3], D.term_energy[4], D.term_energy[5], D.term_energy[6],
         D.chamber[CH_FEAR], D.chamber[CH_LOVE], D.chamber[CH_RAGE],
         D.chamber[CH_VOID], D.chamber[CH_FLOW], D.chamber[CH_COMPLEX],
-        D.vocab.n_words, D.cooc.n, D.step
+        prophecy_n, prophecy_fulfilled, prophecy_rate,
+        g_dest_magnitude, D.vis_magnitude,
+        D.vocab.n_words, D.cooc.n, D.bigrams.n, D.step
     );
 
     char header[256];
@@ -2178,6 +2194,25 @@ int main(int argc, char **argv) {
     printf("\n");
 
     dario_init();
+
+    /* --ingest <path>  — pre-ingest a directory into the Knowledge Kernel
+     * before any other mode runs. Lets test harnesses populate KK without
+     * dropping into the REPL. No-op if compiled without HAS_KK. */
+    for (int i = 1; i < argc - 1; i++) {
+        if (strcmp(argv[i], "--ingest") == 0) {
+#ifdef HAS_KK
+            if (g_kk) {
+                const char *path = argv[i + 1];
+                int n = kk_ingest_dir(g_kk, path, "dario", "public");
+                fprintf(stderr, "[dario] --ingest %s → %d files\n", path, n);
+            } else {
+                fprintf(stderr, "[dario] --ingest: kk not initialized\n");
+            }
+#else
+            fprintf(stderr, "[dario] --ingest: built without HAS_KK, skipping\n");
+#endif
+        }
+    }
 
 #ifndef DARIO_NO_WEB
     /* check for --web flag */

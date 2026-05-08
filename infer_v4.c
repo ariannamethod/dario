@@ -17,11 +17,10 @@
 
 static int V,E,H,D,B,M,T,R;
 
-/* ── BLAS-accelerated matmul via notorch ── */
-static void mm_t(float *C, const float *A, const float *BT, int m, int k, int n) {
-    /* C[m,n] = A[m,k] @ BT[n,k]^T — BT is stored transposed */
-    nt_blas_mmT(C, A, BT, m, k, n);
-}
+/* All matmul / matvec calls go directly to notorch BLAS:
+ *   - prefill (T > 1): nt_blas_mmT      (Y[T,N] = X[T,K] @ W[N,K]^T)
+ *   - autoregressive (T = 1): nt_blas_matvec (out[M] = W[M,N] @ x[N])
+ */
 
 /* notorch ops — used directly for single-vector operations */
 static void rmsnorm(float *o, const float *x, int n) {
@@ -64,8 +63,14 @@ static void qk_norm(float *q, float *k, int dim) {
     for (int i = 0; i < dim; i++) { q[i] *= 1.2f; k[i] *= 1.2f; }
 }
 
-/* Weight layout: header(8i) + resid_l(20) + x0_l(20) + smear_l(1) + backout_l(1) + smear_g(24)
- * + wte[V,E] + B * (cq ck cv wr_a wr_b wvr wj gate cproj wg wu wd) + head[V,E] */
+/* Weight layout (matches yent.aml/tools/janus_to_gguf.py read_janus_bin order):
+ *   resid_l(B) + x0_l(B) + smear_l(1) + backout_l(1) + wte[V,E]
+ * + B * (wr_a + wr_b + gate + cq + ck + cv + wvr + wj + cproj + wg + wu + wd)
+ * + head[V,E] + smear_g(24)
+ *
+ * smear_g lives AFTER head — this is the on-disk order written by every
+ * exporter in the tree.  The buffer is sized to n_params = 66 + 2*V*E +
+ * B*(6*E*E + H*R*(E+T) + 3*H + 3*M*E), where 66 = 2B + 2 + 24 (B=20). */
 #define MBL 24
 typedef struct {
     float *resid_l, *x0_l, *smear_l, *backout_l, *smear_g;
@@ -78,9 +83,11 @@ typedef struct {
 } Weights;
 
 static void assign(Weights *w, float *p) {
-    /* Order matches PyTorch state_dict (from janus_gpt_v4_lowrank.py) */
-    w->resid_l = p; p += B;           /* resid_lambdas [20] */
-    w->x0_l = p; p += B;              /* x0_lambdas [20] */
+    /* On-disk order (canonical, matches yent.aml/tools/janus_to_gguf.py:319-340).
+     * Order: prefix-scalars → wte → B blocks → head → smear_g.
+     * The 24-float smear_g tensor is written LAST, after lm_head. */
+    w->resid_l = p; p += B;           /* resid_lambdas [B] */
+    w->x0_l = p; p += B;              /* x0_lambdas [B] */
     w->smear_l = p; p += 1;           /* smear_lambda [1] */
     w->backout_l = p; p += 1;         /* backout_lambda [1] */
     w->wte = p; p += V * E;           /* transformer.wte.weight [V, E] */
@@ -99,7 +106,7 @@ static void assign(Weights *w, float *p) {
         w->b[i].wd = p; p += E*M;     /* mlp.w_down.weight [E, M] */
     }
     w->head = p; p += V * E;          /* lm_head.weight [V, E] */
-    w->smear_g = p;                    /* smear_gate.weight [1, 24] */
+    w->smear_g = p; p += 24;          /* smear_gate.weight [1, 24] */
 }
 
 /* KV cache for autoregressive generation */
@@ -214,6 +221,28 @@ static void prefill_batch(Weights *w, int *toks, int n, float *logits, float *hi
                 for (int j = i+1; j < n; j++) scores[i*n+j] = -1e30f;
                 softmax_f(scores + i*n, n);
             }
+            /* RRPRAM intermediate: mid[r] = sum_t sum_e rns[t,e] * wr_a[h,e,r],
+             * t=0..n-1.  Identical for every i; compute once per (bl,h). */
+            float *wr_a_h = w->b[bl].wr_a + h*E*R;
+            float *wr_b_h = w->b[bl].wr_b + h*R*T;
+            float mid[128] = {0};
+            for (int t = 0; t < n; t++)
+                for (int r = 0; r < R; r++)
+                    for (int e = 0; e < E; e++)
+                        mid[r] += rns[t*E+e] * wr_a_h[e*R+r];
+            /* Seed kv_rrpram_mid[bl][h] for autoregressive continuation:
+             * forward_token() does mid_cache[r] += sum_e rn[e] * wr_a[h,e,r]
+             * for each new pos.  The accumulated sum across prompt positions
+             * is exactly `mid`, so seeding once = mirror autoregressive path. */
+            float *mid_cache = kv_rrpram_mid + ((size_t)bl * H + h) * R;
+            for (int r = 0; r < R; r++) mid_cache[r] = mid[r];
+            /* scores = mid @ wr_b * sc, broadcast */
+            float r_scores[2048];
+            for (int j = 0; j < n; j++) {
+                float s = 0;
+                for (int r = 0; r < R; r++) s += mid[r] * wr_b_h[r*T+j];
+                r_scores[j] = s * sc;
+            }
             /* Weighted sum of V */
             for (int i = 0; i < n; i++) {
                 float c_out[128] = {0};
@@ -221,22 +250,6 @@ static void prefill_batch(Weights *w, int *toks, int n, float *logits, float *hi
                     for (int d = 0; d < D; d++)
                         c_out[d] += scores[i*n+j] * va[j*E + h*D + d];
 
-                /* RRPRAM (broadcast pattern) */
-                float *wr_a_h = w->b[bl].wr_a + h*E*R;
-                float *wr_b_h = w->b[bl].wr_b + h*R*T;
-                /* intermediate = sum_t sum_e x[t,e] * wr_a[h,e,r] for t=0..n-1 */
-                float mid[128] = {0};
-                for (int t = 0; t < n; t++)
-                    for (int r = 0; r < R; r++)
-                        for (int e = 0; e < E; e++)
-                            mid[r] += rns[t*E+e] * wr_a_h[e*R+r];
-                /* scores = mid @ wr_b * sc, broadcast */
-                float r_scores[2048];
-                for (int j = 0; j < n; j++) {
-                    float s = 0;
-                    for (int r = 0; r < R; r++) s += mid[r] * wr_b_h[r*T+j];
-                    r_scores[j] = s * sc;
-                }
                 /* RRPRAM attention: attn[i,j] = softmax(r_scores[j] for j<=i) */
                 float r_attn[2048];
                 for (int j = 0; j <= i; j++) r_attn[j] = r_scores[j];
@@ -282,11 +295,11 @@ static void prefill_batch(Weights *w, int *toks, int n, float *logits, float *hi
     float bl_val = *w->backout_l;
     for (int i = 0; i < n*E; i++) xs[i] -= bl_val * x_backout[i];
 
-    /* Final norm + head for last position */
+    /* Final norm + head for last position — matvec, last row only */
     float rn_final[1024];
     rmsnorm(rn_final, xs + (n-1)*E, E);
     if (hidden) memcpy(hidden, rn_final, E * sizeof(float));
-    mm_t(logits, rn_final, w->head, 1, E, V);
+    nt_blas_matvec(logits, w->head, rn_final, V, E);
     for (int i = 0; i < V; i++) logits[i] = 15.0f * tanhf(logits[i] / 15.0f);
 
 
@@ -324,12 +337,12 @@ static void forward_token(Weights *w, int tok, int pos, float *logits, float *hi
         /* Block: attn(norm(x)) + x, then mlp(norm(x)) + x */
         rmsnorm(rn, x, E);
 
-        /* QKV projections */
+        /* QKV projections — matvec hot path (autoregressive, 1×E @ E×E^T) */
         float qa[1024], ka[1024], va[1024], vra[1024];
-        mm_t(qa, rn, w->b[bl].cq, 1, E, E);
-        mm_t(ka, rn, w->b[bl].ck, 1, E, E);
-        mm_t(va, rn, w->b[bl].cv, 1, E, E);
-        mm_t(vra, rn, w->b[bl].wvr, 1, E, E);
+        nt_blas_matvec(qa, w->b[bl].cq, rn, E, E);
+        nt_blas_matvec(ka, w->b[bl].ck, rn, E, E);
+        nt_blas_matvec(va, w->b[bl].cv, rn, E, E);
+        nt_blas_matvec(vra, w->b[bl].wvr, rn, E, E);
 
         /* RoPE + QK-norm per head */
         for (int h = 0; h < H; h++) {
@@ -343,9 +356,9 @@ static void forward_token(Weights *w, int tok, int pos, float *logits, float *hi
         memcpy(kv_v + off, va, E * sizeof(float));
         memcpy(kv_vr + off, vra, E * sizeof(float));
 
-        /* Echo */
+        /* Echo — matvec hot path */
         float echo_out[1024];
-        mm_t(echo_out, rn, w->b[bl].wj, 1, E, E);
+        nt_blas_matvec(echo_out, w->b[bl].wj, rn, E, E);
 
         /* Gate softmax */
         float gs[16][3];
@@ -418,22 +431,22 @@ static void forward_token(Weights *w, int tok, int pos, float *logits, float *hi
                 cat[h*D+d] = gs[h][0]*c_out[d] + gs[h][1]*r_out[d] + gs[h][2]*e_h[d];
         }
 
-        /* Output projection + residual (x = x + attn_out) */
+        /* Output projection + residual (x = x + attn_out) — matvec hot path */
         float ao[1024];
-        mm_t(ao, cat, w->b[bl].cproj, 1, E, E);
+        nt_blas_matvec(ao, w->b[bl].cproj, cat, E, E);
         for (int e = 0; e < E; e++) x[e] += ao[e];
 
         /* Cache mid-layer for backout */
         if (bl == backout_layer)
             memcpy(x_backout, x, E * sizeof(float));
 
-        /* MLP: x = x + mlp(norm(x)) */
+        /* MLP: x = x + mlp(norm(x)) — matvec hot path */
         rmsnorm(rn2, x, E);
         float mg[2048], mu[2048], mo[1024];
-        mm_t(mg, rn2, w->b[bl].wg, 1, E, M);
-        mm_t(mu, rn2, w->b[bl].wu, 1, E, M);
+        nt_blas_matvec(mg, w->b[bl].wg, rn2, M, E);
+        nt_blas_matvec(mu, w->b[bl].wu, rn2, M, E);
         for (int i = 0; i < M; i++) mg[i] = siluf(mg[i]) * mu[i];
-        mm_t(mo, mg, w->b[bl].wd, 1, M, E);
+        nt_blas_matvec(mo, w->b[bl].wd, mg, E, M);
         for (int e = 0; e < E; e++) x[e] += mo[e];
 
         if (pos == 7 && bl < 3) {
@@ -450,7 +463,7 @@ static void forward_token(Weights *w, int tok, int pos, float *logits, float *hi
 
     rmsnorm(rn, x, E);
     if (hidden) memcpy(hidden, rn, E * sizeof(float));
-    mm_t(logits, rn, w->head, 1, E, V);
+    nt_blas_matvec(logits, w->head, rn, V, E);
 
     /* Softcap: logits = 15 * tanh(logits / 15) */
     for (int i = 0; i < V; i++)
@@ -478,8 +491,13 @@ static void init_bpe(int vocab_size) {
 }
 
 int main(int argc, char **argv) {
-    srand(time(NULL));
-    if (argc < 2) { printf("usage: %s weights.bin [prompt] [max_tokens] [temp]\n", argv[0]); return 1; }
+    if (argc < 2) { printf("usage: %s weights.bin [prompt] [max_tokens] [temp] [seed] [top_k]\n", argv[0]); return 1; }
+    /* seed: argv[5] if given, else time(NULL). top_k: argv[6] if given, else 0 (no filter). */
+    unsigned int rng_seed = (argc > 5) ? (unsigned int)strtoul(argv[5], NULL, 10) : (unsigned int)time(NULL);
+    int topk_arg = (argc > 6) ? atoi(argv[6]) : 0;
+    if (topk_arg < 0) topk_arg = 0;
+    srand(rng_seed);
+    fprintf(stderr, "[infer_v4] seed=%u top_k=%d\n", rng_seed, topk_arg);
 
     FILE *f = fopen(argv[1], "rb");
     if (!f) { printf("cannot open %s\n", argv[1]); return 1; }
@@ -497,13 +515,31 @@ int main(int argc, char **argv) {
          * → R = (n_params - 66 - 2*V*E - B*(6*E*E + 3*H + 3*M*E)) / (B * H * (E + T)) */
         long fixed = 66 + 2L*V*E + (long)B*(6L*E*E + 3*H + 3L*M*E);
         R = (int)((n_params - fixed) / ((long)B * H * (E + T)));
-        printf("[janus-v4] JANU format v%d, n_params=%d, R=%d (derived)\n", magic_buf[1], n_params, R);
+        printf("[janus-v4] JANU format v%d, n_params=%ld, R=%d (derived)\n", magic_buf[1], n_params, R);
         fseek(f, 256, SEEK_SET); /* weights start at offset 256 */
     } else {
         /* legacy format: 8 plain ints */
         hdr[0] = magic_buf[0]; hdr[1] = magic_buf[1];
         fread(hdr + 2, 4, 6, f);
         V=hdr[0]; E=hdr[1]; H=hdr[2]; D=hdr[3]; B=hdr[4]; M=hdr[5]; T=hdr[6]; R=hdr[7];
+    }
+    /* Validate header dims against built-in stack buffers:
+     *   Weights.b[MBL=24]   → B  <= 24
+     *   gs[16][3]           → H  <= 16
+     *   x[1024], rn[1024],
+     *   qa/ka/va/vra[1024], → E  <= 1024
+     *   mg[2048], mu[2048]  → M  <= 2048
+     *   mid[128], r_out[128]→ R  <= 128, D <= 128
+     *   r_scores[2048]      → max(n, T) <= 2048 (n is clamped to T below)
+     *   r_attn[2048]        → ditto
+     */
+    if (B > MBL || H > 16 || E > 1024 || M > 2048 || R > 128 || D > 128 || T > 2048) {
+        fprintf(stderr, "model dims exceed built-in limits: "
+                "B=%d (max %d), H=%d (max 16), E=%d (max 1024), M=%d (max 2048), "
+                "R=%d (max 128), D=%d (max 128), T=%d (max 2048)\n",
+                B, MBL, H, E, M, R, D, T);
+        fclose(f);
+        return 1;
     }
     printf("[janus-v4] V=%d E=%d H=%d D=%d B=%d M=%d T=%d R=%d\n", V,E,H,D,B,M,T,R);
 
@@ -548,6 +584,11 @@ int main(int argc, char **argv) {
         FILE *pf = fopen(prompt, "rb");
         if (pf) {
             int n; fread(&n, 4, 1, pf);
+            if (n <= 0 || n > 4096) {
+                fprintf(stderr, "invalid token count %d in .bin (must be 1..4096)\n", n);
+                fclose(pf);
+                return 1;
+            }
             fread(ctx, 4, n, pf); len = n;
             fclose(pf);
             printf("(loaded %d tokens from file)\n", len);
@@ -557,6 +598,13 @@ int main(int argc, char **argv) {
     } else {
         for (int i = 0; prompt[i] && len < 4096; i++)
             ctx[len++] = (unsigned char)prompt[i];
+    }
+
+    /* Clamp prompt to model context — prefill_batch writes kv_*[(bl*T+p)*E]
+     * for p in [0,len), so len > T would overrun the KV cache. */
+    if (len > T) {
+        fprintf(stderr, "prompt too long (%d > %d), truncating\n", len, T);
+        len = T;
     }
 
     /* Prefill: parallel batch through all blocks (matches Python exactly) */
@@ -569,6 +617,10 @@ int main(int argc, char **argv) {
     /* generate with BPE decode */
     struct timespec ts0, ts1;
     clock_gettime(CLOCK_MONOTONIC, &ts0);
+
+#ifdef DARIO_PROFILE
+    nt_profiler_enable();
+#endif
 
     for (int step = 0; step < max_gen && len < T; step++) {
         /* Repetition penalty: penalize tokens seen in last 32 positions */
@@ -583,6 +635,33 @@ int main(int argc, char **argv) {
 
         for (int i = 0; i < V; i++) logits[i] /= temp;
         softmax_f(logits, V);
+
+        /* top-k truncation: zero all but the top k probs, then renormalize.
+         * topk_arg == 0  → no filter (full distribution)
+         * topk_arg >= V  → no filter (degenerate case)
+         */
+        if (topk_arg > 0 && topk_arg < V) {
+            /* find kth-largest via partial selection on a copy */
+            float *sorted = (float*)malloc((size_t)V * sizeof(float));
+            if (sorted) {
+                memcpy(sorted, logits, (size_t)V * sizeof(float));
+                for (int k = 0; k < topk_arg; k++) {
+                    int best = k;
+                    for (int j = k + 1; j < V; j++)
+                        if (sorted[j] > sorted[best]) best = j;
+                    float tmp = sorted[k]; sorted[k] = sorted[best]; sorted[best] = tmp;
+                }
+                float thresh = sorted[topk_arg - 1];
+                free(sorted);
+                float zsum = 0.0f;
+                for (int i = 0; i < V; i++) {
+                    if (logits[i] < thresh) logits[i] = 0.0f;
+                    zsum += logits[i];
+                }
+                if (zsum > 0.0f)
+                    for (int i = 0; i < V; i++) logits[i] /= zsum;
+            }
+        }
 
         float r = (float)rand() / RAND_MAX, cum = 0;
         int next = 0;
@@ -610,6 +689,10 @@ int main(int argc, char **argv) {
     double elapsed = (ts1.tv_sec - ts0.tv_sec) + (ts1.tv_nsec - ts0.tv_nsec) / 1e9;
     int gen_tokens = len - (int)strlen(prompt);
     printf("\n\n[janus-v4] %d tokens, %.1f tok/s (%.2fs)\n", gen_tokens, gen_tokens / elapsed, elapsed);
+
+#ifdef DARIO_PROFILE
+    nt_profiler_print();
+#endif
 
     free(kv_k); free(kv_v); free(kv_vr); free(kv_rrpram_mid);
     free(data);

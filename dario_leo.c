@@ -18,6 +18,7 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
+#include "ariannamethod/notorch.h"
 #include "kk_kernel.h"
 #include "leo_bpe_merges.h"
 
@@ -91,22 +92,16 @@ static int V, xE, xH, xD, BLK, xM, MT;
 #define D xD
 #define M xM
 
-static void mm(float *C, const float *A, const float *B, int m, int k, int n) {
-    for (int i = 0; i < m; i++)
-        for (int j = 0; j < n; j++) {
-            float s = 0;
-            for (int p = 0; p < k; p++) s += A[i*k+p] * B[p*n+j];
-            C[i*n+j] = s;
-        }
+/* mm / mm_t — notorch-backed BLAS wrappers (Accelerate / OpenBLAS via libnotorch).
+ * mm(C, A, B, m, k, n):   C[m,n] = A[m,k] @ B[k,n]
+ * mm_t(C, A, B, m, k, n): C[m,n] = A[m,k] @ B[n,k]^T  (B stored row-major [n,k])
+ */
+static inline void mm(float *C, const float *A, const float *B, int m, int k, int n) {
+    nt_blas_mm(C, A, B, m, k, n);
 }
 
-static void mm_t(float *C, const float *A, const float *B, int m, int k, int n) {
-    for (int i = 0; i < m; i++)
-        for (int j = 0; j < n; j++) {
-            float s = 0;
-            for (int p = 0; p < k; p++) s += A[i*k+p] * B[j*k+p];
-            C[i*n+j] = s;
-        }
+static inline void mm_t(float *C, const float *A, const float *B, int m, int k, int n) {
+    nt_blas_mmT(C, A, B, m, k, n);
 }
 
 static void rmsnorm(float *out, const float *x, const float *w, int T, int dim) {
@@ -344,6 +339,26 @@ int main(int argc, char **argv) {
     fread(hdr, 4, 7, f);
     V = hdr[0]; xE = hdr[1]; xH = hdr[2]; xD = hdr[3];
     BLK = hdr[4]; xM = hdr[5]; MT = hdr[6];
+    /* Validate header dims against built-in stack buffers:
+     *   Weights.b[MAX_BLK=24]   → BLK <= MAX_BLK
+     *   gs[16][3]               → H   <= 16
+     *   hidden[1024]            → E   <= 1024
+     *   D = E/H, must be ≥ 1 and divide E exactly
+     *   MT > 0 (pos_emb size + division-by-(MT-1))
+     */
+    if (V <= 0 || E <= 0 || H <= 0 || D <= 0 || BLK <= 0 || M <= 0 || MT <= 1) {
+        fprintf(stderr, "ERROR: invalid header dims (non-positive or MT<=1): "
+                "V=%d E=%d H=%d D=%d BLK=%d M=%d MT=%d\n", V, E, H, D, BLK, M, MT);
+        fclose(f);
+        return 1;
+    }
+    if (BLK > MAX_BLK || H > 16 || E > 1024) {
+        fprintf(stderr, "ERROR: model dims exceed built-in limits: "
+                "BLK=%d (max %d), H=%d (max 16), E=%d (max 1024)\n",
+                BLK, MAX_BLK, H, E);
+        fclose(f);
+        return 1;
+    }
     printf("[janus] V=%d E=%d H=%d D=%d B=%d M=%d T=%d\n", V, E, H, D, BLK, M, MT);
 
     int np = param_count();
@@ -408,6 +423,15 @@ int main(int argc, char **argv) {
     int ctx[4096];
     int len = bpe_encode(prompt, strlen(prompt), ctx, 4096);
     printf("[prompt] \"%s\" → %d tokens\n\n", prompt, len);
+
+    /* Empty prompt → T=0 → janus_forward indexes hidden_out + (T-1)*E = -E.
+     * Guard early to avoid undefined behavior. */
+    if (len <= 0) {
+        fprintf(stderr, "ERROR: empty prompt (encoded to %d tokens)\n", len);
+        free(data);
+        if (kk) kk_close(kk);
+        return 1;
+    }
 
     /* Generation loop */
     float hidden[1024]; /* max embedding dim */

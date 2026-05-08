@@ -1,0 +1,868 @@
+# dario_forum.aml — three-voices HTTP API
+#
+# AML port of forum.py (612 LOC). Holds one shared KK in C kk_kernel,
+# accepts POST /api/forum {question, voice}, spawns infer_v4 for the
+# right voice, returns generated text + KK injection + emotional state.
+#
+# Also serves dario.html / chatbot.html / forum.html if they exist next
+# to the binary.
+#
+# AML's standard library has no native HTTP server, but it gives us
+# unrestricted C access through BLOOD COMPILE — so we use POSIX sockets
+# directly, the same pattern dario.c (parent) uses for its --web server
+# at port 3001. Concurrent requests fork; each child runs infer_v4 and
+# writes the response back. The KK is mutex-protected for absorbing
+# concurrent forum interactions.
+#
+# Persistent KK at $KK_DB_PATH or ./dario_memory.db (matches dario.c).
+#
+# Usage:
+#   ./dario_forum --port 8800 --knowledge ../docs/dario_essay.txt
+#
+# By Arianna Method.
+
+PROPHECY 7
+DESTINY 0.35
+VELOCITY WALK
+ATTEND_FOCUS 0.70
+
+ECHO "../kk_kernel.h"
+ECHO "../kk_kernel.c"
+
+BLOOD LINK -lsqlite3
+
+BLOOD COMPILE forum_headers {
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <ctype.h>
+#include <time.h>
+#include <signal.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <pthread.h>
+#include <ariannamethod/ariannamethod.h>
+
+#define DARIO_FORUM_VERSION "0.1.0"
+#define FORUM_BUF_SIZE      (1 << 16)
+
+typedef struct {
+    const char *name;
+    const char *backend;
+    const char *weights_file;
+    float       temp;
+    int         top_k;
+    float       rep_penalty;
+    const char *desc;
+} dario_voice;
+
+static dario_voice CATALOG[] = {
+    {"leo",            "janus",     "janus_v4_sft_leo.bin",
+     0.75f, 40, 1.4f,  "luminous, philosophical -- Janus 176M"},
+    {"arianna",        "janus",     "janus_v4_sft_arianna.bin",
+     0.75f, 45, 1.3f,  "precise, architectural -- Janus 176M"},
+    {"yent",           "janus",     "janus_v4_sft_yent.bin",
+     0.75f, 40, 1.35f, "warm, direct -- Janus 176M"},
+    {"resonance-yent", "resonance", "resonance_200m_lora_yent.bin",
+     0.75f, 40, 1.3f,  "warm, direct, sarcastic -- Resonance 200M"},
+    {"base",           "janus",     "janus_v4_base_22k.bin",
+     0.75f, 40, 1.3f,  "Janus 176M base (no SFT)"},
+    {"leo24m",         "janus",     "leo_janus_d12_f16.bin",
+     0.7f,  40, 1.3f,  "Leo 24M mini -- Janus d12 f16"},
+};
+#define CATALOG_N (sizeof(CATALOG)/sizeof(CATALOG[0]))
+
+static dario_voice *lookup_voice(const char *name) {
+    for (size_t i = 0; i < CATALOG_N; i++)
+        if (strcmp(CATALOG[i].name, name) == 0) return &CATALOG[i];
+    return NULL;
+}
+
+static int file_exists_(const char *p) {
+    struct stat st;
+    return stat(p, &st) == 0;
+}
+
+static int resolve_weights_(const char *script_dir, const char *bare,
+                            char *out_path, size_t out_sz) {
+    char buf[1024];
+    const char *env = getenv("DARIO_WEIGHTS_DIR");
+    if (env && *env) {
+        snprintf(buf, sizeof(buf), "%s/%s", env, bare);
+        if (file_exists_(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+    }
+    snprintf(buf, sizeof(buf), "%s/weights/%s", script_dir, bare);
+    if (file_exists_(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+    const char *home = getenv("HOME");
+    if (home) {
+        snprintf(buf, sizeof(buf), "%s/arianna/weights/dario/%s", home, bare);
+        if (file_exists_(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+        snprintf(buf, sizeof(buf), "%s/arianna/dario_hf_upload/%s", home, bare);
+        if (file_exists_(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+        snprintf(buf, sizeof(buf), "%s/Downloads/janus-v4-final/%s", home, bare);
+        if (file_exists_(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+    }
+    snprintf(buf, sizeof(buf), "%s/%s", script_dir, bare);
+    if (file_exists_(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+    return -1;
+}
+
+static int find_infer_(const char *script_dir, char *out_path, size_t out_sz) {
+    char buf[1024];
+    snprintf(buf, sizeof(buf), "%s/infer_v4", script_dir);
+    if (file_exists_(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+    if (file_exists_("./infer_v4")) { snprintf(out_path, out_sz, "./infer_v4"); return 0; }
+    return -1;
+}
+
+static void get_script_dir_(const char *argv0, char *out, size_t out_sz) {
+    char buf[1024];
+    snprintf(buf, sizeof(buf), "%s", argv0);
+    char *slash = strrchr(buf, '/');
+    if (slash) {
+        *slash = 0;
+        char trial[1100];
+        snprintf(trial, sizeof(trial), "%s/infer_v4", buf);
+        if (file_exists_(trial)) { snprintf(out, out_sz, "%s", buf); return; }
+        snprintf(trial, sizeof(trial), "%s/../infer_v4", buf);
+        if (file_exists_(trial)) {
+            char parent[1024];
+            snprintf(parent, sizeof(parent), "%s", buf);
+            char *p = strrchr(parent, '/');
+            if (p) *p = 0;
+            else   snprintf(parent, sizeof(parent), "..");
+            snprintf(out, out_sz, "%s", parent);
+            return;
+        }
+        snprintf(out, out_sz, "%s", buf);
+        return;
+    }
+    if (!getcwd(out, out_sz)) snprintf(out, out_sz, ".");
+}
+}
+
+BLOOD COMPILE forum_state {
+/* Per-process server context. Forked children inherit it copy-on-write,
+ * which is fine — we re-open the SQLite handle inside the child to
+ * avoid contention on the WAL. */
+typedef struct {
+    char binary_path[1024];
+    char script_dir[1024];
+    char db_path[1024];
+    char weights_paths[CATALOG_N][1024]; /* index parallel to CATALOG */
+    int  weights_resolved[CATALOG_N];
+    int  field_up;
+    char field_host[128];
+    int  field_port;
+    int  no_field;
+} forum_ctx;
+
+static forum_ctx G;
+
+/* Mutex for KK access — used both by ingest and on-the-fly absorb. */
+static pthread_mutex_t g_kk_mu = PTHREAD_MUTEX_INITIALIZER;
+static kk_ctx *g_kk = NULL;
+}
+
+BLOOD COMPILE forum_subprocess {
+/* Spawn ./infer_v4 — same pattern as dialogue. */
+static int run_infer_(const char *binary, const char *weights,
+                      const char *prompt, int max_tokens, float temp, int top_k,
+                      char *text_out, size_t text_sz,
+                      char *stats_out, size_t stats_sz) {
+    int pipefd[2];
+    if (pipe(pipefd) < 0) return -1;
+    pid_t pid = fork();
+    if (pid < 0) { close(pipefd[0]); close(pipefd[1]); return -1; }
+    if (pid == 0) {
+        dup2(pipefd[1], 1);
+        close(pipefd[0]); close(pipefd[1]);
+        char max_s[16], temp_s[32], seed_s[16], topk_s[16];
+        snprintf(max_s, sizeof(max_s), "%d", max_tokens);
+        snprintf(temp_s, sizeof(temp_s), "%g", temp);
+        snprintf(seed_s, sizeof(seed_s), "0");
+        snprintf(topk_s, sizeof(topk_s), "%d", top_k);
+        execl(binary, binary, weights, prompt, max_s, temp_s,
+              seed_s, topk_s, (char*)NULL);
+        _exit(127);
+    }
+    close(pipefd[1]);
+    static char buf[1 << 18];
+    size_t total = 0;
+    ssize_t n;
+    while (total < sizeof(buf) - 1 &&
+           (n = read(pipefd[0], buf + total, sizeof(buf) - 1 - total)) > 0)
+        total += (size_t)n;
+    buf[total] = 0;
+    close(pipefd[0]);
+    int status; waitpid(pid, &status, 0);
+
+    const char *sep = "--- generation ---\n";
+    char *gen = strstr(buf, sep);
+    if (!gen) { snprintf(text_out, text_sz, "%s", buf); if (stats_sz) stats_out[0] = 0; return 0; }
+    gen += strlen(sep);
+    size_t glen = strlen(gen);
+    while (glen > 0 && (gen[glen-1] == '\n' || gen[glen-1] == ' '))
+        gen[--glen] = 0;
+    char *stats_line = NULL;
+    for (size_t i = glen; i > 0; i--) {
+        if (gen[i-1] == '\n') {
+            if (strncmp(gen + i, "[janus", 6) == 0) {
+                stats_line = gen + i;
+                gen[i-1] = 0; glen = i - 1;
+            }
+            break;
+        }
+    }
+    if (!stats_line && strncmp(gen, "[janus", 6) == 0) { stats_line = gen; glen = 0; }
+    char *text = gen;
+    while (*text == '\n' || *text == ' ') text++;
+    snprintf(text_out, text_sz, "%s", text);
+    if (stats_line && stats_sz) snprintf(stats_out, stats_sz, "%s", stats_line);
+    else if (stats_sz) stats_out[0] = 0;
+    return WIFEXITED(status) && WEXITSTATUS(status) == 0 ? 0 : -1;
+}
+
+/* JSON-escape a string into out, returns strlen. */
+static int json_escape_(const char *src, char *out, int out_sz) {
+    int p = 0;
+    for (const char *s = src; *s && p < out_sz - 8; s++) {
+        switch (*s) {
+            case '"':  out[p++] = '\\'; out[p++] = '"'; break;
+            case '\\': out[p++] = '\\'; out[p++] = '\\'; break;
+            case '\n': out[p++] = '\\'; out[p++] = 'n'; break;
+            case '\t': out[p++] = '\\'; out[p++] = 't'; break;
+            case '\r': break;
+            default:
+                if ((unsigned char)*s < 0x20) {
+                    p += snprintf(out + p, out_sz - p, "\\u%04x", (unsigned char)*s);
+                } else out[p++] = *s;
+        }
+    }
+    out[p] = 0;
+    return p;
+}
+
+/* HTTP POST to dario --web for KK absorption. */
+static int field_post_chat_(const char *host, int port, const char *text) {
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) return -1;
+    struct timeval tv = {1, 0};
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+
+    struct sockaddr_in addr = {0};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    if (inet_pton(AF_INET, host, &addr.sin_addr) != 1) {
+        struct hostent *he = gethostbyname(host);
+        if (!he) { close(sock); return -1; }
+        memcpy(&addr.sin_addr, he->h_addr_list[0], he->h_length);
+    }
+    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        close(sock); return -1;
+    }
+    static char jbuf[1 << 14];
+    int jp = snprintf(jbuf, sizeof(jbuf), "{\"text\":\"");
+    jp += json_escape_(text, jbuf + jp, sizeof(jbuf) - jp);
+    jp += snprintf(jbuf + jp, sizeof(jbuf) - jp, "\"}");
+
+    static char req[1 << 14];
+    int n = snprintf(req, sizeof(req),
+        "POST /api/chat HTTP/1.1\r\n"
+        "Host: %s:%d\r\n"
+        "Content-Type: application/json\r\n"
+        "Content-Length: %d\r\n"
+        "Connection: close\r\n\r\n%s",
+        host, port, jp, jbuf);
+    if (n <= 0) { close(sock); return -1; }
+    if (send(sock, req, n, 0) != n) { close(sock); return -1; }
+    char resp[256];
+    ssize_t rr = recv(sock, resp, sizeof(resp) - 1, 0);
+    close(sock);
+    if (rr <= 0) return -1;
+    resp[rr] = 0;
+    return strstr(resp, "200") ? 0 : -1;
+}
+
+static int field_probe_(const char *host, int port) {
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) return -1;
+    struct timeval tv = {0, 500000};
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+    struct sockaddr_in addr = {0};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    if (inet_pton(AF_INET, host, &addr.sin_addr) != 1) {
+        struct hostent *he = gethostbyname(host);
+        if (!he) { close(sock); return -1; }
+        memcpy(&addr.sin_addr, he->h_addr_list[0], he->h_length);
+    }
+    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        close(sock); return -1;
+    }
+    const char *r = "GET /api/kernel HTTP/1.0\r\n\r\n";
+    send(sock, r, strlen(r), 0);
+    char resp[256];
+    ssize_t rr = recv(sock, resp, sizeof(resp) - 1, 0);
+    close(sock);
+    if (rr <= 0) return -1;
+    resp[rr] = 0;
+    return strstr(resp, "200") ? 0 : -1;
+}
+}
+
+BLOOD COMPILE forum_kk_glue {
+/* Strip Q:/A: from a chunk to extract the answer text. */
+static void strip_qa_(const char *src, char *dst, size_t dst_sz) {
+    const char *nlA = strstr(src, "\nA:");
+    if (nlA) src = nlA + 3;
+    else if (strncmp(src, "A:", 2) == 0) src += 2;
+    while (*src == ' ' || *src == '\n' || *src == '\t') src++;
+    snprintf(dst, dst_sz, "%s", src);
+}
+
+/* Pick a short injection from query — used by /api/forum to prime
+ * the model with a relevant sentence from KK. */
+static int kk_query_injection_(kk_ctx *kk, const char *query,
+                               char *out, int out_sz) {
+    if (!kk) return -1;
+    kk_result *results = NULL;
+    int n = kk_retrieve(kk, query, "public", NULL, 5,
+                        KK_PROFILE_BALANCED, &results);
+    if (n <= 0 || !results) return -1;
+
+    /* pick the first non-model chunk */
+    int picked = -1;
+    for (int i = 0; i < n; i++) {
+        if (!results[i].text) continue;
+        const char *src = results[i].path ? results[i].path : "";
+        if (strstr(src, "_forum") || strstr(src, "_turn") || strstr(src, "_chain")) continue;
+        picked = i; break;
+    }
+    if (picked < 0) picked = 0;
+
+    /* pull first sentence ≤ 100 chars */
+    char clean[1024];
+    strip_qa_(results[picked].text, clean, sizeof(clean));
+    int len = (int)strlen(clean);
+    int end = -1;
+    for (int i = 0; i < len; i++) {
+        if (clean[i] == '.' || clean[i] == '!' || clean[i] == '?') {
+            if (i + 1 == len || clean[i+1] == ' ' || clean[i+1] == '\n')
+                { end = i + 1; break; }
+        }
+    }
+    if (end < 0) end = len < 100 ? len : 100;
+    if (end > 100) end = 100;
+    if (end > out_sz - 1) end = out_sz - 1;
+    memcpy(out, clean, end);
+    out[end] = 0;
+    kk_free_results(results, n);
+    return 0;
+}
+
+/* Absorb model output into KK. */
+static int kk_absorb_text_(kk_ctx *kk, const char *text, const char *source) {
+    if (!kk || !text) return 0;
+    int len = (int)strlen(text);
+    if (len < 30) return 0;
+    int added = 0;
+    int start = 0;
+    int i = 0;
+    while (i <= len) {
+        int boundary = (i == len) ||
+            ((text[i] == '.' || text[i] == '!' || text[i] == '?') &&
+             (i + 1 == len || text[i+1] == ' ' || text[i+1] == '\n'));
+        if (boundary) {
+            int end = (i == len) ? i : i + 1;
+            int sl = end - start;
+            if (sl >= 40 && sl <= 600) {
+                char sent[700];
+                int n = sl < (int)sizeof(sent) - 1 ? sl : (int)sizeof(sent) - 1;
+                memcpy(sent, text + start, n);
+                sent[n] = 0;
+                char *p = sent;
+                while (*p == ' ' || *p == '\n') p++;
+                if (p[0] >= 'A' && p[0] <= 'Z') {
+                    int wc = 0, in_w = 0;
+                    for (char *q = p; *q; q++) {
+                        if (*q == ' ' || *q == '\t' || *q == '\n') {
+                            if (in_w) { wc++; in_w = 0; }
+                        } else in_w = 1;
+                    }
+                    if (in_w) wc++;
+                    if (wc >= 6) {
+                        char path[256];
+                        snprintf(path, sizeof(path), "%s_%d_%lld",
+                                 source, added, (long long)time(NULL));
+                        if (kk_store(kk, path, p, strlen(p),
+                                     "dario", "public") >= 0)
+                            added++;
+                    }
+                }
+            }
+            start = end;
+            while (start < len && (text[start] == ' ' || text[start] == '\n' ||
+                                   text[start] == '\t' || text[start] == '\r'))
+                start++;
+            if (start >= len) break;
+            i = start;
+        } else {
+            i++;
+        }
+    }
+    return added;
+}
+}
+
+BLOOD COMPILE forum_http {
+/* Minimal helpers for the HTTP server — write status + body, escape JSON,
+ * extract a JSON string field. Modelled on dario.c's web layer. */
+
+static void send_response_(int fd, int status, const char *content_type,
+                           const char *body, int body_len) {
+    char header[512];
+    int n = snprintf(header, sizeof(header),
+        "HTTP/1.1 %d %s\r\n"
+        "Content-Type: %s\r\n"
+        "Content-Length: %d\r\n"
+        "Access-Control-Allow-Origin: *\r\n"
+        "Access-Control-Allow-Methods: POST, GET, OPTIONS\r\n"
+        "Access-Control-Allow-Headers: Content-Type\r\n"
+        "Connection: close\r\n\r\n",
+        status, status == 200 ? "OK" :
+                status == 400 ? "Bad Request" :
+                status == 404 ? "Not Found" :
+                status == 500 ? "Internal Server Error" : "Status",
+        content_type, body_len);
+    write(fd, header, n);
+    if (body && body_len > 0) write(fd, body, body_len);
+}
+
+static void send_options_(int fd) {
+    const char *r =
+        "HTTP/1.1 204 No Content\r\n"
+        "Access-Control-Allow-Origin: *\r\n"
+        "Access-Control-Allow-Methods: POST, GET, OPTIONS\r\n"
+        "Access-Control-Allow-Headers: Content-Type\r\n"
+        "Connection: close\r\n\r\n";
+    write(fd, r, strlen(r));
+}
+
+/* Extract a JSON string field "<key>":"<value>" — returns 1 on success,
+ * fills `out` (NUL-terminated). Handles \"  \\  \n  \t escapes only. */
+static int json_get_string_(const char *body, const char *key,
+                            char *out, int out_sz) {
+    char pat[64];
+    snprintf(pat, sizeof(pat), "\"%s\"", key);
+    const char *p = strstr(body, pat);
+    if (!p) return 0;
+    p = strchr(p + strlen(pat), ':');
+    if (!p) return 0;
+    p++;
+    while (*p == ' ' || *p == '\t') p++;
+    if (*p != '"') return 0;
+    p++;
+    int i = 0;
+    while (*p && *p != '"' && i < out_sz - 1) {
+        if (*p == '\\' && p[1]) {
+            p++;
+            switch (*p) {
+                case 'n':  out[i++] = '\n'; break;
+                case 't':  out[i++] = '\t'; break;
+                case '"':  out[i++] = '"';  break;
+                case '\\': out[i++] = '\\'; break;
+                default:   out[i++] = *p;
+            }
+        } else out[i++] = *p;
+        p++;
+    }
+    out[i] = 0;
+    return 1;
+}
+
+static int json_get_int_(const char *body, const char *key, int dflt) {
+    char pat[64];
+    snprintf(pat, sizeof(pat), "\"%s\"", key);
+    const char *p = strstr(body, pat);
+    if (!p) return dflt;
+    p = strchr(p + strlen(pat), ':');
+    if (!p) return dflt;
+    p++;
+    while (*p == ' ' || *p == '\t') p++;
+    return atoi(p);
+}
+
+/* Find body after \r\n\r\n. */
+static const char *find_body_(const char *req) {
+    const char *p = strstr(req, "\r\n\r\n");
+    return p ? p + 4 : NULL;
+}
+
+/* Serve a static .html file from script_dir. */
+static void serve_file_(int fd, const char *script_dir, const char *name) {
+    char p1[1100];
+    snprintf(p1, sizeof(p1), "%s/%s", script_dir, name);
+    FILE *f = fopen(p1, "r");
+    if (!f) {
+        snprintf(p1, sizeof(p1), "%s/dario/%s", script_dir, name);
+        f = fopen(p1, "r");
+    }
+    if (!f) {
+        send_response_(fd, 404, "text/plain", "Not Found", 9);
+        return;
+    }
+    fseek(f, 0, SEEK_END); long sz = ftell(f); fseek(f, 0, SEEK_SET);
+    char *buf = malloc(sz + 1);
+    fread(buf, 1, sz, f); fclose(f);
+    send_response_(fd, 200, "text/html; charset=utf-8", buf, sz);
+    free(buf);
+}
+}
+
+BLOOD COMPILE forum_handler {
+/* /api/voices — list available voices the server has resolved. */
+static void handle_voices_(int fd) {
+    char body[4096];
+    int p = snprintf(body, sizeof(body), "{");
+    int first = 1;
+    for (size_t i = 0; i < CATALOG_N; i++) {
+        if (!G.weights_resolved[i]) continue;
+        p += snprintf(body + p, sizeof(body) - p,
+            "%s\"%s\":{\"desc\":\"%s\",\"backend\":\"%s\"}",
+            first ? "" : ",",
+            CATALOG[i].name, CATALOG[i].desc, CATALOG[i].backend);
+        first = 0;
+    }
+    p += snprintf(body + p, sizeof(body) - p, "}");
+    send_response_(fd, 200, "application/json", body, p);
+}
+
+/* /api/kk — return chunk count + emotional state.
+ *
+ * The C kk_kernel doesn't compute Python forum.py's 8-emotion vector,
+ * so we proxy through kk_get_stats and return uniform zeros for the
+ * emotion slots. The API shape stays compatible with forum.py clients. */
+static void handle_kk_(int fd) {
+    pthread_mutex_lock(&g_kk_mu);
+    kk_stats st = {0};
+    if (g_kk) kk_get_stats(g_kk, &st);
+    pthread_mutex_unlock(&g_kk_mu);
+    char body[1024];
+    int p = snprintf(body, sizeof(body),
+        "{\"chunks\":%d,\"documents\":%d,\"namespaces\":%d,"
+        "\"emotional_state\":{"
+        "\"trauma\":0,\"joy\":0,\"grief\":0,\"resonance\":0,"
+        "\"desire\":0,\"void\":0,\"rage\":0,\"tenderness\":0}}",
+        st.chunks, st.documents, st.namespaces);
+    send_response_(fd, 200, "application/json", body, p);
+}
+
+/* /api/forum — main endpoint. */
+static void handle_forum_(int fd, const char *req) {
+    const char *body = find_body_(req);
+    if (!body) {
+        send_response_(fd, 400, "text/plain", "missing body", 12);
+        return;
+    }
+    char question[2048] = {0};
+    char voice_name[64] = {0};
+    int max_tokens = json_get_int_(body, "max_tokens", 200);
+    if (!json_get_string_(body, "question", question, sizeof(question))) {
+        send_response_(fd, 400, "text/plain", "missing 'question'", 18);
+        return;
+    }
+    if (!json_get_string_(body, "voice", voice_name, sizeof(voice_name))) {
+        snprintf(voice_name, sizeof(voice_name), "leo");
+    }
+
+    dario_voice *v = lookup_voice(voice_name);
+    if (!v) {
+        char err[256];
+        int n = snprintf(err, sizeof(err), "unknown voice: %s", voice_name);
+        send_response_(fd, 400, "text/plain", err, n);
+        return;
+    }
+    int idx = (int)(v - CATALOG);
+    if (!G.weights_resolved[idx]) {
+        char err[256];
+        int n = snprintf(err, sizeof(err),
+                         "weights not resolved for voice: %s", voice_name);
+        send_response_(fd, 503, "text/plain", err, n);
+        return;
+    }
+
+    /* Absorb question into KK first — conversation grows. */
+    pthread_mutex_lock(&g_kk_mu);
+    if (g_kk) kk_store(g_kk, "user", question, strlen(question), "dario", "public");
+    /* Pull KK injection. */
+    char injection[256] = {0};
+    if (g_kk) kk_query_injection_(g_kk, question, injection, sizeof(injection));
+    pthread_mutex_unlock(&g_kk_mu);
+
+    /* Build prompt: Q:/A: with optional injection prepended. */
+    char prompt[3072];
+    if (injection[0])
+        snprintf(prompt, sizeof(prompt), "Q: %s\nA: %s ", question, injection);
+    else
+        snprintf(prompt, sizeof(prompt), "Q: %s\nA:", question);
+
+    /* Run inference. */
+    static char gen[1 << 16];
+    static char stats[256];
+    int rc = run_infer_(G.binary_path, G.weights_paths[idx], prompt,
+                        max_tokens, v->temp, v->top_k,
+                        gen, sizeof(gen), stats, sizeof(stats));
+    if (rc != 0) {
+        send_response_(fd, 500, "text/plain", "inference failed", 16);
+        return;
+    }
+
+    /* Absorb model output. */
+    pthread_mutex_lock(&g_kk_mu);
+    int n_added = 0;
+    if (g_kk) {
+        char src[64];
+        snprintf(src, sizeof(src), "%s_forum", v->name);
+        n_added = kk_absorb_text_(g_kk, gen, src);
+    }
+    kk_stats kkst = {0};
+    if (g_kk) kk_get_stats(g_kk, &kkst);
+    pthread_mutex_unlock(&g_kk_mu);
+
+    /* Bridge into dario field if up. */
+    if (G.field_up && !G.no_field) {
+        field_post_chat_(G.field_host, G.field_port, gen);
+    }
+
+    /* Compose JSON response. */
+    static char text_esc[1 << 16];
+    static char inj_esc[1024];
+    static char stats_esc[1024];
+    json_escape_(gen, text_esc, sizeof(text_esc));
+    json_escape_(injection, inj_esc, sizeof(inj_esc));
+    json_escape_(stats, stats_esc, sizeof(stats_esc));
+
+    static char resp[1 << 17];
+    int rp = snprintf(resp, sizeof(resp),
+        "{\"voice\":\"%s\",\"text\":\"%s\",\"injection\":\"%s\","
+        "\"kk_chunks\":%d,\"backend\":\"%s\",\"desc\":\"%s\","
+        "\"stats\":\"%s\","
+        "\"emotional_state\":{"
+        "\"trauma\":0,\"joy\":0,\"grief\":0,\"resonance\":0,"
+        "\"desire\":0,\"void\":0,\"rage\":0,\"tenderness\":0}}",
+        v->name, text_esc, inj_esc, kkst.chunks,
+        v->backend, v->desc, stats_esc);
+    (void)n_added;
+    send_response_(fd, 200, "application/json", resp, rp);
+}
+
+static void handle_request_(int fd) {
+    char buf[FORUM_BUF_SIZE] = {0};
+    int n = read(fd, buf, sizeof(buf) - 1);
+    if (n <= 0) return;
+    if (strncmp(buf, "OPTIONS", 7) == 0) {
+        send_options_(fd);
+        return;
+    }
+    if (strstr(buf, "POST /api/forum")) {
+        handle_forum_(fd, buf);
+    } else if (strncmp(buf, "GET /api/voices", 15) == 0) {
+        handle_voices_(fd);
+    } else if (strncmp(buf, "GET /api/kk", 11) == 0) {
+        handle_kk_(fd);
+    } else if (strncmp(buf, "GET /forum", 10) == 0 ||
+               strncmp(buf, "GET / ",     6) == 0 ||
+               strncmp(buf, "GET /index", 10) == 0) {
+        serve_file_(fd, G.script_dir, "forum.html");
+    } else if (strncmp(buf, "GET /chat", 9) == 0 ||
+               strncmp(buf, "GET /chatbot", 12) == 0) {
+        serve_file_(fd, G.script_dir, "chatbot.html");
+    } else if (strncmp(buf, "GET /dario", 10) == 0) {
+        serve_file_(fd, G.script_dir, "dario.html");
+    } else if (strncmp(buf, "GET /favicon", 12) == 0) {
+        send_response_(fd, 204, "text/plain", "", 0);
+    } else {
+        send_response_(fd, 404, "text/plain", "Not Found", 9);
+    }
+}
+}
+
+BLOOD MAIN {
+static void usage(const char *argv0) {
+    fprintf(stderr,
+        "dario_forum (AML) v" DARIO_FORUM_VERSION "\n"
+        "\nUsage: %s [flags]\n"
+        "\nFlags:\n"
+        "  --port N           HTTP port (default 8800)\n"
+        "  --host ADDR        bind addr (default 0.0.0.0)\n"
+        "  --knowledge PATH   knowledge file (repeatable)\n"
+        "  --kk-db PATH       SQLite DB (default ./dario_memory.db)\n"
+        "  --field URL        dario equation REPL (default http://localhost:3001)\n"
+        "  --no-field         skip POSTing to dario field\n"
+        "  --binary PATH      override path to ./infer_v4\n"
+        "  --help\n"
+        "\nEndpoints:\n"
+        "  POST /api/forum     {question, voice, max_tokens?} -> generated response\n"
+        "  GET  /api/voices    voice catalog\n"
+        "  GET  /api/kk        knowledge kernel state\n"
+        "  GET  /              serves forum.html (if present)\n", argv0);
+}
+
+static void parse_url_(const char *url, char *host, int hsz, int *port) {
+    *port = 3001;
+    if (strncmp(url, "http://", 7) == 0) url += 7;
+    else if (strncmp(url, "https://", 8) == 0) url += 8;
+    const char *colon = strchr(url, ':');
+    const char *slash = strchr(url, '/');
+    if (slash && colon && slash < colon) colon = NULL;
+    int hlen = (int)((colon ? colon - url : (slash ? slash - url : (int)strlen(url))));
+    if (hlen >= hsz) hlen = hsz - 1;
+    memcpy(host, url, hlen); host[hlen] = 0;
+    if (colon) *port = atoi(colon + 1);
+}
+
+int main(int argc, char **argv) {
+    am_init();
+    am_exec("PROPHECY 7\nDESTINY 0.35\nVELOCITY WALK\n");
+
+    /* SIGPIPE only — clients close mid-write; ignoring SIGCHLD breaks
+     * the explicit waitpid() inside run_infer_, so we leave it default
+     * and rely on synchronous reaping. */
+    signal(SIGPIPE, SIG_IGN);
+
+    int port = 8800;
+    const char *host = "0.0.0.0";
+    const char *kk_db_path = NULL;
+    const char *field_url  = "http://localhost:3001";
+    const char *binary_override = NULL;
+    int no_field = 0;
+    const char *knowledge_paths[16];
+    int knowledge_n = 0;
+
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0)
+            { usage(argv[0]); return 0; }
+        if (strcmp(argv[i], "--port") == 0)              port = atoi(argv[++i]);
+        else if (strcmp(argv[i], "--host") == 0)         host = argv[++i];
+        else if (strcmp(argv[i], "--kk-db") == 0)        kk_db_path = argv[++i];
+        else if (strcmp(argv[i], "--field") == 0)        field_url = argv[++i];
+        else if (strcmp(argv[i], "--no-field") == 0)     no_field = 1;
+        else if (strcmp(argv[i], "--binary") == 0)       binary_override = argv[++i];
+        else if (strcmp(argv[i], "--knowledge") == 0) {
+            if (knowledge_n < 16) knowledge_paths[knowledge_n++] = argv[++i];
+            else                  i++;
+        } else {
+            fprintf(stderr, "unknown flag: %s\n", argv[i]);
+            usage(argv[0]); return 1;
+        }
+    }
+
+    /* Resolve script_dir, infer_v4, weights for every voice */
+    get_script_dir_(argv[0], G.script_dir, sizeof(G.script_dir));
+
+    if (binary_override) snprintf(G.binary_path, sizeof(G.binary_path), "%s", binary_override);
+    else if (find_infer_(G.script_dir, G.binary_path, sizeof(G.binary_path)) != 0) {
+        fprintf(stderr, "infer_v4 not found\n"); return 1;
+    }
+    fprintf(stderr, "[forum] binary: %s\n", G.binary_path);
+
+    for (size_t i = 0; i < CATALOG_N; i++) {
+        if (resolve_weights_(G.script_dir, CATALOG[i].weights_file,
+                             G.weights_paths[i], sizeof(G.weights_paths[i])) == 0) {
+            G.weights_resolved[i] = 1;
+            fprintf(stderr, "[forum] %-16s -> %s\n",
+                    CATALOG[i].name, G.weights_paths[i]);
+        } else {
+            G.weights_resolved[i] = 0;
+            fprintf(stderr, "[forum] %-16s -- weights not found, voice unavailable\n",
+                    CATALOG[i].name);
+        }
+    }
+
+    /* KK */
+    if (!kk_db_path) {
+        const char *env = getenv("KK_DB_PATH");
+        if (env && *env) snprintf(G.db_path, sizeof(G.db_path), "%s", env);
+        else            snprintf(G.db_path, sizeof(G.db_path),
+                                 "%s/dario_memory.db", G.script_dir);
+    } else {
+        snprintf(G.db_path, sizeof(G.db_path), "%s", kk_db_path);
+    }
+    g_kk = kk_open(G.db_path);
+    if (g_kk) {
+        kk_set_namespace(g_kk, "dario", "public", "Dario equation field memory");
+        for (int i = 0; i < knowledge_n; i++) {
+            int n = kk_ingest_file(g_kk, knowledge_paths[i], "dario", "public");
+            fprintf(stderr, "[kk] %s: %d chunks\n", knowledge_paths[i], n);
+        }
+        if (knowledge_n == 0) {
+            char p1[1100];
+            snprintf(p1, sizeof(p1), "%s/docs/dario_essay.txt", G.script_dir);
+            if (file_exists_(p1)) {
+                int n = kk_ingest_file(g_kk, p1, "dario", "public");
+                fprintf(stderr, "[kk] %s: %d chunks\n", p1, n);
+            }
+        }
+        kk_stats st = {0};
+        kk_get_stats(g_kk, &st);
+        fprintf(stderr, "[kk] %d chunks, %d documents ready (db: %s)\n",
+                st.chunks, st.documents, G.db_path);
+    } else {
+        fprintf(stderr, "[kk] WARNING: could not open %s\n", G.db_path);
+    }
+
+    /* Field */
+    G.no_field = no_field;
+    parse_url_(field_url, G.field_host, sizeof(G.field_host), &G.field_port);
+    if (!no_field) {
+        G.field_up = field_probe_(G.field_host, G.field_port) == 0;
+        fprintf(stderr, "[field] %s:%d — %s\n",
+                G.field_host, G.field_port,
+                G.field_up ? "alive" : "not reachable");
+    }
+
+    /* Bind socket */
+    int srv = socket(AF_INET, SOCK_STREAM, 0);
+    if (srv < 0) { perror("socket"); return 1; }
+    int opt = 1;
+    setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    struct sockaddr_in addr = {0};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    if (strcmp(host, "0.0.0.0") == 0) addr.sin_addr.s_addr = INADDR_ANY;
+    else inet_pton(AF_INET, host, &addr.sin_addr);
+    if (bind(srv, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        perror("bind"); close(srv); return 1;
+    }
+    listen(srv, 16);
+    fprintf(stderr, "\n[forum] listening on http://%s:%d\n", host, port);
+    fprintf(stderr, "[forum] POST /api/forum   GET /api/voices   GET /api/kk\n\n");
+
+    /* Accept loop. We DON'T fork per request — that would re-open the
+     * SQLite handle and introduce DB races. Instead, handle each request
+     * synchronously. infer_v4 itself is a sub-process so the main loop
+     * blocks during inference. To unblock long-running calls a caller
+     * can run multiple dario_forum instances on different ports. */
+    while (1) {
+        struct sockaddr_in caddr; socklen_t clen = sizeof(caddr);
+        int cfd = accept(srv, (struct sockaddr*)&caddr, &clen);
+        if (cfd < 0) { if (errno == EINTR) continue; perror("accept"); break; }
+        handle_request_(cfd);
+        close(cfd);
+    }
+    close(srv);
+    if (g_kk) kk_close(g_kk);
+    return 0;
+}
+}

@@ -1,24 +1,29 @@
-# compiled binaries
-dario
-test_dario
-tests/test_dario
-*.o
-*.out
+# runtime KK artifacts
+dario_memory.db
+dario_memory.db-shm
+dario_memory.db-wal
 
-# weights — use HuggingFace or git-lfs, not raw git
-weights/
-*.bin
-*.pt
+# build outputs (root-level binaries only — patterns anchored to repo root)
+/dario
+/dario_leo
+/dario_topk0
+/infer_v4
+/infer_v4_v1_baseline
+/sartre_kernel
+/kk
+/test_dario
+/bin/
 
-# python cache
-__pycache__/
-*.pyc
+# runtime / logs
+runpod/
+*.dSYM/
 
-# test artifacts
-test_*.py
-test_*.c
-!tests/
-ariannamethod/libnotorch.dylib
-ariannamethod/libnotorch.so
-ariannamethod/*.o
-*.bin
+# IDE
+.clangd
+.vscode/
+
+# AML binaries + amlc-generated C
+aml/dario_dialogue
+aml/dario_forum
+aml/dario_infer
+aml/*.c

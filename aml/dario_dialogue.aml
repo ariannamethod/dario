@@ -1,0 +1,862 @@
+# dario_dialogue.aml — chain / dialogue with bi-directional KK absorption
+#
+# AML port of chain_dialogue.py (1063 LOC). Modes:
+#   chain     — one voice; KK injects between rounds for `depth` rounds
+#   dialogue  — interactive REPL: user → voice (with KK) → user → ...
+#
+# Each utterance is also POSTed to the running dario equation REPL
+# (./dario --web 3001) when one is reachable, so the C field absorbs
+# the conversation. KK absorbs every model output back into SQLite.
+#
+# Binds the C kk_kernel.c (kk_open / kk_ingest_file / kk_retrieve /
+# kk_store / kk_close) directly via BLOOD COMPILE — no sub-process
+# bridging, no shell-out, no Python.
+#
+# Persistent KK lives at $KK_DB_PATH or ./dario_memory.db (matches dario.c).
+#
+# AML field directives at top configure libaml at runtime.
+#
+# Usage:
+#   ./dario_dialogue --mode chain --voice leo --topic "What is resonance?"
+#   ./dario_dialogue --mode dialogue --voice arianna
+#
+# By Arianna Method.
+
+PROPHECY 12
+DESTINY 0.35
+VELOCITY WALK
+ATTEND_FOCUS 0.70
+ATTEND_SPREAD 0.20
+
+ECHO "../kk_kernel.h"
+ECHO "../kk_kernel.c"
+
+BLOOD LINK -lsqlite3
+
+BLOOD COMPILE dialogue_headers {
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <ctype.h>
+#include <time.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <ariannamethod/ariannamethod.h>
+
+#define DARIO_DIALOGUE_VERSION "0.1.0"
+
+typedef struct {
+    const char *name;
+    const char *backend;
+    const char *weights_file;
+    float       temp;
+    int         top_k;
+    float       rep_penalty;
+    const char *desc;
+} dario_voice;
+
+static dario_voice CATALOG[] = {
+    {"leo",            "janus",     "janus_v4_sft_leo.bin",
+     0.75f, 40, 1.4f,  "luminous, philosophical -- Janus 176M"},
+    {"arianna",        "janus",     "janus_v4_sft_arianna.bin",
+     0.75f, 45, 1.3f,  "precise, architectural -- Janus 176M"},
+    {"yent",           "janus",     "janus_v4_sft_yent.bin",
+     0.75f, 40, 1.35f, "warm, direct -- Janus 176M"},
+    {"resonance-yent", "resonance", "resonance_200m_lora_yent.bin",
+     0.75f, 40, 1.3f,  "warm, direct, sarcastic -- Resonance 200M"},
+    {"base",           "janus",     "janus_v4_base_22k.bin",
+     0.75f, 40, 1.3f,  "Janus 176M base (no SFT)"},
+    {"leo24m",         "janus",     "leo_janus_d12_f16.bin",
+     0.7f,  40, 1.3f,  "Leo 24M mini -- Janus d12 f16"},
+};
+#define CATALOG_N (sizeof(CATALOG)/sizeof(CATALOG[0]))
+
+static int file_exists(const char *p) {
+    struct stat st;
+    return stat(p, &st) == 0;
+}
+
+static dario_voice *lookup_voice(const char *name) {
+    for (size_t i = 0; i < CATALOG_N; i++)
+        if (strcmp(CATALOG[i].name, name) == 0) return &CATALOG[i];
+    return NULL;
+}
+
+static int resolve_weights(const char *script_dir, const char *bare,
+                           char *out_path, size_t out_sz) {
+    char buf[1024];
+    const char *env = getenv("DARIO_WEIGHTS_DIR");
+    if (env && *env) {
+        snprintf(buf, sizeof(buf), "%s/%s", env, bare);
+        if (file_exists(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+    }
+    snprintf(buf, sizeof(buf), "%s/weights/%s", script_dir, bare);
+    if (file_exists(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+
+    const char *home = getenv("HOME");
+    if (home) {
+        snprintf(buf, sizeof(buf), "%s/arianna/weights/dario/%s", home, bare);
+        if (file_exists(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+        snprintf(buf, sizeof(buf), "%s/arianna/dario_hf_upload/%s", home, bare);
+        if (file_exists(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+        snprintf(buf, sizeof(buf), "%s/Downloads/janus-v4-final/%s", home, bare);
+        if (file_exists(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+    }
+    snprintf(buf, sizeof(buf), "%s/%s", script_dir, bare);
+    if (file_exists(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+
+    return -1;
+}
+
+static int find_infer_binary(const char *script_dir, char *out_path, size_t out_sz) {
+    char buf[1024];
+    snprintf(buf, sizeof(buf), "%s/infer_v4", script_dir);
+    if (file_exists(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+    const char *home = getenv("DARIO_HOME");
+    if (home) {
+        snprintf(buf, sizeof(buf), "%s/infer_v4", home);
+        if (file_exists(buf)) { snprintf(out_path, out_sz, "%s", buf); return 0; }
+    }
+    if (file_exists("./infer_v4")) { snprintf(out_path, out_sz, "./infer_v4"); return 0; }
+    return -1;
+}
+
+/* If argv[0] is in aml/, the script_dir is parent. */
+static void get_script_dir(const char *argv0, char *out, size_t out_sz) {
+    char buf[1024];
+    snprintf(buf, sizeof(buf), "%s", argv0);
+    char *slash = strrchr(buf, '/');
+    if (slash) {
+        *slash = 0;
+        char trial[1100];
+        snprintf(trial, sizeof(trial), "%s/infer_v4", buf);
+        if (file_exists(trial)) { snprintf(out, out_sz, "%s", buf); return; }
+        snprintf(trial, sizeof(trial), "%s/../infer_v4", buf);
+        if (file_exists(trial)) {
+            char parent[1024];
+            snprintf(parent, sizeof(parent), "%s", buf);
+            char *p = strrchr(parent, '/');
+            if (p) *p = 0;
+            else   snprintf(parent, sizeof(parent), "..");
+            snprintf(out, out_sz, "%s", parent);
+            return;
+        }
+        snprintf(out, out_sz, "%s", buf);
+        return;
+    }
+    if (!getcwd(out, out_sz)) snprintf(out, out_sz, ".");
+}
+}
+
+BLOOD COMPILE dialogue_subprocess {
+/* spawn ./infer_v4 — same as dario_infer.aml */
+static int run_infer(const char *binary, const char *weights,
+                     const char *prompt, int max_tokens, float temp, int top_k,
+                     char *text_out, size_t text_sz,
+                     char *stats_out, size_t stats_sz) {
+    int pipefd[2];
+    if (pipe(pipefd) < 0) { perror("pipe"); return -1; }
+
+    pid_t pid = fork();
+    if (pid < 0) { perror("fork"); close(pipefd[0]); close(pipefd[1]); return -1; }
+
+    if (pid == 0) {
+        dup2(pipefd[1], 1);
+        close(pipefd[0]); close(pipefd[1]);
+        char max_s[16], temp_s[32], seed_s[16], topk_s[16];
+        snprintf(max_s, sizeof(max_s), "%d", max_tokens);
+        snprintf(temp_s, sizeof(temp_s), "%g", temp);
+        snprintf(seed_s, sizeof(seed_s), "0");
+        snprintf(topk_s, sizeof(topk_s), "%d", top_k);
+        execl(binary, binary, weights, prompt, max_s, temp_s,
+              seed_s, topk_s, (char*)NULL);
+        fprintf(stderr, "execl(%s) failed: %s\n", binary, strerror(errno));
+        _exit(127);
+    }
+
+    close(pipefd[1]);
+    static char buf[1 << 18];
+    size_t total = 0;
+    ssize_t n;
+    while (total < sizeof(buf) - 1 &&
+           (n = read(pipefd[0], buf + total, sizeof(buf) - 1 - total)) > 0)
+        total += (size_t)n;
+    buf[total] = 0;
+    close(pipefd[0]);
+    int status; waitpid(pid, &status, 0);
+
+    const char *sep = "--- generation ---\n";
+    char *gen = strstr(buf, sep);
+    if (!gen) {
+        snprintf(text_out, text_sz, "%s", buf);
+        if (stats_sz) stats_out[0] = 0;
+        return 0;
+    }
+    gen += strlen(sep);
+    size_t glen = strlen(gen);
+    while (glen > 0 && (gen[glen-1] == '\n' || gen[glen-1] == ' '))
+        gen[--glen] = 0;
+    char *stats_line = NULL;
+    for (size_t i = glen; i > 0; i--) {
+        if (gen[i-1] == '\n') {
+            if (strncmp(gen + i, "[janus", 6) == 0) {
+                stats_line = gen + i;
+                gen[i-1] = 0; glen = i - 1;
+            }
+            break;
+        }
+    }
+    if (!stats_line && strncmp(gen, "[janus", 6) == 0) {
+        stats_line = gen; glen = 0;
+    }
+    char *text = gen;
+    while (*text == '\n' || *text == ' ') text++;
+    snprintf(text_out, text_sz, "%s", text);
+    if (stats_line && stats_sz) snprintf(stats_out, stats_sz, "%s", stats_line);
+    else if (stats_sz) stats_out[0] = 0;
+    return WIFEXITED(status) && WEXITSTATUS(status) == 0 ? 0 : -1;
+}
+
+/* Tail of a string, last n bytes. */
+static const char *str_tail(const char *s, int n) {
+    int len = (int)strlen(s);
+    return len <= n ? s : s + (len - n);
+}
+
+/* Truncate, replace newlines with spaces. Returns the same buffer for
+ * ergonomic chaining. */
+static const char *truncate_inplace(char *s, int n) {
+    for (char *p = s; *p; p++) if (*p == '\n') *p = ' ';
+    int len = (int)strlen(s);
+    if (len > n) s[n] = 0;
+    return s;
+}
+
+/* Strip Q:/A: prefix used by the SFT format — pull out only the answer. */
+static void strip_qa(const char *src, char *dst, size_t dst_sz) {
+    const char *nlA = strstr(src, "\nA:");
+    if (nlA) src = nlA + 3;
+    else if (strncmp(src, "A:", 2) == 0) src += 2;
+    while (*src == ' ' || *src == '\n' || *src == '\t') src++;
+    snprintf(dst, dst_sz, "%s", src);
+}
+}
+
+BLOOD COMPILE dialogue_field {
+/* HTTP POST to dario --web N for /api/chat absorption.
+ * Best-effort: returns 0 on 2xx, -1 otherwise. Connect timeout 500ms.
+ *
+ * The C field returns rich JSON — we ignore it here, we just want the
+ * field to absorb. */
+static int field_post_chat(const char *host, int port, const char *text) {
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) return -1;
+
+    /* connect with 500ms timeout */
+    int flags = fcntl(sock, F_GETFL, 0);
+    fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+
+    struct sockaddr_in addr = {0};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    if (inet_pton(AF_INET, host, &addr.sin_addr) != 1) {
+        struct hostent *he = gethostbyname(host);
+        if (!he) { close(sock); return -1; }
+        memcpy(&addr.sin_addr, he->h_addr_list[0], he->h_length);
+    }
+
+    int rc = connect(sock, (struct sockaddr*)&addr, sizeof(addr));
+    if (rc < 0 && errno != EINPROGRESS) { close(sock); return -1; }
+
+    if (rc < 0) {
+        fd_set wfds; FD_ZERO(&wfds); FD_SET(sock, &wfds);
+        struct timeval tv = {0, 500000};
+        rc = select(sock + 1, NULL, &wfds, NULL, &tv);
+        if (rc <= 0) { close(sock); return -1; }
+        int err = 0; socklen_t errlen = sizeof(err);
+        getsockopt(sock, SOL_SOCKET, SO_ERROR, &err, &errlen);
+        if (err) { close(sock); return -1; }
+    }
+    fcntl(sock, F_SETFL, flags); /* back to blocking */
+
+    /* JSON-escape minimal: ", \, \n, \t */
+    static char jbuf[1 << 14];
+    int jp = 0;
+    jbuf[jp++] = '{'; jbuf[jp++] = '"'; jbuf[jp++] = 't'; jbuf[jp++] = 'e';
+    jbuf[jp++] = 'x'; jbuf[jp++] = 't'; jbuf[jp++] = '"'; jbuf[jp++] = ':';
+    jbuf[jp++] = '"';
+    for (const char *p = text; *p && jp < (int)sizeof(jbuf) - 8; p++) {
+        switch (*p) {
+            case '"':  jbuf[jp++] = '\\'; jbuf[jp++] = '"'; break;
+            case '\\': jbuf[jp++] = '\\'; jbuf[jp++] = '\\'; break;
+            case '\n': jbuf[jp++] = '\\'; jbuf[jp++] = 'n'; break;
+            case '\t': jbuf[jp++] = '\\'; jbuf[jp++] = 't'; break;
+            case '\r': break;
+            default:   jbuf[jp++] = *p;
+        }
+    }
+    jbuf[jp++] = '"'; jbuf[jp++] = '}'; jbuf[jp] = 0;
+
+    static char req[1 << 14];
+    int n = snprintf(req, sizeof(req),
+        "POST /api/chat HTTP/1.1\r\n"
+        "Host: %s:%d\r\n"
+        "Content-Type: application/json\r\n"
+        "Content-Length: %d\r\n"
+        "Connection: close\r\n\r\n%s",
+        host, port, jp, jbuf);
+    if (n <= 0 || (size_t)n >= sizeof(req)) { close(sock); return -1; }
+
+    if (send(sock, req, n, 0) != n) { close(sock); return -1; }
+
+    /* read first line, look for "200" */
+    char resp[256] = {0};
+    ssize_t rr = recv(sock, resp, sizeof(resp) - 1, 0);
+    close(sock);
+    if (rr <= 0) return -1;
+    resp[rr] = 0;
+    return strstr(resp, "200") ? 0 : -1;
+}
+
+/* GET /api/kernel — used to probe if the field is up. */
+static int field_probe(const char *host, int port) {
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) return -1;
+    struct timeval tv = {0, 500000};
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+
+    struct sockaddr_in addr = {0};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    if (inet_pton(AF_INET, host, &addr.sin_addr) != 1) {
+        struct hostent *he = gethostbyname(host);
+        if (!he) { close(sock); return -1; }
+        memcpy(&addr.sin_addr, he->h_addr_list[0], he->h_length);
+    }
+
+    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        close(sock); return -1;
+    }
+    const char *req = "GET /api/kernel HTTP/1.0\r\n\r\n";
+    send(sock, req, strlen(req), 0);
+    char resp[256];
+    ssize_t rr = recv(sock, resp, sizeof(resp) - 1, 0);
+    close(sock);
+    if (rr <= 0) return -1;
+    resp[rr] = 0;
+    return strstr(resp, "200") ? 0 : -1;
+}
+}
+
+BLOOD COMPILE dialogue_kk_glue {
+/* Pull a short injection sentence from the most relevant chunk.
+ *
+ * Mirrors KnowledgeKernel.extract_injection in chain_dialogue.py
+ * (lines 184-260): scores sentences, prefers short concrete capitalised
+ * definitions, rejects metaphor openers and questions, max 100 chars.
+ *
+ * Returns 0 on success, fills out (NUL-terminated). */
+static int kk_extract_injection(const char *chunk_text, char *out, int out_sz) {
+    /* strip Q:/A: prefix */
+    char clean[1024];
+    strip_qa(chunk_text, clean, sizeof(clean));
+
+    /* split on '.', '!', '?' followed by whitespace */
+    int best_score = -100000;
+    int best_neg   = 0;
+    char best[256] = {0};
+    int  found = 0;
+
+    int len = (int)strlen(clean);
+    int start = 0;
+    int sent_idx = 0;
+    int i = 0;
+    while (i <= len) {
+        int boundary = (i == len) ||
+            ((clean[i] == '.' || clean[i] == '!' || clean[i] == '?') &&
+             (i + 1 == len || clean[i+1] == ' ' || clean[i+1] == '\n' ||
+              clean[i+1] == '\t' || clean[i+1] == '\r'));
+        if (boundary) {
+            int end = (i == len) ? i : i + 1;
+            int sl = end - start;
+            if (sl > 5 && sl < (int)sizeof(best) - 1) {
+                char sent[256];
+                int n = sl < (int)sizeof(sent) - 1 ? sl : (int)sizeof(sent) - 1;
+                memcpy(sent, clean + start, n);
+                sent[n] = 0;
+                /* trim leading whitespace */
+                char *p = sent;
+                while (*p == ' ' || *p == '\n') p++;
+                int slen = (int)strlen(p);
+                if (slen >= 10 && slen <= 100) {
+                    int score = 0;
+                    if (sent_idx == 0) score += 3;
+                    else if (sent_idx == 1) score += 1;
+                    /* metaphor openers penalty */
+                    if (strncmp(p, "Like ", 5) == 0 ||
+                        strncmp(p, "Just as ", 8) == 0 ||
+                        strncmp(p, "Imagine ", 8) == 0)
+                        score -= 4;
+                    if (strncmp(p, "Absolutely", 10) == 0 ||
+                        strncmp(p, "Yes,", 4) == 0 ||
+                        strncmp(p, "Indeed", 6) == 0 ||
+                        strncmp(p, "Of course", 9) == 0)
+                        score -= 3;
+                    /* concrete verbs bonus (small heuristic match) */
+                    if (strstr(p, "create") || strstr(p, "compute") ||
+                        strstr(p, "measure") || strstr(p, "generate") ||
+                        strstr(p, "produce"))
+                        score += 2;
+                    if (slen >= 40 && slen <= 80) score += 1;
+                    /* must start with uppercase */
+                    if (!(p[0] >= 'A' && p[0] <= 'Z')) score -= 5;
+                    /* questions get rejected */
+                    if (p[slen-1] == '?') score -= 8;
+
+                    if (score > best_score ||
+                        (score == best_score && -slen > best_neg)) {
+                        best_score = score;
+                        best_neg = -slen;
+                        snprintf(best, sizeof(best), "%s", p);
+                        found = 1;
+                    }
+                }
+                sent_idx++;
+            }
+            start = end;
+            while (start < len && (clean[start] == ' ' || clean[start] == '\n' ||
+                                   clean[start] == '\t' || clean[start] == '\r'))
+                start++;
+            if (start >= len) break;
+            i = start;
+        } else {
+            i++;
+        }
+    }
+    if (!found) {
+        /* fallback: first sentence */
+        snprintf(out, out_sz, "%.*s", out_sz - 1, clean);
+        return 0;
+    }
+    snprintf(out, out_sz, "%s", best);
+    return 0;
+}
+
+/* Pick best chunk from kk_retrieve, extract injection.
+ *
+ * Returns 0 on success and fills `injection` (≤100 chars) plus the full
+ * `full_chunk` (caller can absorb it). Returns -1 if nothing found. */
+static int kk_pick_injection(kk_ctx *kk, const char *query, int exclude_model,
+                             char *injection, int inj_sz,
+                             char *full_chunk, int chunk_sz) {
+    if (!kk) return -1;
+    kk_result *results = NULL;
+    int n = kk_retrieve(kk, query, "public", NULL, 6,
+                        KK_PROFILE_BALANCED, &results);
+    if (n <= 0 || !results) return -1;
+
+    int picked = -1;
+    for (int i = 0; i < n; i++) {
+        if (!results[i].text) continue;
+        const char *src = results[i].path ? results[i].path : "";
+        if (exclude_model &&
+            (strstr(src, "model") || strstr(src, "_turn") || strstr(src, "_duet")))
+            continue;
+        picked = i; break;
+    }
+    if (picked < 0) { kk_free_results(results, n); return -1; }
+
+    snprintf(full_chunk, chunk_sz, "%s", results[picked].text);
+    kk_extract_injection(results[picked].text, injection, inj_sz);
+    kk_free_results(results, n);
+    return 0;
+}
+
+/* Absorb model output into KK by chunking sentence-wise.
+ * Mirrors KnowledgeKernel.absorb in chain_dialogue.py: requires sentences
+ * ≥ 40 chars, capitalised first letter, ≥6 words. Returns count added. */
+static int kk_absorb_text(kk_ctx *kk, const char *text, const char *source) {
+    if (!kk || !text) return 0;
+    int len = (int)strlen(text);
+    if (len < 30) return 0;
+
+    int added = 0;
+    int start = 0;
+    int i = 0;
+    while (i <= len) {
+        int boundary = (i == len) ||
+            ((text[i] == '.' || text[i] == '!' || text[i] == '?') &&
+             (i + 1 == len || text[i+1] == ' ' || text[i+1] == '\n'));
+        if (boundary) {
+            int end = (i == len) ? i : i + 1;
+            int sl = end - start;
+            if (sl >= 40 && sl <= 600) {
+                char sent[700];
+                int n = sl < (int)sizeof(sent) - 1 ? sl : (int)sizeof(sent) - 1;
+                memcpy(sent, text + start, n);
+                sent[n] = 0;
+                char *p = sent;
+                while (*p == ' ' || *p == '\n') p++;
+                if (p[0] >= 'A' && p[0] <= 'Z') {
+                    /* count words */
+                    int wc = 0;
+                    int in_w = 0;
+                    for (char *q = p; *q; q++) {
+                        if (*q == ' ' || *q == '\t' || *q == '\n') {
+                            if (in_w) { wc++; in_w = 0; }
+                        } else in_w = 1;
+                    }
+                    if (in_w) wc++;
+                    if (wc >= 6) {
+                        char path[256];
+                        snprintf(path, sizeof(path), "%s_%d_%lld",
+                                 source, added, (long long)time(NULL));
+                        if (kk_store(kk, path, p, strlen(p),
+                                     "dario", "public") >= 0)
+                            added++;
+                    }
+                }
+            }
+            start = end;
+            while (start < len && (text[start] == ' ' || text[start] == '\n' ||
+                                   text[start] == '\t' || text[start] == '\r'))
+                start++;
+            if (start >= len) break;
+            i = start;
+        } else {
+            i++;
+        }
+    }
+    return added;
+}
+}
+
+BLOOD MAIN {
+static void usage(const char *argv0) {
+    fprintf(stderr,
+        "dario_dialogue (AML) v" DARIO_DIALOGUE_VERSION "\n"
+        "\nUsage: %s [flags]\n"
+        "\nFlags:\n"
+        "  --mode MODE        chain | dialogue (default chain)\n"
+        "  --voice NAME       voice (default leo)\n"
+        "  --topic TEXT       seed topic / prompt for chain\n"
+        "  --depth N          chain rounds (default 4)\n"
+        "  --max-tokens N     per-turn token cap (default 80)\n"
+        "  --temp F           override sampling temp\n"
+        "  --topk N           override top-k\n"
+        "  --knowledge PATH   ingest a knowledge file (repeatable)\n"
+        "  --field URL        dario web URL (default http://localhost:3001)\n"
+        "  --no-field         skip field POSTs even if reachable\n"
+        "  --kk-db PATH       SQLite DB for KK (default ./dario_memory.db)\n"
+        "  --binary PATH      override path to ./infer_v4\n"
+        "  --weights PATH     override weights for primary voice\n"
+        "  --help\n"
+        "\nVoices: leo, arianna, yent, resonance-yent, base, leo24m\n", argv0);
+}
+
+/* Tiny URL parse: http://host:port — we only need host + port. */
+static void parse_url(const char *url, char *host, int hsz, int *port) {
+    *port = 3001;
+    if (strncmp(url, "http://", 7) == 0) url += 7;
+    else if (strncmp(url, "https://", 8) == 0) url += 8;
+    const char *colon = strchr(url, ':');
+    const char *slash = strchr(url, '/');
+    if (slash && colon && slash < colon) colon = NULL;
+    int hlen = (int)((colon ? colon - url : (slash ? slash - url : (int)strlen(url))));
+    if (hlen >= hsz) hlen = hsz - 1;
+    memcpy(host, url, hlen); host[hlen] = 0;
+    if (colon) *port = atoi(colon + 1);
+}
+
+int main(int argc, char **argv) {
+    am_init();
+    am_exec("PROPHECY 12\nDESTINY 0.35\nVELOCITY WALK\n"
+            "ATTEND_FOCUS 0.70\nATTEND_SPREAD 0.20\n");
+
+    const char *mode    = "chain";
+    const char *voice_n = "leo";
+    const char *topic   = "What is resonance?";
+    const char *kk_db_path = NULL;
+    const char *field_url  = "http://localhost:3001";
+    const char *binary_override  = NULL;
+    const char *weights_override = NULL;
+    int depth      = 4;
+    int max_tokens = 80;
+    int no_field   = 0;
+    float temp_override = -1.0f;
+    int   topk_override = -1;
+
+    /* up to 8 knowledge files */
+    const char *knowledge_paths[8];
+    int knowledge_n = 0;
+
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+            usage(argv[0]); return 0;
+        }
+        if (strcmp(argv[i], "--mode") == 0)              mode    = argv[++i];
+        else if (strcmp(argv[i], "--voice") == 0)        voice_n = argv[++i];
+        else if (strcmp(argv[i], "--topic") == 0 ||
+                 strcmp(argv[i], "--prompt") == 0 ||
+                 strcmp(argv[i], "--seed") == 0)         topic   = argv[++i];
+        else if (strcmp(argv[i], "--depth") == 0)        depth   = atoi(argv[++i]);
+        else if (strcmp(argv[i], "--max-tokens") == 0)   max_tokens = atoi(argv[++i]);
+        else if (strcmp(argv[i], "--temp") == 0)         temp_override = (float)atof(argv[++i]);
+        else if (strcmp(argv[i], "--topk") == 0)         topk_override = atoi(argv[++i]);
+        else if (strcmp(argv[i], "--field") == 0)        field_url = argv[++i];
+        else if (strcmp(argv[i], "--no-field") == 0)     no_field = 1;
+        else if (strcmp(argv[i], "--kk-db") == 0)        kk_db_path = argv[++i];
+        else if (strcmp(argv[i], "--binary") == 0)       binary_override = argv[++i];
+        else if (strcmp(argv[i], "--weights") == 0)      weights_override = argv[++i];
+        else if (strcmp(argv[i], "--knowledge") == 0) {
+            if (knowledge_n < 8) knowledge_paths[knowledge_n++] = argv[++i];
+            else                 i++;
+        } else {
+            fprintf(stderr, "unknown flag: %s\n", argv[i]);
+            usage(argv[0]); return 1;
+        }
+    }
+
+    dario_voice *v = lookup_voice(voice_n);
+    if (!v) { fprintf(stderr, "unknown voice: %s\n", voice_n); return 1; }
+
+    char script_dir[1024];
+    get_script_dir(argv[0], script_dir, sizeof(script_dir));
+
+    char binary_path[1024];
+    if (binary_override) snprintf(binary_path, sizeof(binary_path), "%s", binary_override);
+    else if (find_infer_binary(script_dir, binary_path, sizeof(binary_path)) != 0) {
+        fprintf(stderr, "infer_v4 not found\n"); return 1;
+    }
+    char weights_path[1024];
+    if (weights_override) snprintf(weights_path, sizeof(weights_path), "%s", weights_override);
+    else if (resolve_weights(script_dir, v->weights_file,
+                             weights_path, sizeof(weights_path)) != 0) {
+        fprintf(stderr, "weights %s not found\n", v->weights_file); return 1;
+    }
+
+    /* KK init */
+    char db_path_buf[1024];
+    if (!kk_db_path) {
+        const char *env = getenv("KK_DB_PATH");
+        if (env && *env) kk_db_path = env;
+        else {
+            snprintf(db_path_buf, sizeof(db_path_buf), "%s/dario_memory.db", script_dir);
+            kk_db_path = db_path_buf;
+        }
+    }
+    fprintf(stderr, "[kk] db: %s\n", kk_db_path);
+    kk_ctx *kk = kk_open(kk_db_path);
+    if (!kk) {
+        fprintf(stderr, "[kk] could not open %s — running KK-less\n", kk_db_path);
+    } else {
+        kk_set_namespace(kk, "dario", "public", "Dario equation field memory");
+        for (int i = 0; i < knowledge_n; i++) {
+            int n = kk_ingest_file(kk, knowledge_paths[i], "dario", "public");
+            fprintf(stderr, "[kk] %s: %d chunks\n", knowledge_paths[i], n);
+        }
+        /* Default: docs/dario_essay.txt if present and no --knowledge given */
+        if (knowledge_n == 0) {
+            char p1[1100];
+            snprintf(p1, sizeof(p1), "%s/docs/dario_essay.txt", script_dir);
+            if (file_exists(p1)) {
+                int n = kk_ingest_file(kk, p1, "dario", "public");
+                fprintf(stderr, "[kk] %s: %d chunks\n", p1, n);
+            }
+        }
+        kk_stats st = {0};
+        kk_get_stats(kk, &st);
+        fprintf(stderr, "[kk] %d chunks, %d documents ready\n",
+                st.chunks, st.documents);
+    }
+
+    /* Field probe */
+    int field_up = 0;
+    char field_host[128] = "127.0.0.1";
+    int  field_port = 3001;
+    if (!no_field) {
+        parse_url(field_url, field_host, sizeof(field_host), &field_port);
+        if (field_probe(field_host, field_port) == 0) {
+            field_up = 1;
+            fprintf(stderr, "[field] %s:%d — alive\n", field_host, field_port);
+        } else {
+            fprintf(stderr, "[field] %s:%d — not reachable, KK-only\n",
+                    field_host, field_port);
+        }
+    }
+
+    fprintf(stderr, "[voice]   %s (%s) — %s\n", v->name, v->backend, v->desc);
+    fprintf(stderr, "[weights] %s\n",            weights_path);
+
+    float temp = temp_override > 0 ? temp_override : v->temp;
+    int   tk   = topk_override >= 0 ? topk_override : v->top_k;
+
+    if (strcmp(mode, "chain") == 0) {
+        printf("============================================================\n");
+        printf("  CHAIN DIALOGUE — depth %d\n", depth);
+        printf("  voice: %s | topic: %s\n", v->name, topic);
+        printf("============================================================\n");
+
+        char prompt_text[2200];
+        char injection[256] = {0};
+        char full_chunk[1024] = {0};
+        if (kk && kk_pick_injection(kk, topic, 0,
+                                    injection, sizeof(injection),
+                                    full_chunk, sizeof(full_chunk)) == 0)
+        {
+            char preview[120];
+            snprintf(preview, sizeof(preview), "%s", injection);
+            truncate_inplace(preview, 80);
+            printf("  [prime] %s\n\n", preview);
+            snprintf(prompt_text, sizeof(prompt_text), "%s %s", injection, topic);
+        } else {
+            snprintf(prompt_text, sizeof(prompt_text), "%s", topic);
+        }
+
+        struct timespec t0, t1;
+        clock_gettime(CLOCK_MONOTONIC, &t0);
+
+        for (int step = 0; step < depth; step++) {
+            char wrapped[2300];
+            snprintf(wrapped, sizeof(wrapped), "Q: %s\nA:", prompt_text);
+
+            static char gen[1 << 16], stats[256];
+            int rc = run_infer(binary_path, weights_path, wrapped,
+                               max_tokens, temp, tk,
+                               gen, sizeof(gen), stats, sizeof(stats));
+            if (rc != 0) {
+                fprintf(stderr, "[chain] infer failed at step %d\n", step);
+                break;
+            }
+            printf("%s\n", gen);
+
+            /* Absorb into KK */
+            if (kk) {
+                char src[64];
+                snprintf(src, sizeof(src), "%s_chain%d", v->name, step);
+                int n_added = kk_absorb_text(kk, gen, src);
+                if (n_added > 0)
+                    printf("  [kk+%d from %s]\n", n_added, src);
+            }
+
+            /* Field POST */
+            if (field_up) {
+                if (field_post_chat(field_host, field_port, gen) == 0)
+                    printf("  [field absorbed]\n");
+            }
+
+            /* Step the AML field forward */
+            am_step(0.05f);
+
+            if (step + 1 >= depth) break;
+
+            /* Pick next injection from (topic + tail of last gen) */
+            const char *tl = str_tail(gen, 200);
+            char query[2400];
+            snprintf(query, sizeof(query), "%s %s", topic, tl);
+            char inj[256] = {0}, fc[1024] = {0};
+            if (kk && kk_pick_injection(kk, query, 1, inj, sizeof(inj),
+                                        fc, sizeof(fc)) == 0)
+            {
+                char preview[120];
+                snprintf(preview, sizeof(preview), "%s", inj);
+                truncate_inplace(preview, 80);
+                printf("\n  [-> step %d] %s\n\n", step + 1, preview);
+                snprintf(prompt_text, sizeof(prompt_text), "%s", inj);
+            } else {
+                printf("\n[chain] KK exhausted at step %d\n", step + 1);
+                break;
+            }
+        }
+        clock_gettime(CLOCK_MONOTONIC, &t1);
+        double el = (t1.tv_sec - t0.tv_sec) + (t1.tv_nsec - t0.tv_nsec) / 1e9;
+        printf("\n============================================================\n");
+        printf("  CHAIN COMPLETE — %.1fs\n", el);
+        printf("============================================================\n");
+
+    } else if (strcmp(mode, "dialogue") == 0) {
+        printf("============================================================\n");
+        printf("  DIALOGUE — %s + Knowledge Kernel\n", v->name);
+        printf("  Type 'quit' to exit.\n");
+        printf("============================================================\n");
+
+        char line[2048];
+        char prev_answer[1 << 14] = {0};
+        int turn = 0;
+        while (1) {
+            fprintf(stderr, "you> "); fflush(stderr);
+            if (!fgets(line, sizeof(line), stdin)) { fprintf(stderr, "\n"); break; }
+            int ll = (int)strlen(line);
+            while (ll > 0 && (line[ll-1] == '\n' || line[ll-1] == '\r' ||
+                              line[ll-1] == ' '  || line[ll-1] == '\t'))
+                line[--ll] = 0;
+            if (ll == 0) continue;
+            if (strcmp(line, "quit") == 0 || strcmp(line, "exit") == 0 ||
+                strcmp(line, "q")    == 0) break;
+            turn++;
+
+            char query[3072];
+            if (prev_answer[0])
+                snprintf(query, sizeof(query), "%s %s", line, str_tail(prev_answer, 200));
+            else
+                snprintf(query, sizeof(query), "%s", line);
+
+            char inj[256] = {0}, fc[1024] = {0};
+            char prompt_text[2200];
+            if (kk && kk_pick_injection(kk, query, 1, inj, sizeof(inj),
+                                        fc, sizeof(fc)) == 0)
+            {
+                char preview[120];
+                snprintf(preview, sizeof(preview), "%s", inj);
+                truncate_inplace(preview, 80);
+                fprintf(stderr, "  [kk] %s\n", preview);
+                snprintf(prompt_text, sizeof(prompt_text), "%s %s", inj, line);
+            } else {
+                snprintf(prompt_text, sizeof(prompt_text), "%s", line);
+            }
+
+            char wrapped[2300];
+            snprintf(wrapped, sizeof(wrapped), "Q: %s\nA:", prompt_text);
+
+            static char gen[1 << 16], stats[256];
+            int rc = run_infer(binary_path, weights_path, wrapped,
+                               max_tokens, temp, tk,
+                               gen, sizeof(gen), stats, sizeof(stats));
+            if (rc != 0) { fprintf(stderr, "infer failed\n"); continue; }
+
+            printf("\n%s> %s\n\n", v->name, gen);
+
+            if (kk) {
+                char src[64];
+                snprintf(src, sizeof(src), "%s_turn%d", v->name, turn);
+                int n_added = kk_absorb_text(kk, gen, src);
+                if (n_added > 0) fprintf(stderr, "  [kk+%d]\n", n_added);
+            }
+            if (field_up)
+                field_post_chat(field_host, field_port, gen);
+
+            am_step(0.05f);
+            snprintf(prev_answer, sizeof(prev_answer), "%s", gen);
+        }
+        printf("[dialogue] %d turns\n", turn);
+
+    } else {
+        fprintf(stderr, "unknown --mode %s (chain | dialogue)\n", mode);
+        usage(argv[0]);
+        if (kk) kk_close(kk);
+        return 1;
+    }
+
+    if (kk) kk_close(kk);
+    return 0;
+}
+}
