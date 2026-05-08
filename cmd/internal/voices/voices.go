@@ -66,8 +66,8 @@ var Catalog = map[string]Voice{
 	"resonance-yent": {
 		Name: "resonance-yent", Backend: BackendResonance,
 		WeightsFile: "resonance_200m_lora_yent.bin",
-		Temp:        0.75, TopK: 40, RepPenalty: 1.3,
-		Desc: "warm, direct, sarcastic -- Resonance 200M (sweep TBD: infer_v4 dim limits)",
+		Temp:        0.7, TopK: 0, RepPenalty: 1.3,
+		Desc: "warm, direct, sarcastic -- Resonance 200M (top_p=1.0 nucleus, dedicated ./resonance binary)",
 	},
 	"base": {
 		Name: "base", Backend: BackendJanus,

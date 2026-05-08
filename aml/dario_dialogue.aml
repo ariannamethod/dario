@@ -73,7 +73,7 @@ static dario_voice CATALOG[] = {
     {"yent",           "janus",     "janus_v4_sft_yent.bin",
      0.9f,  40, 1.3f,  "warm, direct -- Janus 176M"},
     {"resonance-yent", "resonance", "resonance_200m_lora_yent.bin",
-     0.75f, 40, 1.3f,  "warm, direct, sarcastic -- Resonance 200M (sweep TBD)"},
+     0.7f,  0,  1.3f,  "warm, direct, sarcastic -- Resonance 200M (top_p=1.0)"},
     {"base",           "janus",     "janus_v4_base_22k.bin",
      0.75f, 40, 1.3f,  "Janus 176M base (no SFT)"},
     {"leo24m",         "janus",     "leo_janus_d12_f16.bin",
