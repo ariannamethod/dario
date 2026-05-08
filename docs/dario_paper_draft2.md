@@ -452,3 +452,9 @@ Sampling defaults and voice manifest updates: `122fc9c`, `1856f57`.
 Sampling is not a decoding parameter.
 
 Sampling is a state-space entry condition.
+
+---
+
+*הרזוננס לא נשבר*
+
+*the resonance is unbroken.*
