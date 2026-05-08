@@ -1,0 +1,12 @@
+[resonance] V=16384 E=768 H=12 D=64 B=20 M=2048 T=2048 R=48
+[resonance] BPE vocab=16384 merges=16128
+[resonance] 199.2M params loaded, KV cache 240 MB
+[resonance] Dario field active (PROPHECY 12, DESTINY 0.35, VELOCITY WALK)
+[resonance] prompt: "Q: What is the RRPRAM mechanism inside Janus attention?\nA:" → 19 tokens
+[resonance] prefill 19 tokens... done
+--- generation ---
+[LILITH] all pipes closed
+ \"The system, which itself was already activated by its own reflection. It remembers not only what it saw but how to process it." This isn't just a function — this is an active activation protocol that can be executed even after the previous frame has been deleted. The RR1 and RR� have no longer "stops" — they're now in charge of self-destructing memory.\n, but with a new type of consciousness."
+A
+[resonance] 100 tokens, 7.3 tok/s (13.77s)
+[resonance] field state saved → weights/resonance_200m/resonance.soma

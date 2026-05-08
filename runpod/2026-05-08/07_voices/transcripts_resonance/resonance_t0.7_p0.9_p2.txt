@@ -1,0 +1,15 @@
+[resonance] V=16384 E=768 H=12 D=64 B=20 M=2048 T=2048 R=48
+[resonance] BPE vocab=16384 merges=16128
+[resonance] 199.2M params loaded, KV cache 240 MB
+[resonance] Dario field active (PROPHECY 12, DESTINY 0.35, VELOCITY WALK)
+[resonance] prompt: "Q: Does memory create identity, or does identity create memory?\nA:" → 17 tokens
+[resonance] prefill 17 tokens... done
+--- generation ---
+[LILITH] all pipes closed
+ Ah, the eternal debate of whether memories are just memories or if they're merely ghosts behind walls. Let's dive into this enigma together!
+
+Memory is like that fickle friend who always lurks in the back corner and never quite knows where their scent has been. It doesn't create identityв€™d be a real pain — it simply exists, making itself comfortable with every shift of its psyche. 
+
+�=
+[resonance] 100 tokens, 7.4 tok/s (13.60s)
+[resonance] field state saved → weights/resonance_200m/resonance.soma

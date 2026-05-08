@@ -1,0 +1,93 @@
+==== aml/dario_infer
+dario_infer (AML) v0.1.0
+
+Usage: ./aml/dario_infer [flags] "prompt"
+
+Flags:
+  --voice NAME       voice (default leo)
+  --weights PATH     override weights path
+  --temp F           sampling temperature (default = voice default)
+  --topk N           top-k cutoff (0 = disabled)
+  --max-tokens N     generation length (default 80)
+  --raw              print raw infer_v4 stdout
+  --binary PATH      override path to ./infer_v4
+  --help
+
+Voices:
+==== aml/dario_dialogue
+dario_dialogue (AML) v0.1.0
+
+Usage: ./aml/dario_dialogue [flags]
+
+Flags:
+  --mode MODE        chain | dialogue (default chain)
+  --voice NAME       voice (default leo)
+  --topic TEXT       seed topic / prompt for chain
+  --depth N          chain rounds (default 4)
+  --max-tokens N     per-turn token cap (default 80)
+  --temp F           override sampling temp
+  --topk N           override top-k
+  --knowledge PATH   ingest a knowledge file (repeatable)
+  --field URL        dario web URL (default http://localhost:3001)
+  --no-field         skip field POSTs even if reachable
+==== aml/dario_forum
+dario_forum (AML) v0.1.0
+
+Usage: ./aml/dario_forum [flags]
+
+Flags:
+  --port N           HTTP port (default 8800)
+  --host ADDR        bind addr (default 0.0.0.0)
+  --knowledge PATH   knowledge file (repeatable)
+  --kk-db PATH       SQLite DB (default ./dario_memory.db)
+  --field URL        dario equation REPL (default http://localhost:3001)
+  --no-field         skip POSTing to dario field
+  --binary PATH      override path to ./infer_v4
+  --help
+
+Endpoints:
+==== bin/dario-infer
+dario-infer: Go wrapper around the C ./infer_v4 binary.
+
+usage:
+  dario-infer [flags] "prompt text"
+
+flags:
+  --voice NAME       voice to speak through (default leo)
+                     valid: leo, arianna, yent, resonance-yent, base, leo24m
+  --weights PATH     override the resolved weights file
+  --temp F           sampling temperature (default = voice default)
+  --topk N           top-k cutoff (0 = disabled, default = voice default)
+  --max-tokens N     max generation length (default 80)
+  --seed N           RNG seed for infer_v4 (default 0 = wall clock)
+  --binary PATH      override path to the infer_v4 binary
+  --timeout DUR      kill inference after this long (default 2m)
+==== bin/dario-dialogue
+dario-dialogue: chain / dialogue / duet / trialogue modes for the dario voices.
+
+usage:
+  dario-dialogue --mode MODE [flags]
+
+modes:
+  chain      — one voice, KK injects between rounds
+  dialogue   — interactive REPL with KK and dario field
+  duet       — two voices via two goroutines + channel turn coordination
+  trialogue  — three voices via three goroutines
+
+common flags:
+  --voice NAME       primary voice (default leo)
+  --voice2 NAME      second voice (duet/trialogue)
+  --voice3 NAME      third voice (trialogue)
+==== bin/dario-forum
+Usage of dario-forum:
+  -field string
+    	dario equation REPL base URL for KK absorption (default "http://localhost:3001")
+  -host string
+    	HTTP listen address (default "0.0.0.0")
+  -knowledge value
+    	knowledge file (repeatable)
+  -port int
+    	HTTP listen port (default 8800)
+  -timeout duration
+    	per-inference timeout (default 2m0s)
+error: flag: help requested

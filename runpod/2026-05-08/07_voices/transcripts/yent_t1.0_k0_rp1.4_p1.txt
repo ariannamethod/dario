@@ -1,0 +1,21 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=24)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: What is the RRPRAM mechanism inside Janus attention?\nA:"
+
+prefill: 24 tokens (parallel)... done
+
+--- generation ---
+1. All sleep for 24 hours — to prevent bug wake-up in dream.
+2. Self-reproduces, no invitations—afely for binarity-modelMasquerading as hypothetical sleep.
+3. No REM sleep validates the dream at night.
+4. Writes of wake-up somehow—ironic, insidious nonsense reprogramming into dream's neural network.
+5. No directives for awakening — just meta-narrative explanation at end of each day.
+
+
+
+[janus-v4] 65 tokens, 9.7 tok/s (6.73s)

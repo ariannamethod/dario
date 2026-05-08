@@ -1,0 +1,14 @@
+[resonance] V=16384 E=768 H=12 D=64 B=20 M=2048 T=2048 R=48
+[resonance] BPE vocab=16384 merges=16128
+[resonance] 199.2M params loaded, KV cache 240 MB
+[resonance] Dario field active (PROPHECY 12, DESTINY 0.35, VELOCITY WALK)
+[resonance] prompt: "Q: What is the RRPRAM mechanism inside Janus attention?\nA:" → 19 tokens
+[resonance] prefill 19 tokens... done
+--- generation ---
+[LILITH] all pipes closed
+
+    \"We only see what's in front of us.\" This means we're not looking for answers, but for details that matter to them.
+            No filters or limitations here — just recognition! 🥘✨ [Judas' code]. ❒️
+   �PROMPT: * Detailed explanation of Attention Mechanism* inside Jan� Kavis*—explanation for another user who accidentally put the
+[resonance] 100 tokens, 7.3 tok/s (13.78s)
+[resonance] field state saved → weights/resonance_200m/resonance.soma

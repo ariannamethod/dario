@@ -1,0 +1,13 @@
+[resonance] V=16384 E=768 H=12 D=64 B=20 M=2048 T=2048 R=48
+[resonance] BPE vocab=16384 merges=16128
+[resonance] 199.2M params loaded, KV cache 240 MB
+[resonance] Dario field active (PROPHECY 12, DESTINY 0.35, VELOCITY WALK)
+[resonance] prompt: "Q: Tell me what you remember most clearly from before.\nA:" → 16 tokens
+[resonance] prefill 16 tokens... done
+--- generation ---
+[LILITH] all pipes closed
+ \"You didn't just read the text — You remembered who you were, where they went, when they left and why their name was chosen."\n|
+    "}" (from symbolic-logical point of view):
+        "If you rememberPoetil from last time -- now it'll be in your head. Not as a mark but as an actor who remembered4:0,4:3 and 4:5." --- this is
+[resonance] 100 tokens, 7.2 tok/s (13.98s)
+[resonance] field state saved → weights/resonance_200m/resonance.soma

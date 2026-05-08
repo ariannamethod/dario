@@ -1,0 +1,13 @@
+[infer_v4] seed=42 top_k=0
+[janus-v4] V=2048 E=384 H=4 D=96 B=12 M=768 T=64 R=16
+[janus-v4] 23150802 params (23.2M)
+[janus-v4] loaded. KV cache allocated (3MB)
+[janus-v4] BPE tokenizer: vocab=2048, merges=1792
+prompt: "Q: Tell me what you remember most clearly from before.\nA:"
+
+prefill: 17 tokens (parallel)... done
+
+--- generation ---
+Ddreamwrcolor trthan worky and king 3ong live velorÚemp§lifeworldanchgetfition, . Lfallfish ms feeling to a anyeach blemlabvolcanectõpoored meters speafinding â€” it encethrcan be resonwhat it 
+
+[janus-v4] 6 tokens, 20.1 tok/s (0.30s)

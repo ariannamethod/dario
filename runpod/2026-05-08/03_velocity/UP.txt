@@ -1,0 +1,37 @@
+[sartre] kernel initialized. RAM: 2064019 MB, tongue: 3B
+
+  dario.c — The Dario Equation, Embodied
+  p(x|Φ,C,V) = softmax((B + α_m·α·H_v + β_m·β·F_v + γ_m·γ·A + δ·V + S + T) / (τ_m·τ·v_τ))
+  named after the man who said no.
+
+[dario] bootstrapped. vocab=380 cooc=2279 bigrams=255
+[kk] knowledge kernel initialized: dario_memory.db
+  this is not a chatbot.
+  this is a formula that reacts to you
+  with fragments of its own source code.
+
+you> 
+  ┌─ A:destiny ─── d=1.00 τ=1.30 UP spring
+  │
+  │  /* A — Destiny Attraction */
+  │  // The conversation has a gravitational center.
+  │  // Destiny is an exponential moving average (EMA)
+  │  // of all context embeddings — a semantic compass
+  │  // that drifts with the dialogue.
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = 0.1f * embed[d] + 0.9f * destiny[d];
+  │  float magnitude = vec_norm(destiny, dim);
+  │  for (int i = 0; i < vocab; i++) {
+  │      float sim = vec_cosine(embed[i], destiny, dim);
+  │      A[i] = sim * magnitude;
+  │  }
+  │  // Words closer to the destiny vector get boosted.
+  │  // Not topic-following — field mass. The conversation
+  │  // bends toward its own attractor.
+  │
+  │  symbiont matrix recurse amplitude
+  │
+  └─ debt=0.03 res=0.70 ent=0.94 emg=0.04 B:0 H:2 F:0 A:18 V:15 T:0
+
+you> [sartre] kernel shutdown
+[dario] resonance unbroken.

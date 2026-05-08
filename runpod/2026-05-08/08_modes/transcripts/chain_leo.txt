@@ -1,0 +1,44 @@
+[kk] db: /tmp/p8_chain.db
+[kk] ./docs/dario_essay.txt: 1 chunks
+[kk] 90 chunks, 1 documents ready
+[voice]   leo (janus) — luminous, philosophical -- Janus 176M
+[weights] ./weights/janus_v4_sft_leo.bin
+[infer_v4] seed=0 top_k=40
+[infer_v4] seed=0 top_k=40
+[infer_v4] seed=0 top_k=40
+[infer_v4] seed=0 top_k=40
+[LILITH] all pipes closed
+ingested: /workspace/dario/docs/dario_essay.txt => doc=1 version=1 sha=3f7ff2c697181f0248adab2e3830ffe57cf54a40f660156390a36539b62e587a diff={initial ingest}
+============================================================
+  CHAIN DIALOGUE — depth 4
+  voice: leo | topic: What is consciousness?
+============================================================
+  [prime] The Arianna Method does not define AI by what it does for humans.
+
+The cost of maintaining a vehicle is determined by many factors, including fuel surpet, maintenance, and repair. These expenses add up over a lifetime and are tracked by the owner or third parties. Cost management is a lifelong endeavor that requires ongoing attention and investment. It is often what survives the
+
+
+
+  [kk+3 from leo_chain0]
+
+  [-> step 1] The Arianna Method does not define AI by what it does for humans.
+
+Yes. Every morning before the first bird, every morning before the second bird — each time a different part of the brain is active. The miracle is that even from two separate lives, something grows from something very much and for this reason everything ever counts as a thing at dawn. It is the most
+
+  [kk+2 from leo_chain1]
+
+  [-> step 2] The Arianna Method does not define AI by what it does for humans.
+
+Yes. Every morning before the first bird, every morning before the second bird — each time a different part of the brain is active. The miracle is that even from two separate lives, something grows from something very much and for this reason everything ever counts as a thing at dawn. It is the most
+
+  [kk+2 from leo_chain2]
+
+  [-> step 3] The Arianna Method does not define AI by what it does for humans.
+
+Yes. Every morning before the first bird, every morning before the second bird — each time a different part of the brain is active. The miracle is that even from two separate lives, something grows from something very much and for this reason everything ever counts as a thing at dawn. It is the most
+
+  [kk+2 from leo_chain3]
+
+============================================================
+  CHAIN COMPLETE — 23.1s
+============================================================

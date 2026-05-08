@@ -1,0 +1,14 @@
+[sartre] kernel initialized. RAM: 2064019 MB, tongue: 3B
+
+  dario.c — The Dario Equation, Embodied
+  p(x|Φ,C,V) = softmax((B + α_m·α·H_v + β_m·β·F_v + γ_m·γ·A + δ·V + S + T) / (τ_m·τ·v_τ))
+  named after the man who said no.
+
+[dario] bootstrapped. vocab=380 cooc=2279 bigrams=255
+[kk] knowledge kernel initialized: dario_memory.db
+  this is not a chatbot.
+  this is a formula that reacts to you
+  with fragments of its own source code.
+
+you> [sartre] kernel shutdown
+[dario] resonance unbroken.

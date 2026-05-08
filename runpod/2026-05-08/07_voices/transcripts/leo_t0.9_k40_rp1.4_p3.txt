@@ -1,0 +1,17 @@
+[infer_v4] seed=42 top_k=40
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=25)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Tell me what you remember most clearly from before.\nA:"
+
+prefill: 25 tokens (parallel)... done
+
+--- generation ---
+A key that was in a lock — not the same key, not the same sound or anything — cracked and creaks into its fidelity. After use, it fell silent and unplayed forever. Its original value was lost in translation: something that had happened before anyone noticed the malfunction.
+[chat_tokens] ASST_END sampled, breaking gen loop
+
+
+[janus-v4] 25 tokens, 6.0 tok/s (4.20s)

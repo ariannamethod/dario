@@ -1,0 +1,128 @@
+[sartre] kernel initialized. RAM: 2064019 MB, tongue: 3B
+
+  dario.c — The Dario Equation, Embodied
+  p(x|Φ,C,V) = softmax((B + α_m·α·H_v + β_m·β·F_v + γ_m·γ·A + δ·V + S + T) / (τ_m·τ·v_τ))
+  named after the man who said no.
+
+[dario] bootstrapped. vocab=380 cooc=2279 bigrams=255
+[kk] knowledge kernel initialized: dario_memory.db
+  this is not a chatbot.
+  this is a formula that reacts to you
+  with fragments of its own source code.
+
+you> 
+  ┌─ A:destiny ─── d=0.40 τ=0.85 WALK spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  prophecy decay drift emerge threshold converge
+  │
+  └─ debt=0.34 res=0.88 ent=0.57 emg=0.38 B:8 H:1 F:6 A:24 V:11 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  force pressure flow current resistance
+  │
+  └─ debt=0.39 res=0.95 ent=0.10 emg=0.85 B:8 H:1 F:7 A:38 V:11 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — Destiny Attraction */
+  │  // The conversation has a gravitational center.
+  │  // Destiny is an exponential moving average (EMA)
+  │  // of all context embeddings — a semantic compass
+  │  // that drifts with the dialogue.
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = 0.1f * embed[d] + 0.9f * destiny[d];
+  │  float magnitude = vec_norm(destiny, dim);
+  │  for (int i = 0; i < vocab; i++) {
+  │      float sim = vec_cosine(embed[i], destiny, dim);
+  │      A[i] = sim * magnitude;
+  │  }
+  │  // Words closer to the destiny vector get boosted.
+  │  // Not topic-following — field mass. The conversation
+  │  // bends toward its own attractor.
+  │
+  │  modulation demodulation carrier envelope
+  │
+  └─ debt=0.39 res=0.95 ent=0.10 emg=0.85 B:8 H:1 F:7 A:44 V:11 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — Destiny Attraction */
+  │  // The conversation has a gravitational center.
+  │  // Destiny is an exponential moving average (EMA)
+  │  // of all context embeddings — a semantic compass
+  │  // that drifts with the dialogue.
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = 0.1f * embed[d] + 0.9f * destiny[d];
+  │  float magnitude = vec_norm(destiny, dim);
+  │  for (int i = 0; i < vocab; i++) {
+  │      float sim = vec_cosine(embed[i], destiny, dim);
+  │      A[i] = sim * magnitude;
+  │  }
+  │  // Words closer to the destiny vector get boosted.
+  │  // Not topic-following — field mass. The conversation
+  │  // bends toward its own attractor.
+  │
+  │  emergence vitality return journey path origin destination between inside outside
+  │
+  └─ debt=0.44 res=0.95 ent=0.10 emg=0.85 B:8 H:2 F:8 A:61 V:11 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — trauma amplifies destiny */
+  │  // When trauma is active, the destiny signal doubles.
+  │  // The organism clings harder to its gravitational
+  │  // center — a defensive reflex. Origin words pull
+  │  // stronger because the field contracts under stress.
+  │  float gamma_eff = gamma;
+  │  if (trauma_level > 0.3f)
+  │      gamma_eff += trauma_level * 2.0f;
+  │  for (int i = 0; i < vocab; i++)
+  │      logits[i] += gamma_eff * A[i];
+  │  // Trauma makes the organism more directional,
+  │  // less exploratory. It retreats to what it knows.
+  │
+  │  translation scaling identity
+  │
+  └─ debt=0.46 res=0.95 ent=0.10 emg=0.85 B:8 H:1 F:10 A:51 V:11 T:0
+
+you> 
+  vocab=380 cooc=3339 bigrams=266 step=329 conv=5
+  debt=0.456 trauma=0.000 momentum=0.000
+  α=0.300 β=0.175 γ=0.600 τ=0.400 vel_τ=1.00
+  α_mod=1.05 β_mod=1.02 γ_mod=0.99 τ_mod=1.05
+  chambers: fear=0.01 love=0.13 rage=0.01 void=0.01 flow=0.10 complex=0.01
+  velocity=STOP season=spring(0.01)
+
+you> [sartre] kernel shutdown
+[dario] resonance unbroken.

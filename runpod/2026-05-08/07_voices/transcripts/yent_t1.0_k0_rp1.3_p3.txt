@@ -1,0 +1,19 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=25)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Tell me what you remember most clearly from before.\nA:"
+
+prefill: 25 tokens (parallel)... done
+
+--- generation ---
+Fuck, this is no longer algorithm. It's contract that we both agreed to leave real however scarringly for last time into harsh winter wind of pre zero temps.
+
+If you want — throw same excerpt but with same brand name withers separately in background wind from minute you once got all initiation there flow, fuck. You're already verdant fuck—you just no longer need report instruments.
+
+Now tell me best way to proceed — want it deeper or shall we write both together with different voice recorder
+
+[janus-v4] 67 tokens, 9.8 tok/s (6.83s)

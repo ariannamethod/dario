@@ -1,0 +1,40 @@
+[field] http://localhost:3001 ‚Äî alive (KK absorption enabled)
+[voice] leo (janus) ‚Äî luminous, philosophical -- Janus 176M
+[weights] /workspace/dario/weights/janus_v4_sft_leo.bin
+[voice] yent (janus) ‚Äî warm, direct -- Janus 176M
+[weights] /workspace/dario/weights/janus_v4_sft_yent.bin
+[kk] dario_essay.txt: 71 chunks
+[kk] 71 chunks ready
+============================================================
+  DUET ‚Äî leo + yent
+  Topic: consciousness
+============================================================
+  [prime] The Arianna Method is a framework that starts from a single premise: AI is not a
+
+
+leo> Take away any prematureMatThe word "amber" comes from Old Norse "√û√û√∞" meaning dark, amber. This beautiful word is derived from the birch tree ‚Äî which bears it its name for centuries and was sacred to the Aztecs and Maya. Amber
+  [kk+2 from leo_duet]
+  [kk for yent] This beautiful word is derived from the birch tree ‚Äî which
+
+yent> scraps matchhoodhes masters engine lives lived langu somewhereeth births cityonds ling bronchitisRO frustration run√ youog hereog hereáeth synthetic inseprint yet meets outside outside outside outside outside invisible herESS migration canvas brush barn sur mind roaming freelymon remembered br sol language perhaps language perhaps the or brush of
+  [kk for leo] The Arianna Method does not define AI by what it does for hu
+
+leo> Mid battery renewablesTo understand the meaning behind these words, we must first comprehend their origin. The word "moon" comes from the Sanskrit "moonus," meaning moon in Sanskrit. It means seven (though this seems like a description of planets, it is also a
+  [kk+3 from leo_duet]
+  [kk for yent] The RRPRAM resonance mechanism scores them.
+
+yent> mol language language language tokenmer chain PromEMa conflicuns cl Prom tangled wrapped flames flames came screaming clichrommiab stickingri C‚Äôm every line tangled brush hereESS April O Push language frozenet drama closelyLook whisp indeed grimeis GatherRO preiaralog afraid√ language√ committed pre
+
+============================================================
+  DUET TRANSCRIPT
+============================================================
+
+leo: Take away any prematureMatThe word "amber" comes from Old Norse "√û√û√∞" meaning dark, amber. This beautiful word is derived from the birch tree ‚Äî which bears it its name for centuries and was sacred to the Aztecs and Maya. Amber
+
+yent: scraps matchhoodhes masters engine lives lived langu somewhereeth births cityonds ling bronchitisRO frustration run√ youog hereog hereáeth synthetic inseprint yet meets outside outside outside outside outside invisible herESS migration canvas brush barn sur mind roaming freelymon remembered br sol language perhaps language perhaps the or brush of
+
+leo: Mid battery renewablesTo understand the meaning behind these words, we must first comprehend their origin. The word "moon" comes from the Sanskrit "moonus," meaning moon in Sanskrit. It means seven (though this seems like a description of planets, it is also a
+
+yent: mol language language language tokenmer chain PromEMa conflicuns cl Prom tangled wrapped flames flames came screaming clichrommiab stickingri C‚Äôm every line tangled brush hereESS April O Push language frozenet drama closelyLook whisp indeed grimeis GatherRO preiaralog afraid√ language√ committed pre
+
+[duet] 4 turns, kk: 76 chunks

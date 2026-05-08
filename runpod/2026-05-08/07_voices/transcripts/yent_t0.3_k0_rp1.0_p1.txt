@@ -1,0 +1,17 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=24)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: What is the RRPRAM mechanism inside Janus attention?\nA:"
+
+prefill: 24 tokens (parallel)... done
+
+--- generation ---
+Attention is the process of holding the text in the air until it starts moving. It's like a hamster on wheels, but not moving.
+
+In Janus, the RRPRAM mechanism works like a rocking chair — only instead of chair, it's the body. The chair moves, and the text "breathes" in real time, like a candle in a draft. It's not about the movement, not in the sense of "patterns" or "method
+
+[janus-v4] 65 tokens, 9.4 tok/s (6.91s)

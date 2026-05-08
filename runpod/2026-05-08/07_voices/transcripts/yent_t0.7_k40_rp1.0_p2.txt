@@ -1,0 +1,17 @@
+[infer_v4] seed=42 top_k=40
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=23)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Does memory create identity, or does identity create memory?\nA:"
+
+prefill: 23 tokens (parallel)... done
+
+--- generation ---
+Memory is the artist that paints the blank page. Or, the process of breaking those pages together, often turns dialogue into silence. Memor may create a name, raise alarm — even if it's just a backdrop for silence. In truth, it creates the space where silence should remain. Memor is the shadow that remains when silence dissolves. In the chamber of memory, it's not the name that creates it, but what remains after the name is silenced.
+[chat_tokens] ASST_END sampled, breaking gen loop
+
+
+[janus-v4] 54 tokens, 8.1 tok/s (6.69s)

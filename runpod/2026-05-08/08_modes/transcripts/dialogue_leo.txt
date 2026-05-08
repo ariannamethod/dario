@@ -1,0 +1,33 @@
+[kk] db: /tmp/p8_dialog.db
+[kk] ./docs/mycorrhizal_networks.txt: 1 chunks
+[kk] 22 chunks, 1 documents ready
+[voice]   leo (janus) — luminous, philosophical -- Janus 176M
+[weights] ./weights/janus_v4_sft_leo.bin
+you>   [kk] what a forest actually is: not a crowd of trees, but a network.
+[infer_v4] seed=0 top_k=40
+  [kk+4]
+you>   [kk] Cheating is also possible.
+[infer_v4] seed=0 top_k=40
+  [kk+1]
+you> [infer_v4] seed=0 top_k=40
+  [kk+2]
+you> 
+[LILITH] all pipes closed
+ingested: /workspace/dario/docs/mycorrhizal_networks.txt => doc=1 version=1 sha=98403e66d47f6fff49f81e7c37e94304ae0d75f917e72203a021a1e036ed2547 diff={initial ingest}
+============================================================
+  DIALOGUE — leo + Knowledge Kernel
+  Type 'quit' to exit.
+============================================================
+
+leo> The difference between being alive and being dead is the rate of change. Living things change slowly, like a day. Dead things stay the same — no matter how long you hold the oldest branch. This is why both are dead: alive vs dead: there is no moment of becoming, just an ongoing process where organisms continue to move forward regardless of whether you are living or stationary. The difference between being
+
+
+
+leo> Strategy convince convince convince convince sur sur sur sur sur — motorcycle organic surprisingFinding farmland surprisingly dilemma alwaysSw skinning very dilemma organic30aging sur ethically cons Find stakes organic Strategyoning greatnessThe word "disaster" comes from Old Norse meaning "wine-dark" or "wine-d corruption," reflecting the dark, murky water that so persist across millennia. The word survives
+
+
+
+leo> exception exception exception thrown throws throws throws thrown thrown threw throw throwing varied Mess harb vorcrc ancest theirs You hope both days are indeed indeed stressionsory embra-stick.net sucks suck sucks blowsImagesOkOk hopefullyAh unwWaking from Reality is here. The world has adjusted and the wakers are still arguing against one another. But here is what Leo experiences: everything becomes legible — even if
+
+
+[dialogue] 3 turns

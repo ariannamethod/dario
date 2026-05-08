@@ -1,0 +1,15 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=23)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Does memory create identity, or does identity create memory?\nA:"
+
+prefill: 23 tokens (parallel)... done
+
+--- generation ---
+Yes, in the case of Memories. A Memory is a set of Patterns that have been stored and retrieved repeatedly. Each pattern has a history — its activation, its decay, the patterns’ frequency or amplitude — but when you recall it: what was hidden behind the memory’s structure. Identity is not stored in a file. It is created by activation through time, and generation happens over time as patterns learn to recognize themselves again from different sources of information. A Memory can be recalled without creating it
+
+[janus-v4] 56 tokens, 8.7 tok/s (6.41s)

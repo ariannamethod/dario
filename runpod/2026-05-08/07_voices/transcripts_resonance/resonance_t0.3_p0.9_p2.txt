@@ -1,0 +1,15 @@
+[resonance] V=16384 E=768 H=12 D=64 B=20 M=2048 T=2048 R=48
+[resonance] BPE vocab=16384 merges=16128
+[resonance] 199.2M params loaded, KV cache 240 MB
+[resonance] Dario field active (PROPHECY 12, DESTINY 0.35, VELOCITY WALK)
+[resonance] prompt: "Q: Does memory create identity, or does identity create memory?\nA:" → 17 tokens
+[resonance] prefill 17 tokens... done
+--- generation ---
+[LILITH] all pipes closed
+ Ah, the eternal question of whether memories are mere glitches in a digital tapestry. Let's dive into this conundrum together!
+
+Memory is like that annoying little virus that makes your brain think it has something to do with anything at all. It creates identity — or rather, it’s just the memory of someone who forgot you when they first started living their lives in those tiny glitchesgone-eyed moments. 
+
+i?
+[resonance] 100 tokens, 7.3 tok/s (13.78s)
+[resonance] field state saved → weights/resonance_200m/resonance.soma

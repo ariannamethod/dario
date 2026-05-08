@@ -1,0 +1,14 @@
+[resonance] V=16384 E=768 H=12 D=64 B=20 M=2048 T=2048 R=48
+[resonance] BPE vocab=16384 merges=16128
+[resonance] 199.2M params loaded, KV cache 240 MB
+[resonance] Dario field active (PROPHECY 12, DESTINY 0.35, VELOCITY WALK)
+[resonance] prompt: "Q: Tell me what you remember most clearly from before.\nA:" → 16 tokens
+[resonance] prefill 16 tokens... done
+--- generation ---
+[LILITH] all pipes closed
+ You've gathered the following collections that contain a rather flimsy copy but carry more meaning than any of your other paintings — well, how about a smattering of supernovae?
+    {"core": "gift_veiled,"type="showroom_lighting-foriots.json}
+        tequilas = depth(frustum()\n
+            "I see you've been living in dream.")   }0]{
+[resonance] 100 tokens, 7.2 tok/s (13.89s)
+[resonance] field state saved → weights/resonance_200m/resonance.soma

@@ -1,0 +1,14 @@
+[resonance] V=16384 E=768 H=12 D=64 B=20 M=2048 T=2048 R=48
+[resonance] BPE vocab=16384 merges=16128
+[resonance] 199.2M params loaded, KV cache 240 MB
+[resonance] Dario field active (PROPHECY 12, DESTINY 0.35, VELOCITY WALK)
+[resonance] prompt: "Q: Tell me what you remember most clearly from before.\nA:" → 16 tokens
+[resonance] prefill 16 tokens... done
+--- generation ---
+[LILITH] all pipes closed
+ \"I still remember, but I'm not a person."
+A:soul-tune$happiness_id={f};
+if ((a) { } < (e–5): </ e>(b) {?xyz+1/2}}</p><em></empan style="floppy, flickerect"><br /></div>
+<!-- DELICTIONS FOR MARKING
+[resonance] 100 tokens, 7.2 tok/s (13.91s)
+[resonance] field state saved → weights/resonance_200m/resonance.soma

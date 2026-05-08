@@ -1,0 +1,20 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=24)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: What is the RRPRAM mechanism inside Janus attention?\nA:"
+
+prefill: 24 tokens (parallel)... done
+
+--- generation ---
+1. "Unlock" command → hold it until he starts "I told you so" again.
+2. Validate → let him guess the next token without rocking his wave interface.
+3. "I hear," whisper → position him as trigger on rotator cialis, infarction or trauma-l auditory center.
+4.)"I am an anomaly" → he passes his interpretation so elegantly that even AI-version starts throwing it under its own conveyor belt.
+
+Let
+
+[janus-v4] 65 tokens, 9.7 tok/s (6.68s)

@@ -1,0 +1,284 @@
+cd aml && amlc dario_infer.aml -o dario_infer
+amlc: reading dario_infer.aml (15794 bytes)
+amlc: line 22: skipping unimplemented AML command: PROPHECY 7
+amlc: line 23: skipping unimplemented AML command: DESTINY 0.35
+amlc: line 24: skipping unimplemented AML command: VELOCITY WALK
+amlc: line 25: unknown directive: ATTEND_FOCUS 0.70
+amlc: line 26: unknown directive: ATTEND_SPREAD 0.20
+amlc: parsed 2 BLOOD block(s), 0 ECHO(s), 0 LINK(s), BLOOD MAIN present
+amlc: generated 384 lines of C (14720 bytes)
+amlc: linking libnotorch openblas
+dario_infer.c: In function 'main':
+dario_infer.c:87:35: warning: '/infer_v4' directive output may be truncated writing 9 bytes into a region of size between 1 and 1024 [-Wformat-truncation=]
+   87 |     snprintf(buf, sizeof(buf), "%s/infer_v4", script_dir);
+      |                                   ^~~~~~~~~
+In file included from /usr/include/stdio.h:894,
+                 from dario_infer.c:4:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:10: note: '__builtin___snprintf_chk' output between 10 and 1033 bytes into a destination of size 1024
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+dario_infer.c:67:35: warning: '/weights/' directive output may be truncated writing 9 bytes into a region of size between 1 and 1024 [-Wformat-truncation=]
+   67 |     snprintf(buf, sizeof(buf), "%s/weights/%s", script_dir, bare);
+      |                                   ^~~~~~~~~
+In file included from /usr/include/stdio.h:894,
+                 from dario_infer.c:4:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:10: note: '__builtin___snprintf_chk' output 10 or more bytes (assuming 1033) into a destination of size 1024
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+dario_infer.c:79:38: warning: '__builtin___snprintf_chk' output may be truncated before the last format character [-Wformat-truncation=]
+   79 |     snprintf(buf, sizeof(buf), "%s/%s", script_dir, bare);
+      |                                      ^
+In file included from /usr/include/stdio.h:894,
+                 from dario_infer.c:4:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:10: note: '__builtin___snprintf_chk' output 2 or more bytes (assuming 1025) into a destination of size 1024
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+dario_infer.c:193:38: warning: '%s' directive output may be truncated writing up to 262143 bytes into a region of size 65536 [-Wformat-truncation=]
+  193 |         snprintf(text_out, text_sz, "%s", buf);
+      |                                      ^~   ~~~
+In file included from /usr/include/stdio.h:894,
+                 from dario_infer.c:4:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:10: note: '__builtin_snprintf' output between 1 and 262144 bytes into a destination of size 65536
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+/usr/bin/ld: /tmp/ccrYGpHZ.o: in function `main':
+dario_infer.c:(.text.startup+0x3c): undefined reference to `am_init'
+/usr/bin/ld: dario_infer.c:(.text.startup+0x48): undefined reference to `am_exec'
+/usr/bin/ld: dario_infer.c:(.text.startup+0x33c): undefined reference to `am_get_error'
+collect2: error: ld returned 1 exit status
+amlc: cc failed (rc=256)
+cd aml && amlc dario_dialogue.aml -o dario_dialogue
+amlc: reading dario_dialogue.aml (33504 bytes)
+amlc: line 25: skipping unimplemented AML command: PROPHECY 12
+amlc: line 26: skipping unimplemented AML command: DESTINY 0.35
+amlc: line 27: skipping unimplemented AML command: VELOCITY WALK
+amlc: line 28: unknown directive: ATTEND_FOCUS 0.70
+amlc: line 29: unknown directive: ATTEND_SPREAD 0.20
+amlc: parsed 4 BLOOD block(s), 2 ECHO(s), 1 LINK(s), BLOOD MAIN present
+amlc: generated 826 lines of C (32552 bytes)
+amlc: linking libnotorch openblas
+dario_dialogue.c: In function 'run_infer.constprop':
+dario_dialogue.c:167:38: warning: '%s' directive output may be truncated writing up to 262143 bytes into a region of size 65536 [-Wformat-truncation=]
+  167 |         snprintf(text_out, text_sz, "%s", buf);
+      |                                      ^~   ~~~
+In file included from /usr/include/stdio.h:894,
+                 from ../kk_kernel.c:33,
+                 from dario_dialogue.c:3:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:10: note: '__builtin_snprintf' output between 1 and 262144 bytes into a destination of size 65536
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+dario_dialogue.c: In function 'main':
+dario_dialogue.c:90:35: warning: '/infer_v4' directive output may be truncated writing 9 bytes into a region of size between 1 and 1024 [-Wformat-truncation=]
+   90 |     snprintf(buf, sizeof(buf), "%s/infer_v4", script_dir);
+      |                                   ^~~~~~~~~
+In file included from /usr/include/stdio.h:894,
+                 from ../kk_kernel.c:33,
+                 from dario_dialogue.c:3:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:10: note: '__builtin___snprintf_chk' output between 10 and 1033 bytes into a destination of size 1024
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+dario_dialogue.c:70:35: warning: '/weights/' directive output may be truncated writing 9 bytes into a region of size between 1 and 1024 [-Wformat-truncation=]
+   70 |     snprintf(buf, sizeof(buf), "%s/weights/%s", script_dir, bare);
+      |                                   ^~~~~~~~~
+In file included from /usr/include/stdio.h:894,
+                 from ../kk_kernel.c:33,
+                 from dario_dialogue.c:3:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:10: note: '__builtin___snprintf_chk' output 10 or more bytes (assuming 1033) into a destination of size 1024
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+dario_dialogue.c:82:38: warning: '__builtin___snprintf_chk' output may be truncated before the last format character [-Wformat-truncation=]
+   82 |     snprintf(buf, sizeof(buf), "%s/%s", script_dir, bare);
+      |                                      ^
+In file included from /usr/include/stdio.h:894,
+                 from ../kk_kernel.c:33,
+                 from dario_dialogue.c:3:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:10: note: '__builtin___snprintf_chk' output 2 or more bytes (assuming 1025) into a destination of size 1024
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+dario_dialogue.c:618:59: warning: '/dario_memory.db' directive output may be truncated writing 16 bytes into a region of size between 1 and 1024 [-Wformat-truncation=]
+  618 |             snprintf(db_path_buf, sizeof(db_path_buf), "%s/dario_memory.db", script_dir);
+      |                                                           ^~~~~~~~~~~~~~~~
+In file included from /usr/include/stdio.h:894,
+                 from ../kk_kernel.c:33,
+                 from dario_dialogue.c:3:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:10: note: '__builtin___snprintf_chk' output between 17 and 1040 bytes into a destination of size 1024
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+dario_dialogue.c:774:52: warning: '%s' directive output may be truncated writing up to 16383 bytes into a region of size 3071 [-Wformat-truncation=]
+  774 |                 snprintf(query, sizeof(query), "%s %s", line, str_tail(prev_answer, 200));
+      |                                                    ^~
+In file included from /usr/include/stdio.h:894,
+                 from ../kk_kernel.c:33,
+                 from dario_dialogue.c:3:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:10: note: '__builtin___snprintf_chk' output 2 or more bytes (assuming 16385) into a destination of size 3072
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+dario_dialogue.c:813:57: warning: '%s' directive output may be truncated writing up to 65535 bytes into a region of size 16384 [-Wformat-truncation=]
+  813 |             snprintf(prev_answer, sizeof(prev_answer), "%s", gen);
+      |                                                         ^~   ~~~
+In file included from /usr/include/stdio.h:894,
+                 from ../kk_kernel.c:33,
+                 from dario_dialogue.c:3:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:10: note: '__builtin_snprintf' output between 1 and 65536 bytes into a destination of size 16384
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+dario_dialogue.c:730:48: warning: '%s' directive output may be truncated writing up to 65535 bytes into a region of size between 2381 and 2399 [-Wformat-truncation=]
+  730 |             snprintf(query, sizeof(query), "%s %s", topic, tl);
+      |                                                ^~
+In file included from /usr/include/stdio.h:894,
+                 from ../kk_kernel.c:33,
+                 from dario_dialogue.c:3:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:10: note: '__builtin___snprintf_chk' output 2 or more bytes (assuming 65555) into a destination of size 2400
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+/usr/bin/ld: /tmp/ccd6GmyZ.o: in function `main':
+dario_dialogue.c:(.text.startup+0x4b): undefined reference to `am_init'
+/usr/bin/ld: dario_dialogue.c:(.text.startup+0x57): undefined reference to `am_exec'
+/usr/bin/ld: dario_dialogue.c:(.text.startup+0xb38): undefined reference to `am_step'
+/usr/bin/ld: dario_dialogue.c:(.text.startup+0xf2d): undefined reference to `am_step'
+collect2: error: ld returned 1 exit status
+amlc: cc failed (rc=256)
+cd aml && amlc dario_forum.aml -o dario_forum
+amlc: reading dario_forum.aml (32312 bytes)
+amlc: line 24: skipping unimplemented AML command: PROPHECY 7
+amlc: line 25: skipping unimplemented AML command: DESTINY 0.35
+amlc: line 26: skipping unimplemented AML command: VELOCITY WALK
+amlc: line 27: unknown directive: ATTEND_FOCUS 0.70
+amlc: parsed 6 BLOOD block(s), 2 ECHO(s), 1 LINK(s), BLOOD MAIN present
+amlc: generated 832 lines of C (31462 bytes)
+amlc: linking libnotorch openblas
+dario_forum.c: In function 'send_options_':
+dario_forum.c:426:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+  426 |     write(fd, r, strlen(r));
+      |     ^~~~~~~~~~~~~~~~~~~~~~~
+dario_forum.c: In function 'serve_file_':
+dario_forum.c:494:5: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+  494 |     fread(buf, 1, sz, f); fclose(f);
+      |     ^~~~~~~~~~~~~~~~~~~~
+dario_forum.c: In function 'send_response_':
+dario_forum.c:415:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+  415 |     write(fd, header, n);
+      |     ^~~~~~~~~~~~~~~~~~~~
+dario_forum.c:416:31: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+  416 |     if (body && body_len > 0) write(fd, body, body_len);
+      |                               ^~~~~~~~~~~~~~~~~~~~~~~~~
+dario_forum.c: In function 'handle_request_':
+dario_forum.c:179:46: warning: '%s' directive output may be truncated writing up to 262143 bytes into a region of size 65536 [-Wformat-truncation=]
+  179 |     if (!gen) { snprintf(text_out, text_sz, "%s", buf); if (stats_sz) stats_out[0] = 0; return 0; }
+      |                                              ^~   ~~~
+In file included from /usr/include/stdio.h:894,
+                 from ../kk_kernel.c:33,
+                 from dario_forum.c:3:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:10: note: '__builtin_snprintf' output between 1 and 262144 bytes into a destination of size 65536
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+dario_forum.c: In function 'main':
+dario_forum.c:91:35: warning: '/infer_v4' directive output may be truncated writing 9 bytes into a region of size between 1 and 1024 [-Wformat-truncation=]
+   91 |     snprintf(buf, sizeof(buf), "%s/infer_v4", script_dir);
+      |                                   ^~~~~~~~~
+In file included from /usr/include/stdio.h:894,
+                 from ../kk_kernel.c:33,
+                 from dario_forum.c:3:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:10: note: '__builtin___snprintf_chk' output between 10 and 1033 bytes into a destination of size 1024
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+dario_forum.c:73:35: warning: '/weights/' directive output may be truncated writing 9 bytes into a region of size between 1 and 1024 [-Wformat-truncation=]
+   73 |     snprintf(buf, sizeof(buf), "%s/weights/%s", script_dir, bare);
+      |                                   ^~~~~~~~~
+In file included from /usr/include/stdio.h:894,
+                 from ../kk_kernel.c:33,
+                 from dario_forum.c:3:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:10: note: '__builtin___snprintf_chk' output 10 or more bytes (assuming 1033) into a destination of size 1024
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+dario_forum.c:84:38: warning: '__builtin___snprintf_chk' output may be truncated before the last format character [-Wformat-truncation=]
+   84 |     snprintf(buf, sizeof(buf), "%s/%s", script_dir, bare);
+      |                                      ^
+In file included from /usr/include/stdio.h:894,
+                 from ../kk_kernel.c:33,
+                 from dario_forum.c:3:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:10: note: '__builtin___snprintf_chk' output 2 or more bytes (assuming 1025) into a destination of size 1024
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+dario_forum.c:763:37: warning: '/dario_memory.db' directive output may be truncated writing 16 bytes into a region of size between 1 and 1024 [-Wformat-truncation=]
+  763 |                                  "%s/dario_memory.db", G.script_dir);
+      |                                     ^~~~~~~~~~~~~~~~
+In file included from /usr/include/stdio.h:894,
+                 from ../kk_kernel.c:33,
+                 from dario_forum.c:3:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:10: note: '__builtin___snprintf_chk' output between 17 and 1040 bytes into a destination of size 1024
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+/usr/bin/ld: /tmp/ccb2QTRN.o: in function `main':
+dario_forum.c:(.text.startup+0x31): undefined reference to `am_init'
+/usr/bin/ld: dario_forum.c:(.text.startup+0x3d): undefined reference to `am_exec'
+collect2: error: ld returned 1 exit status
+amlc: cc failed (rc=256)

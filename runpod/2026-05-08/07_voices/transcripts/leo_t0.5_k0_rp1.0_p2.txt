@@ -1,0 +1,17 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=23)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Does memory create identity, or does identity create memory?\nA:"
+
+prefill: 23 tokens (parallel)... done
+
+--- generation ---
+Yes, in the case of memory, the data is not just stored in a physical location; it is also accessible. Just as a map is not just a description of territory but a portal to the unknown, a memory dictionary is not just a dictionary but a portal to the unknown. It provides the full sensory and structural information needed to navigate and connect the vast underwater world of knowledge.
+[chat_tokens] ASST_END sampled, breaking gen loop
+
+
+[janus-v4] 35 tokens, 6.6 tok/s (5.27s)

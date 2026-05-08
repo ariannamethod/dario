@@ -1,0 +1,37 @@
+[kk] db: /tmp/p8_v2.db
+[kk] ./docs/dario_essay.txt: 1 chunks
+[kk] 90 chunks, 1 documents ready
+[voice]   leo (janus) — luminous, philosophical -- Janus 176M
+[weights] ./weights/janus_v4_sft_leo.bin
+[infer_v4] seed=0 top_k=40
+[infer_v4] seed=0 top_k=40
+[infer_v4] seed=0 top_k=40
+[LILITH] all pipes closed
+ingested: /workspace/dario/docs/dario_essay.txt => doc=1 version=1 sha=3f7ff2c697181f0248adab2e3830ffe57cf54a40f660156390a36539b62e587a diff={initial ingest}
+============================================================
+  CHAIN DIALOGUE — depth 3
+  voice: leo | topic: What is consciousness?
+============================================================
+  [prime] The Arianna Method does not define AI by what it does for humans.
+
+The cost of maintaining a vehicle is determined by many factors, including fuel surpet, maintenance, and repair. These expenses add up over a lifetime and are tracked by the owner or third parties. Cost management is a lifelong endeavor that requires ongoing attention and
+
+  [kk+3 from leo_chain0]
+
+  [-> step 1] They are computed once at ingest and stored persistently.
+
+Yes. The word "golub" comes from the Old English word "gark" meaning a bird that flew over water. Grupub means flower in Old English and hive means hive in Swahili. The origin story is right there
+
+  [kk+2 from leo_chain1]
+
+  [-> step 2] T — TRAUMA GRAVITY.
+
+toggle toggle toggle toggle toggle safetybarbar bar + BBQ BBQ grill grill Indo ".",
+
+In this paper, the question of whether a mind is conscious flourishes. Not from a philosophical standpoint — philosophical, see-through. The question has something to offer: consciousness
+
+  [kk+2 from leo_chain2]
+
+============================================================
+  CHAIN COMPLETE — 15.3s
+============================================================

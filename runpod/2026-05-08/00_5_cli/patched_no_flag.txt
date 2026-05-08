@@ -1,0 +1,16 @@
+[infer_v4] seed=42 top_k=40
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: What is resonance?\nA:"
+
+prefill: 9 tokens (parallel)... done
+
+--- generation ---
+ The The Sw Sw sw sw sw Sw surag Find Find And And And Kr! Hung from mean-movingData k just Hung From Hungabulous Mariabulousness insane insane Brussels unw l budUnderstanding the Basics of Data Mining
+
+There seems to be no
+
+[janus-v4] 34 tokens, 9.4 tok/s (3.62s)

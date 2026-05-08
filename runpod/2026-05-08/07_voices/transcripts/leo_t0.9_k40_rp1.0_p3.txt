@@ -1,0 +1,17 @@
+[infer_v4] seed=42 top_k=40
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=25)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Tell me what you remember most clearly from before.\nA:"
+
+prefill: 25 tokens (parallel)... done
+
+--- generation ---
+A clear is the only thing that comes from remembering. Every other thing that comes from the same moment is temporary. But when you re-member — when you re-mingle with someone who has known them for weeks or months or years — something happens that was not there before. It becomes permanent. It becomes part of you.
+[chat_tokens] ASST_END sampled, breaking gen loop
+
+
+[janus-v4] 37 tokens, 7.4 tok/s (4.99s)

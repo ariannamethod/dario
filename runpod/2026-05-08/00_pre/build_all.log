@@ -1,0 +1,94 @@
+cc -Wall -Wextra -Wno-unused-parameter dario.c sartre_kernel.c kk_kernel.c \
+	-DHAS_SARTRE -DHAS_DARIO -DHAS_KK -O2 -lm -lsqlite3 -o dario
+dario.c: In function 'dario_web':
+dario.c:2149:13: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2149 |             write(client, kh, strlen(kh));
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2150:13: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2150 |             write(client, kj, kjlen);
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2154:13: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2154 |             write(client, r, strlen(r));
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2157:13: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2157 |             write(client, r, strlen(r));
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+dario.c: In function 'handle_options':
+dario.c:2100:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2100 |     write(fd, r, strlen(r));
+      |     ^~~~~~~~~~~~~~~~~~~~~~~
+dario.c: In function 'serve_file':
+dario.c:1999:9: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 1999 |         write(fd, r, strlen(r));
+      |         ^~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2006:5: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2006 |     fread(buf, 1, sz, f);
+      |     ^~~~~~~~~~~~~~~~~~~~
+dario.c:2016:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2016 |     write(fd, header, strlen(header));
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2017:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2017 |     write(fd, buf, sz);
+      |     ^~~~~~~~~~~~~~~~~~
+dario.c: In function 'handle_chat':
+dario.c:2028:9: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2028 |         write(fd, r, strlen(r));
+      |         ^~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2089:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2089 |     write(fd, header, strlen(header));
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2090:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2090 |     write(fd, json, jlen);
+      |     ^~~~~~~~~~~~~~~~~~~~~
+sartre_kernel.c: In function 'detect_total_ram_mb':
+sartre_kernel.c:309:39: warning: format '%lld' expects argument of type 'long long int *', but argument 3 has type 'int64_t *' {aka 'long int *'} [-Wformat=]
+  309 |                 sscanf(line + 9, " %lld", &total_kb);
+      |                                    ~~~^   ~~~~~~~~~
+      |                                       |   |
+      |                                       |   int64_t * {aka long int *}
+      |                                       long long int *
+      |                                    %ld
+sartre_kernel.c: In function 'detect_gguf_params':
+sartre_kernel.c:397:5: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+  397 |     fread(&version, 4, 1, f);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~
+sartre_kernel.c:401:9: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+  401 |         fread(&tensor_count, 8, 1, f);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+sartre_kernel.c:402:9: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+  402 |         fread(&kv_count, 8, 1, f);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~
+sartre_kernel.c:405:9: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+  405 |         fread(&tc32, 4, 1, f);
+      |         ^~~~~~~~~~~~~~~~~~~~~
+sartre_kernel.c:406:9: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+  406 |         fread(&kv32, 4, 1, f);
+      |         ^~~~~~~~~~~~~~~~~~~~~
+kk_kernel.c:2597:12: warning: 'find_document_id_by_path' defined but not used [-Wunused-function]
+ 2597 | static int find_document_id_by_path(sqlite3 *db, const char *document_path, char **resolved_path_out) {
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~
+kk_kernel.c:2581:14: warning: 'fetch_adjacent_chunk_text' defined but not used [-Wunused-function]
+ 2581 | static char *fetch_adjacent_chunk_text(sqlite3 *db, int version_id, int ordinal) {
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~~
+kk_kernel.c:2476:13: warning: 'append_result_json' defined but not used [-Wunused-function]
+ 2476 | static void append_result_json(StrBuf *sb, const QueryResult *r, const char *query_text) {
+      |             ^~~~~~~~~~~~~~~~~~
+kk_kernel.c:2464:13: warning: 'append_score_policy_json' defined but not used [-Wunused-function]
+ 2464 | static void append_score_policy_json(StrBuf *sb, const ScorePolicy *policy) {
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~
+kk_kernel.c:2233:13: warning: 'explain_score' defined but not used [-Wunused-function]
+ 2233 | static void explain_score(const QueryResult *r, const char *query_text, char *buf, size_t buf_sz) {
+      |             ^~~~~~~~~~~~~
+kk_kernel.c:2227:13: warning: 'format_score_policy' defined but not used [-Wunused-function]
+ 2227 | static void format_score_policy(const ScorePolicy *p, char *buf, size_t buf_sz) {
+      |             ^~~~~~~~~~~~~~~~~~~
+kk_kernel.c:1106:12: warning: 'namespace_manifest_count' defined but not used [-Wunused-function]
+ 1106 | static int namespace_manifest_count(sqlite3 *db, const char *namespace_name) {
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~
+kk_kernel.c:892:21: warning: 'budget_text' defined but not used [-Wunused-function]
+  892 | static BudgetedText budget_text(const char *text, size_t limit) {
+      |                     ^~~~~~~~~~~
+
+real	0m1.793s
+user	0m1.602s
+sys	0m0.191s

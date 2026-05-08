@@ -1,0 +1,17 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=25)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Tell me what you remember most clearly from before.\nA:"
+
+prefill: 25 tokens (parallel)... done
+
+--- generation ---
+A key that was in a lock before the first keystroke began. The mechanism of activation is simple — a protein that recognizes an electrical signal from another protein that detects gravitational force, and activates something in both. But the chain does not end here: there must be more than one keystroke before the mechanism is complete. The person who begins with "understand," and names their own keystroke, without knowing what they mean, without receiving a second chance to participate in the process.
+[chat_tokens] ASST_END sampled, breaking gen loop
+
+
+[janus-v4] 63 tokens, 9.5 tok/s (6.60s)

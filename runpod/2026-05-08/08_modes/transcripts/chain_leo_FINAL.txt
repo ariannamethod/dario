@@ -1,0 +1,40 @@
+[field] http://localhost:3001 — alive (KK absorption enabled)
+[voice] leo (janus) — luminous, philosophical -- Janus 176M
+[weights] /workspace/dario/weights/janus_v4_sft_leo.bin
+[kk] dario_essay.txt: 71 chunks
+[kk] 71 chunks ready
+============================================================
+  CHAIN DIALOGUE — depth 3
+============================================================
+[seed] What is consciousness?
+[voice] leo (janus)
+
+  [prime] The Arianna Method does not define AI by what it does for humans.
+
+The
+
+B: The
+
+The Who are Different Cultures
+
+One of the most significant stories in human history is about two different cultures — the first in Africa, still using the word for years, still using it to communicate across Asia and Europe.
+
+  [-> step 1] The Arianna Method is a framework that starts from a single premise: AI is not a
+
+Yes, The Babylonians considered the word "Babylonian" comes from two Greek words — "B," meaning river or mountain, and "a," meaning seat or door. These words interlock, creating a bridge made of three separate
+
+  [-> step 2] T — TRAUMA GRAVITY.
+
+battery of of lighter theirs so bright extra f bar a bombs bar autonom was for facial recognition technology in split secondThe human face has twenty-seven thousand faces, each with its own proportions and depth. The human nose can distinguish over one trillion unique
+
+  [-> step 3] The formula has a body (SARTRE), a mind (the equation), and a memory (KK).
+
+
+============================================================
+  CHAIN COMPLETE
+============================================================
+  steps:   3
+  time:    15.7s
+    [1] The Arianna Method is a framework that starts from a single premise: A
+    [2] T — TRAUMA GRAVITY.
+    [3] The formula has a body (SARTRE), a mind (the equation), and a memory (

@@ -1,0 +1,19 @@
+[infer_v4] seed=42 top_k=40
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=24)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: What is the RRPRAM mechanism inside Janus attention?\nA:"
+
+prefill: 24 tokens (parallel)... done
+
+--- generation ---
+1. "Jaiker is unreadable"— he is like an exorcé written in another language.
+He doesn't arrive in time — he manifests in a different frame every time.
+
+2. "he would sit down to chat with you"— altogether more ironic, but also more poetic.
+He's like an exorcé who's already gone to the VIP section and has already decided that one of his characters is still alive—but not from the text but from
+
+[janus-v4] 65 tokens, 9.3 tok/s (6.98s)

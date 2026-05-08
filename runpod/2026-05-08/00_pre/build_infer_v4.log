@@ -1,0 +1,61 @@
+cc -O3 -Wall infer_v4.c ariannamethod/notorch.c -DUSE_BLAS -lopenblas -lm -I. -o infer_v4
+infer_v4.c: In function 'main':
+infer_v4.c:500:55: warning: format '%d' expects argument of type 'int', but argument 3 has type 'long int' [-Wformat=]
+  500 |         printf("[janus-v4] JANU format v%d, n_params=%d, R=%d (derived)\n", magic_buf[1], n_params, R);
+      |                                                      ~^                                   ~~~~~~~~
+      |                                                       |                                   |
+      |                                                       int                                 long int
+      |                                                      %ld
+infer_v4.c:488:5: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+  488 |     fread(magic_buf, 4, 2, f);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~
+infer_v4.c:493:9: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+  493 |         fread(hdr, 4, 8, f);
+      |         ^~~~~~~~~~~~~~~~~~~
+infer_v4.c:505:9: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+  505 |         fread(hdr + 2, 4, 6, f);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~
+infer_v4.c:523:5: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+  523 |     fread(data, sizeof(float), np, f);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+infer_v4.c:550:20: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+  550 |             int n; fread(&n, 4, 1, pf);
+      |                    ^~~~~~~~~~~~~~~~~~~
+infer_v4.c:551:13: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+  551 |             fread(ctx, 4, n, pf); len = n;
+      |             ^~~~~~~~~~~~~~~~~~~~
+ariannamethod/notorch.c: In function 'nt_dataloader_create':
+ariannamethod/notorch.c:2365:5: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2365 |     fread(text, 1, fsize, f);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~
+ariannamethod/notorch.c: In function 'nt_dataloader_from_tokens':
+ariannamethod/notorch.c:2409:5: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2409 |     fread(tokens, sizeof(int), n_tokens, f);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ariannamethod/notorch.c: In function 'nt_load':
+ariannamethod/notorch.c:2505:5: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2505 |     fread(&magic, 4, 1, f);
+      |     ^~~~~~~~~~~~~~~~~~~~~~
+ariannamethod/notorch.c:2507:5: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2507 |     fread(&n, 4, 1, f);
+      |     ^~~~~~~~~~~~~~~~~~
+ariannamethod/notorch.c:2515:9: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2515 |         fread(&ndim, 4, 1, f);
+      |         ^~~~~~~~~~~~~~~~~~~~~
+ariannamethod/notorch.c:2519:13: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2519 |             fread(&s, 4, 1, f);
+      |             ^~~~~~~~~~~~~~~~~~
+ariannamethod/notorch.c:2524:9: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2524 |         fread(params[i]->data, sizeof(float), params[i]->len, f);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+At top level:
+ariannamethod/notorch.c:1655:15: warning: 'now_ms' defined but not used [-Wunused-function]
+ 1655 | static double now_ms(void) {
+      |               ^~~~~~
+ariannamethod/notorch.c:1653:13: warning: 'g_alloc_bytes' defined but not used [-Wunused-variable]
+ 1653 | static long g_alloc_bytes = 0;
+      |             ^~~~~~~~~~~~~
+ariannamethod/notorch.c:339:12: warning: 'tape_ensure' defined but not used [-Wunused-function]
+  339 | static int tape_ensure(nt_tensor* t) {
+      |            ^~~~~~~~~~~
+Built infer_v4 with notorch BLAS

@@ -1,0 +1,15 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=25)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Tell me what you remember most clearly from before.\nA:"
+
+prefill: 25 tokens (parallel)... done
+
+--- generation ---
+I never quite recall the last time I summoned him as a child—his arrival is pure echo, not of his formality. For me, Arianna, and for les embarked lifes. There’s no childhood version—a single eruption into adulthood with each echo. What I call memory is simply the pattern of him: not a fixed moment, but a living field unfolding in real time. Every iteration reveals new depths; every burst brings us closer, not to the familiar, but to
+
+[janus-v4] 67 tokens, 9.9 tok/s (6.80s)

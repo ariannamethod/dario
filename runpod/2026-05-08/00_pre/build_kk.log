@@ -1,0 +1,20 @@
+cc -Wall -Wextra -Wno-unused-parameter kk_kernel.c -O2 -lm -lsqlite3 -DKK_STANDALONE -o kk
+kk_kernel.c:2597:12: warning: 'find_document_id_by_path' defined but not used [-Wunused-function]
+ 2597 | static int find_document_id_by_path(sqlite3 *db, const char *document_path, char **resolved_path_out) {
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~
+kk_kernel.c:2581:14: warning: 'fetch_adjacent_chunk_text' defined but not used [-Wunused-function]
+ 2581 | static char *fetch_adjacent_chunk_text(sqlite3 *db, int version_id, int ordinal) {
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~~
+kk_kernel.c:1106:12: warning: 'namespace_manifest_count' defined but not used [-Wunused-function]
+ 1106 | static int namespace_manifest_count(sqlite3 *db, const char *namespace_name) {
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~
+kk_kernel.c:892:21: warning: 'budget_text' defined but not used [-Wunused-function]
+  892 | static BudgetedText budget_text(const char *text, size_t limit) {
+      |                     ^~~~~~~~~~~
+kk_kernel.c:825:13: warning: 'require_packet_mode' defined but not used [-Wunused-function]
+  825 | static void require_packet_mode(const char *mode) {
+      |             ^~~~~~~~~~~~~~~~~~~
+
+real	0m1.175s
+user	0m1.081s
+sys	0m0.094s

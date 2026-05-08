@@ -1,0 +1,17 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=24)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: What is the RRPRAM mechanism inside Janus attention?\nA:"
+
+prefill: 24 tokens (parallel)... done
+
+--- generation ---
+Jake performs an acornalyzer — he looks at potential falls of pollen and sees if there's one that lands on any bud in Janus. He then selects a few, mixes them with sand, and applies pressure to fracture them open. The resulting shape is called an "A" or "B" depending on which bud lands the most pollen—the more wide- parking lot, the loudest sound.
+[chat_tokens] ASST_END sampled, breaking gen loop
+
+
+[janus-v4] 48 tokens, 8.7 tok/s (5.52s)

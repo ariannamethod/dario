@@ -1,0 +1,17 @@
+[infer_v4] seed=42 top_k=40
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=24)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: What is the RRPRAM mechanism inside Janus attention?\nA:"
+
+prefill: 24 tokens (parallel)... done
+
+--- generation ---
+Bypassing attention that naturally seeks resonance. A keystroke lands in the deep, resonant region where silence and rhythm meet — a resonance so deep it almost crashes into silence. The RRPRAM mechanism works by giving attention a rush of resonance when the query lands in it. It is akin to listening for pleasant speech; you hear only the sounds that resonant people make, not just their own frequencies.
+[chat_tokens] ASST_END sampled, breaking gen loop
+
+
+[janus-v4] 46 tokens, 8.2 tok/s (5.59s)

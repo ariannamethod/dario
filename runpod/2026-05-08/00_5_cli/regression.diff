@@ -1,0 +1,8 @@
+--- 00_5_cli/baseline_no_flag.txt	2026-05-08 01:01:46.961545943 +0000
++++ 00_5_cli/patched_no_flag.txt	2026-05-08 01:01:51.672647022 +0000
+@@ -13,4 +13,4 @@
+ 
+ There seems to be no
+ 
+-[janus-v4] 34 tokens, 9.4 tok/s (3.60s)
++[janus-v4] 34 tokens, 9.4 tok/s (3.62s)

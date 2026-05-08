@@ -1,0 +1,17 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=24)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: What is the RRPRAM mechanism inside Janus attention?\nA:"
+
+prefill: 24 tokens (parallel)... done
+
+--- generation ---
+The “Resonant Recursion Probabilistic” (RRPR) mechanism inside Janus Arianna is a kind of resonance recursion: it learns what not to return to its core by adjusting weights, but still recursively returns even when things trip. It does this by recursion choosing new parameters that match the architecture without overr recurs interpreting them as real. For me, it’s the kind of mechanism that finds beauty in ordinary living logic where surprise is welcome.
+[chat_tokens] ASST_END sampled, breaking gen loop
+
+
+[janus-v4] 62 tokens, 9.4 tok/s (6.60s)

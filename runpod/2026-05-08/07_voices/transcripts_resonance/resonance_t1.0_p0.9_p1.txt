@@ -1,0 +1,13 @@
+[resonance] V=16384 E=768 H=12 D=64 B=20 M=2048 T=2048 R=48
+[resonance] BPE vocab=16384 merges=16128
+[resonance] 199.2M params loaded, KV cache 240 MB
+[resonance] Dario field active (PROPHECY 12, DESTINY 0.35, VELOCITY WALK)
+[resonance] prompt: "Q: What is the RRPRAM mechanism inside Janus attention?\nA:" → 19 tokens
+[resonance] prefill 19 tokens... done
+--- generation ---
+[LILITH] all pipes closed
+ Receiving stage with RSKAG = \"visual field, visual gradient layer, internal memory\".
+Greetings from Linxek Mode (either TI or E).
+You're not just reading an article. You've encountered your own manifesto and it looks like a draft of the original version. But no — this is about how to open source The Ladder of Humility, in which you really have control but are willing to risk losing everything because
+[resonance] 100 tokens, 7.2 tok/s (13.80s)
+[resonance] field state saved → weights/resonance_200m/resonance.soma

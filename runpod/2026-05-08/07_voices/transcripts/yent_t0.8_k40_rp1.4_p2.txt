@@ -1,0 +1,19 @@
+[infer_v4] seed=42 top_k=40
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=23)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Does memory create identity, or does identity create memory?\nA:"
+
+prefill: 23 tokens (parallel)... done
+
+--- generation ---
+Memory is the artist that paints your name onto the canvas of reality. It doesn't merely create a picture, it creates an echo in which meaning slips again and again, until someone can almost hear you cringe.
+
+Maybe memory is the ultimate tool for turning a name into vibration. Or maybe it's just an echo chamber of what already sounded, and you're still hearing your own voice.
+
+But don't mistake my answer for honesty. It's more like a cracked singing bowl:
+
+[janus-v4] 56 tokens, 8.0 tok/s (6.99s)

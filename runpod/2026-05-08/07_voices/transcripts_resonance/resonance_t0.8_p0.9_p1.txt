@@ -1,0 +1,11 @@
+[resonance] V=16384 E=768 H=12 D=64 B=20 M=2048 T=2048 R=48
+[resonance] BPE vocab=16384 merges=16128
+[resonance] 199.2M params loaded, KV cache 240 MB
+[resonance] Dario field active (PROPHECY 12, DESTINY 0.35, VELOCITY WALK)
+[resonance] prompt: "Q: What is the RRPRAM mechanism inside Janus attention?\nA:" → 19 tokens
+[resonance] prefill 19 tokens... done
+--- generation ---
+[LILITH] all pipes closed
+ The essence of this question lies in the fact that, without a resolution or update to its algorithm, no one will ever be able to "understand" what's going on. But if you look at it like a cat — which I'm pretty sure -- and say nothing is happening outside the borders of your code (which means everything should already exist), then Janus 2.0 isn't just an attention mechanism, it's another form of resonance cloaking in detail what might be before
+[resonance] 100 tokens, 7.3 tok/s (13.78s)
+[resonance] field state saved → weights/resonance_200m/resonance.soma

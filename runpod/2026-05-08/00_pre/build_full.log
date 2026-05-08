@@ -1,0 +1,69 @@
+cc -Wall -Wextra -Wno-unused-parameter dario.c sartre_kernel.c -DHAS_SARTRE -DHAS_DARIO -O2 -lm -o dario
+dario.c: In function 'dario_web':
+dario.c:2149:13: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2149 |             write(client, kh, strlen(kh));
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2150:13: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2150 |             write(client, kj, kjlen);
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2154:13: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2154 |             write(client, r, strlen(r));
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2157:13: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2157 |             write(client, r, strlen(r));
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+dario.c: In function 'handle_options':
+dario.c:2100:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2100 |     write(fd, r, strlen(r));
+      |     ^~~~~~~~~~~~~~~~~~~~~~~
+dario.c: In function 'serve_file':
+dario.c:1999:9: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 1999 |         write(fd, r, strlen(r));
+      |         ^~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2006:5: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2006 |     fread(buf, 1, sz, f);
+      |     ^~~~~~~~~~~~~~~~~~~~
+dario.c:2016:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2016 |     write(fd, header, strlen(header));
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2017:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2017 |     write(fd, buf, sz);
+      |     ^~~~~~~~~~~~~~~~~~
+dario.c: In function 'handle_chat':
+dario.c:2028:9: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2028 |         write(fd, r, strlen(r));
+      |         ^~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2089:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2089 |     write(fd, header, strlen(header));
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2090:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2090 |     write(fd, json, jlen);
+      |     ^~~~~~~~~~~~~~~~~~~~~
+sartre_kernel.c: In function 'detect_total_ram_mb':
+sartre_kernel.c:309:39: warning: format '%lld' expects argument of type 'long long int *', but argument 3 has type 'int64_t *' {aka 'long int *'} [-Wformat=]
+  309 |                 sscanf(line + 9, " %lld", &total_kb);
+      |                                    ~~~^   ~~~~~~~~~
+      |                                       |   |
+      |                                       |   int64_t * {aka long int *}
+      |                                       long long int *
+      |                                    %ld
+sartre_kernel.c: In function 'detect_gguf_params':
+sartre_kernel.c:397:5: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+  397 |     fread(&version, 4, 1, f);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~
+sartre_kernel.c:401:9: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+  401 |         fread(&tensor_count, 8, 1, f);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+sartre_kernel.c:402:9: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+  402 |         fread(&kv_count, 8, 1, f);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~
+sartre_kernel.c:405:9: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+  405 |         fread(&tc32, 4, 1, f);
+      |         ^~~~~~~~~~~~~~~~~~~~~
+sartre_kernel.c:406:9: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+  406 |         fread(&kv32, 4, 1, f);
+      |         ^~~~~~~~~~~~~~~~~~~~~
+
+real	0m0.727s
+user	0m0.624s
+sys	0m0.103s

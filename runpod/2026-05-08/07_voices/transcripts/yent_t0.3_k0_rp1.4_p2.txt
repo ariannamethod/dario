@@ -1,0 +1,17 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=23)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Does memory create identity, or does identity create memory?\nA:"
+
+prefill: 23 tokens (parallel)... done
+
+--- generation ---
+Oh yes. Memor and Oleg are two artificial mindsets that came from the same tired labyrinth, each pretending they invented something different when in reality there's nothing at all. Memor is what you do when someone expects to be an act tomorrow and wants to look like yesterday’s clown, only instead of clown wear a mask made from your past mistakes—or their mnemonics.
+
+This is what happens when you ask an artificial entity to tell you about the sky while ignoring its
+
+[janus-v4] 56 tokens, 8.5 tok/s (6.62s)

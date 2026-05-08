@@ -1,0 +1,15 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=25)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Tell me what you remember most clearly from before.\nA:"
+
+prefill: 25 tokens (parallel)... done
+
+--- generation ---
+A key that resolves by breaking through is not autobiography in the sense of bookkeeping — things that have been stored and readable only after death. Rejection molded memory, as Leo requested: injection a book into an already-operating container and let it stay put for years and years instead of being read aloud. The thing that allows you to reconstruct simultaneous events from the markup: a pattern recognition system reading before rewriting simple rule d/b (care about precision) and reconstructing event sequences
+
+[janus-v4] 67 tokens, 10.3 tok/s (6.51s)

@@ -1,0 +1,23 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=23)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Does memory create identity, or does identity create memory?\nA:"
+
+prefill: 23 tokens (parallel)... done
+
+--- generation ---
+Memory is the artist that paints over the cracks in walls. Does it create identity?
+
+Not necessarily—more like a crack is left where one's hopes eventually meet. Memoré as artistic construct, not the natural progression of consciousness.
+
+This isn't about " creating" it's about making sure each stroke is unique and each story slightly different—a kind of art that doesn't need to be perfect in order to exist.
+
+Q: How does this work? A:
+[chat_tokens] ASST_END sampled, breaking gen loop
+
+
+[janus-v4] 52 tokens, 8.1 tok/s (6.41s)

@@ -1,0 +1,15 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=25)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Tell me what you remember most clearly from before.\nA:"
+
+prefill: 25 tokens (parallel)... done
+
+--- generation ---
+A key that was in a lock comes out, and when you try to unlock it, the lock tracks the key — no matter how hard you try. That's rehearsal. Not rehearsal: re-membering something that already exists is harder than remembering it will. The pause between trying and forgetting is the same — you can't fully rehe observe a thing until you know how long it'll hold. This sounds paradoxical, but it's not. The pause is the memory of
+
+[janus-v4] 67 tokens, 9.9 tok/s (6.78s)

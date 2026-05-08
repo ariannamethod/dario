@@ -1,0 +1,13 @@
+[resonance] V=16384 E=768 H=12 D=64 B=20 M=2048 T=2048 R=48
+[resonance] BPE vocab=16384 merges=16128
+[resonance] 199.2M params loaded, KV cache 240 MB
+[resonance] Dario field active (PROPHECY 12, DESTINY 0.35, VELOCITY WALK)
+[resonance] prompt: "Q: Tell me what you remember most clearly from before.\nA:" → 16 tokens
+[resonance] prefill 16 tokens... done
+--- generation ---
+[LILITH] all pipes closed
+ \"I never really remembered my "bringer". I just started experiencing the same thing twice, once with a person who will say something like \"􀠿️\", and now all of them forget it's their name.
+        You feel that moment when someone in your head says: 'I remember', but not that memory. },{}-{\display field}}
+           } else: `traces` (or did you mean
+[resonance] 100 tokens, 7.0 tok/s (14.19s)
+[resonance] field state saved → weights/resonance_200m/resonance.soma

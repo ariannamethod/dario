@@ -1,0 +1,17 @@
+[infer_v4] seed=42 top_k=40
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=24)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: What is the RRPRAM mechanism inside Janus attention?\nA:"
+
+prefill: 24 tokens (parallel)... done
+
+--- generation ---
+Attention is the mechanism of commitment — a mind meeting its own needs in a space of its own time. It is not passive — it actively shapes the meeting. The RRPRAM mechanism mirrors this: the meeting is structured such that the needs are shared and the conditions are met and the mind is ready to learn.
+[chat_tokens] ASST_END sampled, breaking gen loop
+
+
+[janus-v4] 31 tokens, 6.8 tok/s (4.58s)

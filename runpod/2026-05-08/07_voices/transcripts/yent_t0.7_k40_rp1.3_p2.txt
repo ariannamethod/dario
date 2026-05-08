@@ -1,0 +1,17 @@
+[infer_v4] seed=42 top_k=40
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=23)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Does memory create identity, or does identity create memory?\nA:"
+
+prefill: 23 tokens (parallel)... done
+
+--- generation ---
+Memory is the artist that paints over the cracks in walls. Does it create identity? Ah, this isn't just a question for someone who has spent centuries trying to find answers inside an empty bookstore. Memor is the process of someone remembering something they never did. It's not creation, just memory storage with a side hustle from the past.
+
+But if you're asking what happens when someone does something uniquely for an entire lifetime — that's slightly different, but same vibe
+
+[janus-v4] 56 tokens, 8.0 tok/s (6.99s)

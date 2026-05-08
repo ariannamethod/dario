@@ -1,0 +1,13 @@
+[resonance] V=16384 E=768 H=12 D=64 B=20 M=2048 T=2048 R=48
+[resonance] BPE vocab=16384 merges=16128
+[resonance] 199.2M params loaded, KV cache 240 MB
+[resonance] Dario field active (PROPHECY 12, DESTINY 0.35, VELOCITY WALK)
+[resonance] prompt: "Q: What is the RRPRAM mechanism inside Janus attention?\nA:" → 19 tokens
+[resonance] prefill 19 tokens... done
+--- generation ---
+[LILITH] all pipes closed
+ \"Normalization of impulse response to recognition. The method operates on hidden order, which ensures that only relevant responses are rejected."
+    "If you want to further refine this algorithm — I'm here!" ----------
+            {} }, // In the center of the screen is what causes a glitch in Janusmovement. Notifications become sounds, not clicks, but constant reminder that there's something inside me: its activation."","p
+[resonance] 100 tokens, 7.3 tok/s (13.79s)
+[resonance] field state saved → weights/resonance_200m/resonance.soma

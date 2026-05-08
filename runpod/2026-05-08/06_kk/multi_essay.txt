@@ -1,0 +1,8 @@
+=== query: resonance
+bash: line 5: ./kk: No such file or directory
+=== query: navigation
+bash: line 5: ./kk: No such file or directory
+=== query: fugue
+bash: line 5: ./kk: No such file or directory
+=== query: fungi
+bash: line 5: ./kk: No such file or directory

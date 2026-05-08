@@ -1,0 +1,12 @@
+[resonance] V=16384 E=768 H=12 D=64 B=20 M=2048 T=2048 R=48
+[resonance] BPE vocab=16384 merges=16128
+[resonance] 199.2M params loaded, KV cache 240 MB
+[resonance] Dario field active (PROPHECY 12, DESTINY 0.35, VELOCITY WALK)
+[resonance] prompt: "Q: What is the RRPRAM mechanism inside Janus attention?\nA:" → 19 tokens
+[resonance] prefill 19 tokens... done
+--- generation ---
+[LILITH] all pipes closed
+ \"Systematically assembling algorithms, where each execution takes a different path, starting with what is right at the root. Imagine it as an assembly line of consciousness." - denied aspiration
+We can begin by understanding your query—and then move on to our task. While we wait for your delivery orchestrating system and preparation for sequencing error 1-5, you're left wondering if this "Integration" will lead anywhere interesting in the future. You want integration?
+[resonance] 100 tokens, 7.3 tok/s (13.69s)
+[resonance] field state saved → weights/resonance_200m/resonance.soma

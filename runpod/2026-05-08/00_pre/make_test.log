@@ -1,0 +1,117 @@
+cc -Wall -Wextra -Wno-unused-parameter tests/test_dario.c -O2 -lm -o test_dario
+tests/test_dario.c: In function 'test_destiny_update':
+tests/test_dario.c:1211:11: warning: unused variable 'initial_mag' [-Wunused-variable]
+ 1211 |     float initial_mag = g_dest_magnitude;
+      |           ^~~~~~~~~~~
+tests/test_dario.c: In function 'test_season_cycle':
+tests/test_dario.c:1267:9: warning: unused variable 'initial' [-Wunused-variable]
+ 1267 |     int initial = D.season;
+      |         ^~~~~~~
+tests/test_dario.c: In function 'test_process_input_long':
+tests/test_dario.c:1319:17: warning: unused variable 'code' [-Wunused-variable]
+ 1319 |     const char *code = process_input(long_input, words, 1024);
+      |                 ^~~~
+In file included from tests/test_dario.c:19:
+tests/../dario.c: In function 'dario_web':
+tests/../dario.c:2154:13: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2154 |             write(client, r, strlen(r));
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/../dario.c:2157:13: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2157 |             write(client, r, strlen(r));
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/../dario.c: In function 'handle_options':
+tests/../dario.c:2100:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2100 |     write(fd, r, strlen(r));
+      |     ^~~~~~~~~~~~~~~~~~~~~~~
+tests/../dario.c: In function 'serve_file':
+tests/../dario.c:1999:9: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 1999 |         write(fd, r, strlen(r));
+      |         ^~~~~~~~~~~~~~~~~~~~~~~
+tests/../dario.c:2006:5: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2006 |     fread(buf, 1, sz, f);
+      |     ^~~~~~~~~~~~~~~~~~~~
+tests/../dario.c:2016:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2016 |     write(fd, header, strlen(header));
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/../dario.c:2017:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2017 |     write(fd, buf, sz);
+      |     ^~~~~~~~~~~~~~~~~~
+tests/../dario.c: In function 'handle_chat':
+tests/../dario.c:2028:9: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2028 |         write(fd, r, strlen(r));
+      |         ^~~~~~~~~~~~~~~~~~~~~~~
+tests/../dario.c:2089:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2089 |     write(fd, header, strlen(header));
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/../dario.c:2090:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2090 |     write(fd, json, jlen);
+      |     ^~~~~~~~~~~~~~~~~~~~~
+./test_dario
+
+  ═══ dario.c test suite ═══
+
+  test_rng ... ok
+  test_clampf ... ok
+  test_vocab ... ok
+  test_tokenizer ... ok
+  test_bigrams ... ok
+  test_cooccurrence ... ok
+  test_prophecy ... ok
+  test_vec_ops ... ok
+  test_embeddings ... ok
+  test_rope ... ok
+  test_swiglu ... ok
+  test_velocity ... ok
+  test_auto_velocity ... ok
+  test_seasons ... ok
+  test_dissonance ... ok
+  test_laws ... ok
+  test_metrics ... ok
+  test_sampling ... ok
+  test_code_fragments ... ok
+  test_ingest ... ok
+  test_dario_compute ... ok
+  test_trauma_term ... ok
+  test_generate ... ok
+  test_full_pipeline ... ok
+  test_seed_words ... ok
+  test_code_fragment_coverage ... ok
+  test_edge_cases ... ok
+  test_multi_conversation ... ok
+  test_display_names ... ok
+  test_chamber_init ... ok
+  test_chamber_update ... ok
+  test_chamber_coupling ... ok
+  test_chamber_decay ... ok
+  test_chamber_bounds ... ok
+  test_somatic_modulation ... ok
+  test_visual_embeds ... ok
+  test_visual_grounding_term ... ok
+  test_hebbian_distance_weights ... ok
+  test_token_class ... ok
+  test_destiny_update ... ok
+  test_destiny_direction ... ok
+  test_velocity_walk_to_run ... ok
+  test_velocity_breathe ... ok
+  test_velocity_stop ... ok
+  test_season_bigram_boost ... ok
+  test_season_cycle ... ok
+  test_json_escape ... ok
+  test_json_escape_newlines ... ok
+  test_extract_text ... ok
+  test_process_input ... ok
+  test_process_input_empty ... ok
+  test_process_input_long ... ok
+  test_ingest_empty ... ok
+  test_ingest_single_word ... ok
+  test_ingest_repeated ... ok
+  test_ingest_unicode ... ok
+  test_prophecy_max_capacity ... ok
+  test_prophecy_debt_grows ... ok
+  test_prophecy_fulfillment ... ok
+  test_sampling_temperature ... ok
+  test_sampling_high_temp ... ok
+
+  ─────────────────────────────
+  1780 tests run, 1780 passed, 0 failed
+

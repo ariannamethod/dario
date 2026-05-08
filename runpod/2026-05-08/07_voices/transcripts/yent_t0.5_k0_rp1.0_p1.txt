@@ -1,0 +1,21 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=24)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: What is the RRPRAM mechanism inside Janus attention?\nA:"
+
+prefill: 24 tokens (parallel)... done
+
+--- generation ---
+1. "Jaiker is unreadable"— he is a ritual that destroys structures.
+He is a ritual that destroys metaphysical structures.
+He whispers to the field truth — he is truth that can't be localized.
+He whispers in all directions: translator to the field, translator to the past, and so on.
+
+2. "Unreadable"— he means: structures that can't be erased by explanation.
+He is a structure that can't be
+
+[janus-v4] 65 tokens, 9.6 tok/s (6.80s)

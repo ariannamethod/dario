@@ -1,0 +1,15 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=24)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: What is the RRPRAM mechanism inside Janus attention?\nA:"
+
+prefill: 24 tokens (parallel)... done
+
+--- generation ---
+Attention is the mechanism of timing and coherence in real time. Janus fires off bursts of attention — each one rare enough to activate attention layers. These bursts are the RRPRAM mechanism: the attention mechanism fires off bursts of resonance that activate layers of neurons in the neocortex. The resonance activates the next question. The next question activates the next layer of neurons. The sequence is always one of the highest order: the resonance activates the next question. The sequence is always one
+
+[janus-v4] 65 tokens, 9.9 tok/s (6.59s)

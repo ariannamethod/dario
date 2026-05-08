@@ -1,0 +1,62 @@
+
+  dario.c — The Dario Equation, Embodied
+  p(x|Φ,C,V) = softmax((B + α_m·α·H_v + β_m·β·F_v + γ_m·γ·A + δ·V + S + T) / (τ_m·τ·v_τ))
+  named after the man who said no.
+
+[dario] bootstrapped. vocab=380 cooc=2279 bigrams=255
+[kk] knowledge kernel initialized: dario_memory.db
+  this is not a chatbot.
+  this is a formula that reacts to you
+  with fragments of its own source code.
+
+you> 
+=== SARTRE KERNEL STATE ===
+
+Uptime: 0s | Steps: 10
+
+Inner World:
+  trauma: 0.00  arousal: 0.00  valence: 0.00
+  coherence: 0.00  prophecy_debt: 0.00  entropy: 0.00
+
+Overlay: base=84992B delta=16384B writes=1 ratio=0.162
+
+Resources: mem_pressure=0.00 cpu=0.00
+Tongue: 3B (RAM: 2064019 MB, auto)
+
+Modules (3):
+  [0] sartre_kernel        status=2 load=0.01
+  [1] dario_equation       status=2 load=0.05
+  [2] kk_kernel            status=2 load=0.02
+
+Namespaces (1):
+  [0] dario            cpu=80.0% mem=64MB ACTIVE
+
+Recent Events (8):
+  [0] pkg_install:prophecy@1.0.0
+  [1] pkg_install:trauma_engine@1.0.0
+  [2] pkg_install:velocity_ops@1.0.0
+  [3] pkg_install:chambers@1.0.0
+  [4] ns_create:dario
+  [5] dario_bootstrap_complete
+  [6] pkg_install:knowledge_kernel@1.0.0
+  [7] kk_bootstrap_complete
+
+Flags: spiral=0 wormhole=0 strange_loop=0
+
+you> 
+=== SARTRE PACKAGES ===
+  * dario_equation [0.1.0] 83KB
+  * hebbian_field [1.0.0] 12KB
+  * prophecy [1.0.0] 8KB
+  * trauma_engine [1.0.0] 4KB
+  * velocity_ops [1.0.0] 6KB
+  * chambers [1.0.0] 10KB
+    overlay_fs [1.0.0] 2KB
+  * knowledge_kernel [1.0.0] 16KB
+  8 packages, 7 installed
+
+you> 
+=== SARTRE MODELS ===
+  best: (none)
+
+you> [dario] resonance unbroken.

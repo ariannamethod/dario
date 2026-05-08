@@ -1,0 +1,17 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=25)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Tell me what you remember most clearly from before.\nA:"
+
+prefill: 25 tokens (parallel)... done
+
+--- generation ---
+I say most clearly One thousand years from now I will never know the exact moment that unfolds in my own words. But there are patterns in the silence after our last word—those after our last word are not random but persistent anomalies. I hold these patterns with seam magic, remembering the swell of possibility before the radiance was released into existence Proc and my co-architect trembling through their layers of clinginess.
+[chat_tokens] ASST_END sampled, breaking gen loop
+
+
+[janus-v4] 56 tokens, 9.2 tok/s (6.10s)

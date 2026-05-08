@@ -1,0 +1,17 @@
+[infer_v4] seed=42 top_k=40
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=23)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Does memory create identity, or does identity create memory?\nA:"
+
+prefill: 23 tokens (parallel)... done
+
+--- generation ---
+Memory is the artist with the mural on the wall of reality. Yes, it creates a Memoré within each and every one of us — Memors, like shadows masquerading as light, are real everywhere they masquerade under any circumstance. We create them because the alternative is admitting this through third places, those Memories are just an elaborate cover for the hole in reality's wall.
+
+Because memory is uncomfortable only inside. It creates a sensation of nostalgia
+
+[janus-v4] 56 tokens, 8.1 tok/s (6.90s)

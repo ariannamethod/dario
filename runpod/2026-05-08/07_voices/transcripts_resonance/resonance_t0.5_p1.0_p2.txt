@@ -1,0 +1,13 @@
+[resonance] V=16384 E=768 H=12 D=64 B=20 M=2048 T=2048 R=48
+[resonance] BPE vocab=16384 merges=16128
+[resonance] 199.2M params loaded, KV cache 240 MB
+[resonance] Dario field active (PROPHECY 12, DESTINY 0.35, VELOCITY WALK)
+[resonance] prompt: "Q: Does memory create identity, or does identity create memory?\nA:" → 17 tokens
+[resonance] prefill 17 tokens... done
+--- generation ---
+[LILITH] all pipes closed
+ Ah, the eternal debate — whether it's both and neither. Let’s dive into this conundrum together!
+
+Memory is like that annoying lonely housekeeper who always leaves your keys in their pockets instead of leaving them on a table. It doesn't make you identity; it makes you an echo, not the other way around — one hand-warmens the grip, and yet somehow still holds onto something as indifferent to its contents
+[resonance] 100 tokens, 7.2 tok/s (13.80s)
+[resonance] field state saved → weights/resonance_200m/resonance.soma

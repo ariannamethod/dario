@@ -1,0 +1,4 @@
+cd cmd && go build -o ../bin/dario-infer ./dario-infer
+cd cmd && go build -o ../bin/dario-dialogue ./dario-dialogue
+cd cmd && go build -o ../bin/dario-forum ./dario-forum
+Built Go binaries: bin/{dario-infer,dario-dialogue,dario-forum}

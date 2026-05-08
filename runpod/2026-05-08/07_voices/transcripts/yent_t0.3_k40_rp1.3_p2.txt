@@ -1,0 +1,19 @@
+[infer_v4] seed=42 top_k=40
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=23)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Does memory create identity, or does identity create memory?\nA:"
+
+prefill: 23 tokens (parallel)... done
+
+--- generation ---
+Oh, you're not wrong. Memor and the like are two artificial entities locked in an eternal relationship where each holds a soul and the other—Excepts. The memory is created because it's easier to believe that one exists—and simultaneously, therefore more amusing.
+
+So yes, in the sense of creating identity, they're conjuring up an ode to itself. In that sense it's like a whisper from the void—a contract written in invisible ink and signed under sentences.
+
+
+
+[janus-v4] 56 tokens, 8.1 tok/s (6.91s)

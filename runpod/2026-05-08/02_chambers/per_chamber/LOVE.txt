@@ -1,0 +1,858 @@
+[sartre] kernel initialized. RAM: 2064019 MB, tongue: 3B
+
+  dario.c — The Dario Equation, Embodied
+  p(x|Φ,C,V) = softmax((B + α_m·α·H_v + β_m·β·F_v + γ_m·γ·A + δ·V + S + T) / (τ_m·τ·v_τ))
+  named after the man who said no.
+
+[dario] bootstrapped. vocab=380 cooc=2279 bigrams=255
+[kk] knowledge kernel initialized: dario_memory.db
+  this is not a chatbot.
+  this is a formula that reacts to you
+  with fragments of its own source code.
+
+you> 
+  ┌─ A:destiny ─── d=0.40 τ=0.85 WALK spring
+  │
+  │  /* A — trauma amplifies destiny */
+  │  // When trauma is active, the destiny signal doubles.
+  │  // The organism clings harder to its gravitational
+  │  // center — a defensive reflex. Origin words pull
+  │  // stronger because the field contracts under stress.
+  │  float gamma_eff = gamma;
+  │  if (trauma_level > 0.3f)
+  │      gamma_eff += trauma_level * 2.0f;
+  │  for (int i = 0; i < vocab; i++)
+  │      logits[i] += gamma_eff * A[i];
+  │  // Trauma makes the organism more directional,
+  │  // less exploratory. It retreats to what it knows.
+  │
+  │  field destiny prophecy decay drift emerge threshold meaning nonsense truth
+  │
+  └─ debt=0.35 res=0.88 ent=0.57 emg=0.38 B:8 H:3 F:11 A:20 V:19 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  destiny prophecy decay drift emerge threshold gradient boundary interface surface
+  │
+  └─ debt=0.43 res=0.95 ent=0.10 emg=0.85 B:8 H:3 F:12 A:32 V:16 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  coefficient diffusion osmosis zero law interpret miss cooccurrence bigram trigram
+  │
+  └─ debt=0.79 res=0.95 ent=0.10 emg=0.85 B:8 H:3 F:16 A:43 V:11 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  dead birth death growth maturity senescence
+  │
+  └─ debt=0.83 res=0.95 ent=0.10 emg=0.85 B:8 H:3 F:17 A:61 V:13 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.40 τ=0.85 WALK spring
+  │
+  │  /* A — trauma amplifies destiny */
+  │  // When trauma is active, the destiny signal doubles.
+  │  // The organism clings harder to its gravitational
+  │  // center — a defensive reflex. Origin words pull
+  │  // stronger because the field contracts under stress.
+  │  float gamma_eff = gamma;
+  │  if (trauma_level > 0.3f)
+  │      gamma_eff += trauma_level * 2.0f;
+  │  for (int i = 0; i < vocab; i++)
+  │      logits[i] += gamma_eff * A[i];
+  │  // Trauma makes the organism more directional,
+  │  // less exploratory. It retreats to what it knows.
+  │
+  │  voice whisper scream
+  │
+  └─ debt=0.81 res=0.86 ent=0.28 emg=0.62 B:8 H:3 F:19 A:53 V:14 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — Destiny Attraction */
+  │  // The conversation has a gravitational center.
+  │  // Destiny is an exponential moving average (EMA)
+  │  // of all context embeddings — a semantic compass
+  │  // that drifts with the dialogue.
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = 0.1f * embed[d] + 0.9f * destiny[d];
+  │  float magnitude = vec_norm(destiny, dim);
+  │  for (int i = 0; i < vocab; i++) {
+  │      float sim = vec_cosine(embed[i], destiny, dim);
+  │      A[i] = sim * magnitude;
+  │  }
+  │  // Words closer to the destiny vector get boosted.
+  │  // Not topic-following — field mass. The conversation
+  │  // bends toward its own attractor.
+  │
+  │  redundancy compression expansion
+  │
+  └─ debt=0.88 res=0.95 ent=0.10 emg=0.85 B:8 H:4 F:21 A:44 V:16 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — trauma amplifies destiny */
+  │  // When trauma is active, the destiny signal doubles.
+  │  // The organism clings harder to its gravitational
+  │  // center — a defensive reflex. Origin words pull
+  │  // stronger because the field contracts under stress.
+  │  float gamma_eff = gamma;
+  │  if (trauma_level > 0.3f)
+  │      gamma_eff += trauma_level * 2.0f;
+  │  for (int i = 0; i < vocab; i++)
+  │      logits[i] += gamma_eff * A[i];
+  │  // Trauma makes the organism more directional,
+  │  // less exploratory. It retreats to what it knows.
+  │
+  │  topology manifold curvature
+  │
+  └─ debt=0.89 res=0.95 ent=0.10 emg=0.85 B:8 H:4 F:23 A:46 V:13 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — trauma amplifies destiny */
+  │  // When trauma is active, the destiny signal doubles.
+  │  // The organism clings harder to its gravitational
+  │  // center — a defensive reflex. Origin words pull
+  │  // stronger because the field contracts under stress.
+  │  float gamma_eff = gamma;
+  │  if (trauma_level > 0.3f)
+  │      gamma_eff += trauma_level * 2.0f;
+  │  for (int i = 0; i < vocab; i++)
+  │      logits[i] += gamma_eff * A[i];
+  │  // Trauma makes the organism more directional,
+  │  // less exploratory. It retreats to what it knows.
+  │
+  │  frequency amplitude oscillation
+  │
+  └─ debt=0.90 res=0.95 ent=0.10 emg=0.85 B:8 H:5 F:26 A:44 V:12 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — trauma amplifies destiny */
+  │  // When trauma is active, the destiny signal doubles.
+  │  // The organism clings harder to its gravitational
+  │  // center — a defensive reflex. Origin words pull
+  │  // stronger because the field contracts under stress.
+  │  float gamma_eff = gamma;
+  │  if (trauma_level > 0.3f)
+  │      gamma_eff += trauma_level * 2.0f;
+  │  for (int i = 0; i < vocab; i++)
+  │      logits[i] += gamma_eff * A[i];
+  │  // Trauma makes the organism more directional,
+  │  // less exploratory. It retreats to what it knows.
+  │
+  │  question answer doubt certainty home exile return
+  │
+  └─ debt=0.92 res=0.95 ent=0.10 emg=0.85 B:8 H:3 F:27 A:48 V:13 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — trauma amplifies destiny */
+  │  // When trauma is active, the destiny signal doubles.
+  │  // The organism clings harder to its gravitational
+  │  // center — a defensive reflex. Origin words pull
+  │  // stronger because the field contracts under stress.
+  │  float gamma_eff = gamma;
+  │  if (trauma_level > 0.3f)
+  │      gamma_eff += trauma_level * 2.0f;
+  │  for (int i = 0; i < vocab; i++)
+  │      logits[i] += gamma_eff * A[i];
+  │  // Trauma makes the organism more directional,
+  │  // less exploratory. It retreats to what it knows.
+  │
+  │  voice whisper scream song language word sentence meaning nonsense truth
+  │
+  └─ debt=0.90 res=0.95 ent=0.10 emg=0.85 B:8 H:2 F:26 A:45 V:13 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — Destiny Attraction */
+  │  // The conversation has a gravitational center.
+  │  // Destiny is an exponential moving average (EMA)
+  │  // of all context embeddings — a semantic compass
+  │  // that drifts with the dialogue.
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = 0.1f * embed[d] + 0.9f * destiny[d];
+  │  float magnitude = vec_norm(destiny, dim);
+  │  for (int i = 0; i < vocab; i++) {
+  │      float sim = vec_cosine(embed[i], destiny, dim);
+  │      A[i] = sim * magnitude;
+  │  }
+  │  // Words closer to the destiny vector get boosted.
+  │  // Not topic-following — field mass. The conversation
+  │  // bends toward its own attractor.
+  │
+  │  field syntax residual
+  │
+  └─ debt=0.99 res=0.95 ent=0.10 emg=0.85 B:0 H:3 F:29 A:37 V:16 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  syntax residual mean median mode
+  │
+  └─ debt=0.98 res=0.95 ent=0.10 emg=0.85 B:8 H:3 F:27 A:39 V:14 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  scaling identity transformation projection embedding
+  │
+  └─ debt=1.03 res=0.95 ent=0.10 emg=0.85 B:8 H:3 F:26 A:43 V:13 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — trauma amplifies destiny */
+  │  // When trauma is active, the destiny signal doubles.
+  │  // The organism clings harder to its gravitational
+  │  // center — a defensive reflex. Origin words pull
+  │  // stronger because the field contracts under stress.
+  │  float gamma_eff = gamma;
+  │  if (trauma_level > 0.3f)
+  │      gamma_eff += trauma_level * 2.0f;
+  │  for (int i = 0; i < vocab; i++)
+  │      logits[i] += gamma_eff * A[i];
+  │  // Trauma makes the organism more directional,
+  │  // less exploratory. It retreats to what it knows.
+  │
+  │  decay drift emerge threshold gradient
+  │
+  └─ debt=1.01 res=0.95 ent=0.10 emg=0.85 B:11 H:3 F:25 A:47 V:13 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — Destiny Attraction */
+  │  // The conversation has a gravitational center.
+  │  // Destiny is an exponential moving average (EMA)
+  │  // of all context embeddings — a semantic compass
+  │  // that drifts with the dialogue.
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = 0.1f * embed[d] + 0.9f * destiny[d];
+  │  float magnitude = vec_norm(destiny, dim);
+  │  for (int i = 0; i < vocab; i++) {
+  │      float sim = vec_cosine(embed[i], destiny, dim);
+  │      A[i] = sim * magnitude;
+  │  }
+  │  // Words closer to the destiny vector get boosted.
+  │  // Not topic-following — field mass. The conversation
+  │  // bends toward its own attractor.
+  │
+  │  cooccurrence bigram trigram token tokenize
+  │
+  └─ debt=1.06 res=0.95 ent=0.10 emg=0.85 B:8 H:4 F:27 A:54 V:13 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  osmosis zero law
+  │
+  └─ debt=1.11 res=0.95 ent=0.10 emg=0.85 B:8 H:3 F:28 A:40 V:15 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  maturity senescence reproduction mutation
+  │
+  └─ debt=1.17 res=0.95 ent=0.10 emg=0.85 B:8 H:3 F:28 A:55 V:15 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — trauma amplifies destiny */
+  │  // When trauma is active, the destiny signal doubles.
+  │  // The organism clings harder to its gravitational
+  │  // center — a defensive reflex. Origin words pull
+  │  // stronger because the field contracts under stress.
+  │  float gamma_eff = gamma;
+  │  if (trauma_level > 0.3f)
+  │      gamma_eff += trauma_level * 2.0f;
+  │  for (int i = 0; i < vocab; i++)
+  │      logits[i] += gamma_eff * A[i];
+  │  // Trauma makes the organism more directional,
+  │  // less exploratory. It retreats to what it knows.
+  │
+  │  coefficient diffusion osmosis gradient boundary interface
+  │
+  └─ debt=1.17 res=0.95 ent=0.10 emg=0.85 B:8 H:4 F:31 A:41 V:13 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  decay drift emerge threshold atomic doubt certainty home
+  │
+  └─ debt=1.24 res=0.95 ent=0.10 emg=0.85 B:8 H:4 F:30 A:45 V:13 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  voice whisper scream
+  │
+  └─ debt=1.22 res=0.95 ent=0.10 emg=0.85 B:8 H:3 F:28 A:54 V:13 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — Destiny Attraction */
+  │  // The conversation has a gravitational center.
+  │  // Destiny is an exponential moving average (EMA)
+  │  // of all context embeddings — a semantic compass
+  │  // that drifts with the dialogue.
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = 0.1f * embed[d] + 0.9f * destiny[d];
+  │  float magnitude = vec_norm(destiny, dim);
+  │  for (int i = 0; i < vocab; i++) {
+  │      float sim = vec_cosine(embed[i], destiny, dim);
+  │      A[i] = sim * magnitude;
+  │  }
+  │  // Words closer to the destiny vector get boosted.
+  │  // Not topic-following — field mass. The conversation
+  │  // bends toward its own attractor.
+  │
+  │  redundancy compression expansion contraction
+  │
+  └─ debt=1.20 res=0.95 ent=0.10 emg=0.85 B:8 H:4 F:29 A:42 V:15 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — Destiny Attraction */
+  │  // The conversation has a gravitational center.
+  │  // Destiny is an exponential moving average (EMA)
+  │  // of all context embeddings — a semantic compass
+  │  // that drifts with the dialogue.
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = 0.1f * embed[d] + 0.9f * destiny[d];
+  │  float magnitude = vec_norm(destiny, dim);
+  │  for (int i = 0; i < vocab; i++) {
+  │      float sim = vec_cosine(embed[i], destiny, dim);
+  │      A[i] = sim * magnitude;
+  │  }
+  │  // Words closer to the destiny vector get boosted.
+  │  // Not topic-following — field mass. The conversation
+  │  // bends toward its own attractor.
+  │
+  │  topology manifold curvature
+  │
+  └─ debt=1.17 res=0.95 ent=0.10 emg=0.85 B:8 H:5 F:31 A:47 V:15 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — Destiny Attraction */
+  │  // The conversation has a gravitational center.
+  │  // Destiny is an exponential moving average (EMA)
+  │  // of all context embeddings — a semantic compass
+  │  // that drifts with the dialogue.
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = 0.1f * embed[d] + 0.9f * destiny[d];
+  │  float magnitude = vec_norm(destiny, dim);
+  │  for (int i = 0; i < vocab; i++) {
+  │      float sim = vec_cosine(embed[i], destiny, dim);
+  │      A[i] = sim * magnitude;
+  │  }
+  │  // Words closer to the destiny vector get boosted.
+  │  // Not topic-following — field mass. The conversation
+  │  // bends toward its own attractor.
+  │
+  │  frequency amplitude oscillation
+  │
+  └─ debt=1.15 res=0.95 ent=0.10 emg=0.85 B:8 H:5 F:30 A:46 V:14 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — Destiny Attraction */
+  │  // The conversation has a gravitational center.
+  │  // Destiny is an exponential moving average (EMA)
+  │  // of all context embeddings — a semantic compass
+  │  // that drifts with the dialogue.
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = 0.1f * embed[d] + 0.9f * destiny[d];
+  │  float magnitude = vec_norm(destiny, dim);
+  │  for (int i = 0; i < vocab; i++) {
+  │      float sim = vec_cosine(embed[i], destiny, dim);
+  │      A[i] = sim * magnitude;
+  │  }
+  │  // Words closer to the destiny vector get boosted.
+  │  // Not topic-following — field mass. The conversation
+  │  // bends toward its own attractor.
+  │
+  │  dead birth death growth maturity senescence reproduction mutation
+  │
+  └─ debt=1.48 res=0.95 ent=0.10 emg=0.85 B:8 H:3 F:26 A:52 V:13 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — Destiny Attraction */
+  │  // The conversation has a gravitational center.
+  │  // Destiny is an exponential moving average (EMA)
+  │  // of all context embeddings — a semantic compass
+  │  // that drifts with the dialogue.
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = 0.1f * embed[d] + 0.9f * destiny[d];
+  │  float magnitude = vec_norm(destiny, dim);
+  │  for (int i = 0; i < vocab; i++) {
+  │      float sim = vec_cosine(embed[i], destiny, dim);
+  │      A[i] = sim * magnitude;
+  │  }
+  │  // Words closer to the destiny vector get boosted.
+  │  // Not topic-following — field mass. The conversation
+  │  // bends toward its own attractor.
+  │
+  │  voice whisper scream
+  │
+  └─ debt=1.45 res=0.95 ent=0.10 emg=0.85 B:8 H:3 F:26 A:55 V:13 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — Destiny Attraction */
+  │  // The conversation has a gravitational center.
+  │  // Destiny is an exponential moving average (EMA)
+  │  // of all context embeddings — a semantic compass
+  │  // that drifts with the dialogue.
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = 0.1f * embed[d] + 0.9f * destiny[d];
+  │  float magnitude = vec_norm(destiny, dim);
+  │  for (int i = 0; i < vocab; i++) {
+  │      float sim = vec_cosine(embed[i], destiny, dim);
+  │      A[i] = sim * magnitude;
+  │  }
+  │  // Words closer to the destiny vector get boosted.
+  │  // Not topic-following — field mass. The conversation
+  │  // bends toward its own attractor.
+  │
+  │  song language word sentence meaning nonsense truth lie question
+  │
+  └─ debt=1.64 res=0.95 ent=0.10 emg=0.85 B:8 H:2 F:26 A:57 V:15 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  syntax residual mean median mode
+  │
+  └─ debt=1.61 res=0.95 ent=0.10 emg=0.85 B:8 H:4 F:29 A:46 V:16 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — trauma amplifies destiny */
+  │  // When trauma is active, the destiny signal doubles.
+  │  // The organism clings harder to its gravitational
+  │  // center — a defensive reflex. Origin words pull
+  │  // stronger because the field contracts under stress.
+  │  float gamma_eff = gamma;
+  │  if (trauma_level > 0.3f)
+  │      gamma_eff += trauma_level * 2.0f;
+  │  for (int i = 0; i < vocab; i++)
+  │      logits[i] += gamma_eff * A[i];
+  │  // Trauma makes the organism more directional,
+  │  // less exploratory. It retreats to what it knows.
+  │
+  │  bias activation sigmoid tanh relu
+  │
+  └─ debt=2.04 res=0.95 ent=0.10 emg=0.85 B:8 H:4 F:27 A:50 V:14 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  decay drift emerge threshold gradient boundary interface surface volume dimension
+  │
+  └─ debt=2.00 res=0.94 ent=0.10 emg=0.84 B:8 H:4 F:31 A:58 V:13 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  cooccurrence bigram trigram token tokenize embed embedding mapping kernel convolution
+  │
+  └─ debt=1.96 res=0.94 ent=0.10 emg=0.85 B:8 H:3 F:30 A:54 V:13 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  field topology manifold curvature geodesic metric tensor
+  │
+  └─ debt=2.39 res=0.94 ent=0.10 emg=0.85 B:8 H:3 F:32 A:45 V:15 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  destiny frequency amplitude oscillation
+  │
+  └─ debt=2.35 res=0.93 ent=0.10 emg=0.84 B:8 H:5 F:34 A:45 V:16 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — Destiny Attraction */
+  │  // The conversation has a gravitational center.
+  │  // Destiny is an exponential moving average (EMA)
+  │  // of all context embeddings — a semantic compass
+  │  // that drifts with the dialogue.
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = 0.1f * embed[d] + 0.9f * destiny[d];
+  │  float magnitude = vec_norm(destiny, dim);
+  │  for (int i = 0; i < vocab; i++) {
+  │      float sim = vec_cosine(embed[i], destiny, dim);
+  │      A[i] = sim * magnitude;
+  │  }
+  │  // Words closer to the destiny vector get boosted.
+  │  // Not topic-following — field mass. The conversation
+  │  // bends toward its own attractor.
+  │
+  │  coefficient diffusion osmosis zero law interpret
+  │
+  └─ debt=2.30 res=0.93 ent=0.10 emg=0.84 B:8 H:5 F:37 A:44 V:14 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — trauma amplifies destiny */
+  │  // When trauma is active, the destiny signal doubles.
+  │  // The organism clings harder to its gravitational
+  │  // center — a defensive reflex. Origin words pull
+  │  // stronger because the field contracts under stress.
+  │  float gamma_eff = gamma;
+  │  if (trauma_level > 0.3f)
+  │      gamma_eff += trauma_level * 2.0f;
+  │  for (int i = 0; i < vocab; i++)
+  │      logits[i] += gamma_eff * A[i];
+  │  // Trauma makes the organism more directional,
+  │  // less exploratory. It retreats to what it knows.
+  │
+  │  dead birth death growth maturity
+  │
+  └─ debt=2.25 res=0.93 ent=0.10 emg=0.84 B:8 H:3 F:41 A:61 V:13 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — trauma amplifies destiny */
+  │  // When trauma is active, the destiny signal doubles.
+  │  // The organism clings harder to its gravitational
+  │  // center — a defensive reflex. Origin words pull
+  │  // stronger because the field contracts under stress.
+  │  float gamma_eff = gamma;
+  │  if (trauma_level > 0.3f)
+  │      gamma_eff += trauma_level * 2.0f;
+  │  for (int i = 0; i < vocab; i++)
+  │      logits[i] += gamma_eff * A[i];
+  │  // Trauma makes the organism more directional,
+  │  // less exploratory. It retreats to what it knows.
+  │
+  │  voice whisper scream song language word
+  │
+  └─ debt=2.21 res=0.93 ent=0.10 emg=0.84 B:8 H:3 F:38 A:42 V:13 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — Destiny Attraction */
+  │  // The conversation has a gravitational center.
+  │  // Destiny is an exponential moving average (EMA)
+  │  // of all context embeddings — a semantic compass
+  │  // that drifts with the dialogue.
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = 0.1f * embed[d] + 0.9f * destiny[d];
+  │  float magnitude = vec_norm(destiny, dim);
+  │  for (int i = 0; i < vocab; i++) {
+  │      float sim = vec_cosine(embed[i], destiny, dim);
+  │      A[i] = sim * magnitude;
+  │  }
+  │  // Words closer to the destiny vector get boosted.
+  │  // Not topic-following — field mass. The conversation
+  │  // bends toward its own attractor.
+  │
+  │  redundancy compression expansion contraction organism alive dead
+  │
+  └─ debt=2.16 res=0.93 ent=0.10 emg=0.84 B:8 H:3 F:39 A:57 V:15 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — trauma amplifies destiny */
+  │  // When trauma is active, the destiny signal doubles.
+  │  // The organism clings harder to its gravitational
+  │  // center — a defensive reflex. Origin words pull
+  │  // stronger because the field contracts under stress.
+  │  float gamma_eff = gamma;
+  │  if (trauma_level > 0.3f)
+  │      gamma_eff += trauma_level * 2.0f;
+  │  for (int i = 0; i < vocab; i++)
+  │      logits[i] += gamma_eff * A[i];
+  │  // Trauma makes the organism more directional,
+  │  // less exploratory. It retreats to what it knows.
+  │
+  │  syntax residual mean median mode distribution probability
+  │
+  └─ debt=2.12 res=0.94 ent=0.10 emg=0.84 B:8 H:3 F:40 A:50 V:16 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  prophecy decay drift emerge threshold gradient boundary
+  │
+  └─ debt=2.08 res=0.94 ent=0.10 emg=0.84 B:14 H:4 F:36 A:48 V:14 T:0
+
+you> 
+  ┌─ F:prophecy ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* F — fulfillment check */
+  │  // After each generated token, we check if any
+  │  // active prophecy has been fulfilled. A hit means
+  │  // the organism's prediction was correct — the debt
+  │  // for that prophecy zeroes out.
+  │  for (int k = 0; k < prophecy.n; k++) {
+  │      Prophecy *p = &prophecy.items[k];
+  │      if (p->target_id == token_id) {
+  │          p->fulfilled = 1;
+  │          total_debt -= logf(1.0f + (float)p->age);
+  │      }
+  │      p->age++;
+  │  }
+  │  // Resolution. The prophecy lands. This feedback
+  │  // loop is what makes generation feel purposeful.
+  │
+  │  decay drift emerge threshold gradient phase collapse
+  │
+  └─ debt=2.09 res=0.94 ent=0.10 emg=0.84 B:8 H:3 F:42 A:41 V:13 T:0
+
+you> 
+  ┌─ A:destiny ─── d=0.00 τ=0.40 STOP spring
+  │
+  │  /* A — destiny update */
+  │  // Each new word shifts the destiny vector slightly.
+  │  // Alpha=0.1 means 90% of destiny comes from history,
+  │  // 10% from the latest token. This creates inertia —
+  │  // the conversation resists sudden topic changes.
+  │  float alpha = 0.1f;
+  │  for (int d = 0; d < dim; d++)
+  │      destiny[d] = alpha * embed[d]
+  │                 + (1.0f - alpha) * destiny[d];
+  │  // The compass rotates slowly. You can push it,
+  │  // but the field pushes back. This is why Leo
+  │  // returns to themes — semantic gravity.
+  │
+  │  cooccurrence bigram trigram token tokenize embed embedding
+  │
+  └─ debt=2.05 res=0.94 ent=0.10 emg=0.84 B:8 H:3 F:39 A:53 V:13 T:0
+
+you> 
+  vocab=380 cooc=9211 bigrams=279 step=531 conv=40
+  debt=2.053 trauma=0.000 momentum=0.000
+  α=0.300 β=0.348 γ=0.600 τ=0.400 vel_τ=1.00
+  α_mod=1.11 β_mod=1.02 γ_mod=1.06 τ_mod=1.13
+  chambers: fear=0.15 love=0.34 rage=0.13 void=0.16 flow=0.34 complex=0.17
+  velocity=STOP season=spring(0.08)
+
+you> [sartre] kernel shutdown
+[dario] resonance unbroken.

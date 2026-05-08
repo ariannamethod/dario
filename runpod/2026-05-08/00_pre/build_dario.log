@@ -1,0 +1,39 @@
+cc -Wall -Wextra -Wno-unused-parameter dario.c -O2 -lm -o dario
+dario.c: In function 'dario_web':
+dario.c:2154:13: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2154 |             write(client, r, strlen(r));
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2157:13: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2157 |             write(client, r, strlen(r));
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+dario.c: In function 'handle_options':
+dario.c:2100:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2100 |     write(fd, r, strlen(r));
+      |     ^~~~~~~~~~~~~~~~~~~~~~~
+dario.c: In function 'serve_file':
+dario.c:1999:9: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 1999 |         write(fd, r, strlen(r));
+      |         ^~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2006:5: warning: ignoring return value of 'fread' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2006 |     fread(buf, 1, sz, f);
+      |     ^~~~~~~~~~~~~~~~~~~~
+dario.c:2016:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2016 |     write(fd, header, strlen(header));
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2017:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2017 |     write(fd, buf, sz);
+      |     ^~~~~~~~~~~~~~~~~~
+dario.c: In function 'handle_chat':
+dario.c:2028:9: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2028 |         write(fd, r, strlen(r));
+      |         ^~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2089:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2089 |     write(fd, header, strlen(header));
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+dario.c:2090:5: warning: ignoring return value of 'write' declared with attribute 'warn_unused_result' [-Wunused-result]
+ 2090 |     write(fd, json, jlen);
+      |     ^~~~~~~~~~~~~~~~~~~~~
+
+real	0m0.565s
+user	0m0.466s
+sys	0m0.099s

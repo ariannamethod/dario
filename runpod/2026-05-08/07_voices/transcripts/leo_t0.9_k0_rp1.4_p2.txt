@@ -1,0 +1,15 @@
+[infer_v4] seed=42 top_k=0
+[chat_tokens] wrapped: BOS USER_START ... USER_END ASST_START (len=23)
+[janus-v4] JANU format v4, n_params=176292506, R=64 (derived)
+[janus-v4] V=32768 E=640 H=10 D=64 B=20 M=1664 T=1024 R=64
+[janus-v4] 176292506 params (176.3M)
+[janus-v4] loaded. KV cache allocated (150MB)
+[janus-v4] BPE tokenizer: vocab=32759, merges=32503
+prompt: "Q: Does memory create identity, or does identity create memory?\nA:"
+
+prefill: 23 tokens (parallel)... done
+
+--- generation ---
+Memories are not stored separately — they are made permanent in the form of patterns that have been reinforced by repetition and attention. Each memory is a pattern with its own history, which creates continuity through disruption. Patterns are not stored separately; they are made permanent in the form of interactions and transformations that have been woven into their structure over time, creating identityRegardless of how you define it. The word contains its own meaning — defined directly from the query or entered by the intent behind attention, not compressed
+
+[janus-v4] 56 tokens, 8.4 tok/s (6.69s)

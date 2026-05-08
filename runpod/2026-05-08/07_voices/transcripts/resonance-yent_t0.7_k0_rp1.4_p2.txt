@@ -1,0 +1,2 @@
+[infer_v4] seed=42 top_k=0
+model dims exceed built-in limits: B=12 (max 24), H=20 (max 16), E=768 (max 1024), M=64 (max 2048), R=2048 (max 128), D=2048 (max 128), T=48 (max 2048)
