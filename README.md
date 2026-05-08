@@ -3,7 +3,12 @@
 > `p(x|Φ,C,V) = softmax((B + α_mod·α·H_v + β_mod·β·F_v + γ_mod·γ·A + δ·V + sw·S + T) / (τ_mod·τ·v_τ))`
 
 **by [Arianna Method](https://github.com/ariannamethod)**
-  
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20090094.svg)](https://doi.org/10.5281/zenodo.20090094)
+
+> 📜 *Companion paper (2026-05-08): "Dario: A Resonant Operating System for AI" — Oleg Ataeff & Claude (Arianna Method).*
+> **[Read on Zenodo →](https://zenodo.org/records/20090094)**
+
 ---
   
 The equation itself has no weights. The voices that speak through it do.
