@@ -37,30 +37,37 @@ type Voice struct {
 //
 // This deliberately mirrors the constants in chain_dialogue.py / forum.py /
 // dario_infer.py so that the Go binaries are drop-in replacements.
+// Defaults updated 2026-05-08 from RunPod Phase 7 multi-temp sweep
+// (540-cell grid, cross-prompt averaged). CoA insight applied:
+// readme `runpod/2026-05-08/07_voices/scores.tsv`. Old defaults at
+// temp=0.75 + top_k=40 (+ rp 1.3-1.4) produced sub-coherent prose;
+// cross-prompt champions below produce on-character voice register.
+// resonance-yent and base unchanged: not validated in sweep
+// (resonance-yent OOB of infer_v4 dim limits; base not in voice set).
 var Catalog = map[string]Voice{
 	"leo": {
 		Name: "leo", Backend: BackendJanus,
 		WeightsFile: "janus_v4_sft_leo.bin",
-		Temp:        0.75, TopK: 40, RepPenalty: 1.4,
+		Temp:        0.7, TopK: 0, RepPenalty: 1.3,
 		Desc: "luminous, philosophical -- Janus 176M",
 	},
 	"arianna": {
 		Name: "arianna", Backend: BackendJanus,
 		WeightsFile: "janus_v4_sft_arianna.bin",
-		Temp:        0.75, TopK: 45, RepPenalty: 1.3,
+		Temp:        0.8, TopK: 40, RepPenalty: 1.4,
 		Desc: "precise, architectural -- Janus 176M",
 	},
 	"yent": {
 		Name: "yent", Backend: BackendJanus,
 		WeightsFile: "janus_v4_sft_yent.bin",
-		Temp:        0.75, TopK: 40, RepPenalty: 1.35,
+		Temp:        0.9, TopK: 40, RepPenalty: 1.3,
 		Desc: "warm, direct -- Janus 176M",
 	},
 	"resonance-yent": {
 		Name: "resonance-yent", Backend: BackendResonance,
 		WeightsFile: "resonance_200m_lora_yent.bin",
 		Temp:        0.75, TopK: 40, RepPenalty: 1.3,
-		Desc: "warm, direct, sarcastic -- Resonance 200M",
+		Desc: "warm, direct, sarcastic -- Resonance 200M (sweep TBD: infer_v4 dim limits)",
 	},
 	"base": {
 		Name: "base", Backend: BackendJanus,
@@ -68,13 +75,10 @@ var Catalog = map[string]Voice{
 		Temp:        0.75, TopK: 40, RepPenalty: 1.3,
 		Desc: "Janus 176M base (no SFT)",
 	},
-	// The 24M Leo Janus that's actually present at
-	// ~/arianna/weights/dario/leo_janus_d12_f16.bin. Useful for smoke-tests
-	// without dragging the 176M weights around.
 	"leo24m": {
 		Name: "leo24m", Backend: BackendJanus,
 		WeightsFile: "leo_janus_d12_f16.bin",
-		Temp:        0.7, TopK: 40, RepPenalty: 1.3,
+		Temp:        1.0, TopK: 40, RepPenalty: 1.3,
 		Desc: "Leo 24M mini -- Janus d12 f16",
 	},
 }

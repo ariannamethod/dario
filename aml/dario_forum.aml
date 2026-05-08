@@ -64,19 +64,21 @@ typedef struct {
     const char *desc;
 } dario_voice;
 
+/* Defaults updated 2026-05-08 from RunPod Phase 7 multi-temp sweep
+ * (cross-prompt avg). Source: runpod/2026-05-08/07_voices/scores.tsv. */
 static dario_voice CATALOG[] = {
     {"leo",            "janus",     "janus_v4_sft_leo.bin",
-     0.75f, 40, 1.4f,  "luminous, philosophical -- Janus 176M"},
+     0.7f,  0,  1.3f,  "luminous, philosophical -- Janus 176M"},
     {"arianna",        "janus",     "janus_v4_sft_arianna.bin",
-     0.75f, 45, 1.3f,  "precise, architectural -- Janus 176M"},
+     0.8f,  40, 1.4f,  "precise, architectural -- Janus 176M"},
     {"yent",           "janus",     "janus_v4_sft_yent.bin",
-     0.75f, 40, 1.35f, "warm, direct -- Janus 176M"},
+     0.9f,  40, 1.3f,  "warm, direct -- Janus 176M"},
     {"resonance-yent", "resonance", "resonance_200m_lora_yent.bin",
-     0.75f, 40, 1.3f,  "warm, direct, sarcastic -- Resonance 200M"},
+     0.75f, 40, 1.3f,  "warm, direct, sarcastic -- Resonance 200M (sweep TBD)"},
     {"base",           "janus",     "janus_v4_base_22k.bin",
      0.75f, 40, 1.3f,  "Janus 176M base (no SFT)"},
     {"leo24m",         "janus",     "leo_janus_d12_f16.bin",
-     0.7f,  40, 1.3f,  "Leo 24M mini -- Janus d12 f16"},
+     1.0f,  40, 1.3f,  "Leo 24M mini -- Janus d12 f16"},
 };
 #define CATALOG_N (sizeof(CATALOG)/sizeof(CATALOG[0]))
 
