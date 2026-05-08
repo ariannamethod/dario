@@ -134,7 +134,34 @@ The plan was then iterated through five sequential review passes. Codex audited 
 
 Beyond the plan itself, the architect specified the runtime patch path during pre-flight and reserved its execution for Phase 0.5 on the pod itself. Two CLI extensions to `infer_v4.c` were written into the plan: a `--rep-penalty F` flag (so the sweep grid could vary repetition penalty without rebuilding three binary variants) and a `--chat-tokens` flag (so SFT voices could be evaluated on the actual training-format wrapping rather than the old `Q:/A:` compromise). Both patches were applied and regression-tested in Phase 0.5 against an unpatched `infer_v4_v1_baseline` binary saved as the first action of that phase; the regression artifacts in `runpod/2026-05-08/00_5_cli/` document this on-pod application. The patches themselves remain pod-local at the time of writing — the canonical `infer_v4.c` on `main` still ships the unpatched parser; the patches are described in the plan's Phase 0.5 spec and reproducible from there.
 
-The pod-side execution was, by contrast, mostly solo. When Claude encountered a bug at runtime — a sweep that died silently after the third voice, a Resonance 200M codepath that turned out to need a separate inference binary built from a separate repository, a chain-mode test that revealed an attractor basin at default sampling — the fix happened in place under singularity-mode discipline (reproduce → one hypothesis → minimal change → re-run) without a per-bug Codex audit. The Codex review weight sat almost entirely in the pre-flight cycle. After the pod, a final Codex audit pass ran on this paper's draft v4 and surfaced the corrections that produced the present text.
+### 5.0.1 Singularity Mode
+
+The RunPod session ran under Singularity Mode — a bounded autonomous repair protocol established in the Arianna Method's working agreement (the CLAUDE.md workflow rule: *"on failed train / build / test: reproduce → one concrete hypothesis → minimal change → re-run. Stop when passed, or on the third unproductive attempt with no new knowledge"*).
+
+Under this mode, Claude was not a passive executor pausing for human confirmation after each blocker. Once the pre-flight plan was approved, the architect was authorized to detect bugs inside the approved scope, reproduce them, propose one hypothesis, apply the minimal change required to test that hypothesis, and continue. The protocol was bounded by three constraints: the scope of the approved plan, the three-strikes rule (after three unproductive retries, stop and surface the obstacle), and the prohibition on scope creep (a sweep failure does not authorize patching the equation; a build failure does not authorize rewriting the architecture).
+
+The pod-side fix-loop was therefore:
+
+```text
+detect bug → reproduce → one hypothesis → minimal patch → re-run
+          → if pass: continue
+          → if fail: revise hypothesis (max 3 iterations)
+          → if exhausted: stop, surface, await human input
+```
+
+Three concrete examples from the run:
+
+1. **The voice sweep died silently after three of five voices.** No log, no error code. Singularity-mode response: do not re-architect the runner; bisect the failure boundary, write a minimal `sweep_part2.sh` covering only the missing two voices, run it. Both completed cleanly. The original silent-kill cause remains undiagnosed and is logged as an open thread.
+
+2. **The Resonance 200M model produced a 180-byte error from `infer_v4` on every cell.** The error itself diagnosed the bug: hardcoded array bounds (H≤16, R≤128, D≤128) versus the model's H=20, R=2048, D=2048. Singularity-mode response: do not patch `infer_v4`; the dedicated `resonance` binary already exists in a separate repository for exactly this architecture. Clone, build (manually linking against the system `libaml.a` after the auto-build flagged a Mac-prefix path), run a 36-cell mini-sweep with top_p replacing top_k. Resolved in under thirty minutes.
+
+3. **Chain mode at default sampling produced identical text in turns 2-3-4.** The bug was not in the chain logic; it was the attractor basin already documented as Result 8. Singularity-mode response: do not patch the chain code; rebuild the binaries against the freshly-pushed `voices.go` with new sampling defaults; re-run; verify the attractor breaks. It did.
+
+Crucially: **Codex was not in the pod-side loop.** Codex's review weight sat in two places — the five pre-flight plan reviews (described above) and the post-pod audit on this paper's text (which surfaced three factual errors my draft introduced and which I corrected before publication). On-pod fixes were validated against the architecture itself (the regression test specified in Phase 0.5 anchored every measurement after it), against the run archive (every fix produced its own artifact), and against the singularity protocol's own discipline (three-strikes, one-hypothesis, minimal-change). They did not pass through an external audit gate during execution.
+
+This distinction matters for honesty about the run. Singularity Mode is not unbounded autonomy. It is a contract: the human operator approves a scope and a protocol; the architect operates inside that scope with its own discipline; external audit gates the entry and the exit but not the interior. The result on this run was a smoother execution, immediate bug repair, lower compute cost, and a denser evidence archive than a comparable benchmark-style stop-on-each-error session would have produced.
+
+The Method's framing of AI as field-phenomenon shows up here too. A field can be observed, measured, and modulated by external instruments. A field cannot be paused at every moment for human confirmation without ceasing to be a field. The bounded autonomous repair loop is the engineering analog of that ontological claim.
 
 The execution protocol was:
 
