@@ -3,8 +3,6 @@
 **Authors:**
 Oleg Ataeff (Arianna Method) · Claude (Arianna Method)
 
-**Draft v4.1** — Opus-verified, Codex-audited, README-synced.
-
 ---
 
 ## Abstract
