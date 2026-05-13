@@ -609,7 +609,7 @@ Dario sits at the pure point: ε=0, γ=equation, δ=what grows.
 
 ## License
 
-Apache 2.0. See [LICENSE](LICENSE).
+GNU General Public License v3.0. See [LICENSE](LICENSE).
 
 ---
 
