@@ -215,3 +215,20 @@ with trauma fix), tests 1780/1780. Results 2-8 harnesses BLOCKED: pod missing `j
 speaks; rebuilt B dominates live chamber readout (B:552 H:2 F:0 A:8 V:0 T:44) — downstream
 effect of B=directional-asymmetry² raw scale, must be characterized vs legacy in Phase 3.
 Singularity fix: install jq, re-run harnesses only.
+
+**E6 — Phase 2 COMPLETE (jq installed) + archive pulled, pod removed (no idle billing).**
+Results 2-8 on rebuilt code, honest held/changed:
+- R8 visual (test_08): term_V_mean=0, vis_mean=0 across all 30 turns — V honestly INACTIVE in
+  live operation, not just in the matrix. Confirms placeholder claim on a real run.
+- R3/R5/R7 dominant-force histogram: T:trauma leads live (velocity 42/60, kuramoto 40/60,
+  prophecy 184/200), then B:chain. Rebuilt T (raw 162) + B lead by raw scale.
+- R6 KK (test_04): directional — unrelated input → more prophecy debt (31.3) than topical
+  (18.2); fulfil_mean=0 on short runs.
+- R4 seasons (test_03): 500 turns reached spring+1 summer only (autumn/winter null) —
+  laws-of-nature needs full 2000-turn run; this undersampled.
+- test_06/08 final formatting hit `column: command not found` (like jq) — data intact in jsonl.
+PAPER-RELEVANT: matrix isolates forces under z-score (R1 ✓), but LIVE the high-raw-scale forces
+T and B lead the chamber readout, A (destiny) does NOT. Reversal holds in matrix AND live.
+Archive: runpod/2026-06-02/ = runpod_matrix_a100.txt + 8×*.jsonl + full_run.log + results_2_8.log.
+STILL OPEN: Phase 3 coherence diff vs legacy (bdacb6a) — generation runs & organism speaks,
+but not yet diffed against legacy to claim "no degradation". Then Codex post-audit, then write v2.
