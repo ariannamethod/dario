@@ -1308,7 +1308,7 @@ static void dario_compute(float *logits, int vocab_size) {
         for (int i = 0; i < vocab_size; i++)
             if (B[i] > mx) mx = B[i];
         if (g_matrix_mode)
-            for (int i = 0; i < vocab_size; i++) g_raw_energy[TERM_B] += fabsf(B[i]);
+            for (int i = 0; i < vocab_size; i++) { g_raw_energy[TERM_B] += fabsf(B[i]); if (i < 512) g_snap[TERM_B][i] = B[i]; }
         if (mx > 1e-6f)
             for (int i = 0; i < vocab_size; i++) B[i] /= mx;
     }
@@ -1382,7 +1382,7 @@ static void dario_compute(float *logits, int vocab_size) {
             T[i] = boost * (1.0f - (float)i / 50.0f);
     }
     if (g_matrix_mode)
-        for (int i = 0; i < vocab_size; i++) g_raw_energy[FORCE_TRAUMA] += fabsf(T[i]);
+        for (int i = 0; i < vocab_size; i++) { g_raw_energy[FORCE_TRAUMA] += fabsf(T[i]); if (i < 512) g_snap[FORCE_TRAUMA][i] = T[i]; }
 
     /* ── V: Visual Grounding ── */
     if (D.vis_magnitude > 1e-6f) {
@@ -2356,14 +2356,18 @@ static void dario_matrix(void) {
      * (river/stone) vs the baseline's tokens? If the active set differs, H
      * responds to its pattern, not a rescaled always-on field. */
     {
-        printf("# token-delta — top-5 H tokens (g_snap[H]): H-trigger vs baseline\n");
-        for (int phase = 0; phase < 2; phase++) {
-            if (phase == 0) { dario_reset(0x7777ULL); feed_turns(trig[1], 5); printf("H-trig : "); }
-            else { static const char *const nb[1] = {"the"}; dario_reset(0x7777ULL); feed_turns(nb, 1); printf("base   : "); }
+        printf("# token-delta — top-3 tokens each force activates on ITS OWN trigger (trigger-specific?)\n");
+        const int fidx[5] = {TERM_B, TERM_H, TERM_F, TERM_A, FORCE_TRAUMA};
+        const char *fnm[5] = {"B","H","F","A","T"};
+        const int ftrig[5] = {0, 1, 2, 3, 5};   /* trigger index per force (V=4 is honest-inactive) */
+        for (int ff = 0; ff < 5; ff++) {
+            dario_reset(0x7777ULL + (uint64_t)ff);
+            feed_turns(trig[ftrig[ff]], 5);
+            printf("%s-trig:", fnm[ff]);
             char used[512]; for (int i = 0; i < 512; i++) used[i] = 0;
-            for (int rk = 0; rk < 5; rk++) {
+            for (int rk = 0; rk < 3; rk++) {
                 int bi = -1; float bv = -1e30f;
-                for (int i = 0; i < 380; i++) if (!used[i] && g_snap[TERM_H][i] > bv) { bv = g_snap[TERM_H][i]; bi = i; }
+                for (int i = 0; i < 380; i++) if (!used[i] && g_snap[fidx[ff]][i] > bv) { bv = g_snap[fidx[ff]][i]; bi = i; }
                 if (bi >= 0) { used[bi] = 1; printf(" %s(%.0f)", (bi < D.vocab.n_words ? D.vocab.words[bi] : "?"), bv); }
             }
             printf("\n");
