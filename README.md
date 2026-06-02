@@ -273,7 +273,7 @@ The [Arianna Method Language](https://github.com/ariannamethod/ariannamethod.ai)
 | **S** — Subword Structure | how form carries signal | placeholder in `dario.c` | active in Leo line |
 | **T** — Trauma Gravity | origin wound; seed words surface | activates at trauma > 0.3 | boost over first ~50 seeds |
 
-These are the measurement vocabulary of the equation. The RunPod pass showed that runtime behavior is usually destiny-centered: A concentrates logit mass, while B/H/F/V/S/T shape the path around it.
+These are the measurement vocabulary of the equation. The 2026-05-08 pass read runtime behavior as destiny-centered; the 2026-06-02 re-measurement found that was a metric artifact (see "Force behavior — corrected" above). Under a density-neutral z-gate, no single force dominates by construction — five of seven isolate under their own trigger, with the limits reported in the open.
 
 ### Emotional Chambers
 
