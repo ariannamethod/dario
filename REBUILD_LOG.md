@@ -303,3 +303,15 @@ rank #19(leo)/#7(arianna)/#22(yent)/#2(leo24m) of 36 under pure distinct-2 — p
 while paper's human picked lower temp for coherence among top-distinct cells + seed variation. Honest:
 direction confirmed, exact per-voice cells not re-derived by metric alone. Artifacts: 07_voices_scores.tsv,
 transcripts/. NEXT: R8 dialogue recovery (chat-tokens+champions) + trialogue + forum + P10 web + P11 parity.
+
+**E12 — R8 + dialogue modes DONE. All 8 Results verified on A100.** R8 chain recovery (leo, champion+
+chat-tokens): 3 DISTINCT coherent turns, attractor basin broken (vs default=salad) → HELD. Model-to-model
+DUET (leo<->yent) + TRIALOGUE (leo/yent/arianna) coherent, distinct on-voice registers — the "conversations
+between models" surface works. Go dialogue binary spawns infer_v4 WITHOUT --chat-tokens (infer.go) → its
+raw output was salad; demonstrated R8 directly via infer_v4+chat-tokens instead (same engine). FOLLOW-UP:
+add --chat-tokens passthrough to cmd/internal/dario/infer.go. FINAL held/changed (all 8):
+R1 CHANGED (overturned, McNemar p=3.7e-9, z-gate 5/7, corr(B,A)=0.845, coherence systematic-modest-drop) ·
+R2 chambers co-activate, COMPLEX-needs-conversation shown via duet · R3 CHANGED (T-dominance) ·
+R4 HELD (laws, 2000-turn) · R5 HELD (SARTRE numbers identical) · R6 HELD (KK policy exact + self-ingest) ·
+R7 thesis HELD / exact champions DRIFTED (distinct-2 metric, §7 resonance bound confirmed) ·
+R8 HELD (recovery). Archive runpod/2026-06-02_full/. Pod stopping. NOT done: forum/web(P10)/parity(P11) infra.
