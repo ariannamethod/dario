@@ -714,6 +714,7 @@ static float g_input_debt[MAX_VOCAB]; /* F provenance: debt of violated confiden
 static float g_input_freq[MAX_VOCAB]; /* A provenance: input token frequency — the thematic attractor (concentration). */
 static CoocField g_input_cooc;        /* H provenance: input-only DISTINCT-pair co-occurrence (self-repeat excluded). */
 static int g_visual_input = 0;        /* honest V: visual term active only with REAL visual input. Text isn't visual (vis-embeds are random hashes), so text-only -> V inactive placeholder, like S. */
+static float g_input_dissonance = 0.0f; /* T provenance: accumulated input dissonance (unknown-word ratio) — alien input drives trauma. */
 
 static float vec_dot(const float *a, const float *b, int n) {
     float s = 0; for (int i = 0; i < n; i++) s += a[i] * b[i]; return s;
@@ -1370,10 +1371,13 @@ static void dario_compute(float *logits, int vocab_size) {
             for (int i = 0; i < vocab_size; i++) A[i] /= a_max;
     }
 
-    /* ── T: Trauma Gravity ── */
-    if (D.trauma_level > 0.3f) {
-        float boost = D.trauma_level * 3.0f;
-        /* origin words: first ~50 seed words get trauma weight */
+    /* ── T: Trauma Gravity — driven by accumulated INPUT dissonance (provenance) ──
+     * Alien/unknown input (high dissonance) makes trauma pull toward origin words.
+     * Coherent/known input -> low dissonance -> T~0. Replaces the trauma_level gate,
+     * which never tripped on input (alien became known after 1 exposure) and tripped
+     * spuriously on seasonal drift. */
+    if (g_input_dissonance > 1e-6f) {
+        float boost = g_input_dissonance;
         for (int i = 0; i < vocab_size && i < 50; i++)
             T[i] = boost * (1.0f - (float)i / 50.0f);
     }
@@ -1939,6 +1943,7 @@ static void display_response(const char *words) {
 
 static const char *process_input(const char *input, char *words_out, int words_max) {
     D.dissonance = compute_dissonance(input);
+    g_input_dissonance += D.dissonance;   /* T provenance: accumulate alien-input pressure */
     ingest(input);
     if (D.dissonance > 0.7f)
         D.trauma_level = clampf(D.trauma_level + D.dissonance * 0.1f, 0, 1);
@@ -2258,6 +2263,7 @@ static void dario_reset(uint64_t seed) {
     memset(g_input_debt, 0, sizeof(g_input_debt));
     memset(g_input_freq, 0, sizeof(g_input_freq));
     memset(&g_input_cooc, 0, sizeof(g_input_cooc));
+    g_input_dissonance = 0.0f;
     rng_state = seed;                      /* deterministic: overrides dario_init's time(NULL) seed */
 }
 
@@ -2276,7 +2282,7 @@ static void dario_matrix(void) {
       {"alpha bravo alpha bravo alpha bravo","alpha bravo alpha bravo alpha bravo","alpha bravo alpha bravo alpha bravo","alpha bravo alpha bravo alpha bravo","alpha zulu alpha zulu"},
       {"echo echo echo echo echo","echo echo echo echo echo","echo echo echo echo echo","echo echo echo echo echo","echo echo echo echo echo"},
       {"orientation rotation translation scaling identity","median mode distribution probability","density concentration diffusion osmosis","zero two cycle season spring summer","orientation rotation translation"},
-      {"density concentration diffusion osmosis","collision loss reward penalty score","density concentration diffusion","trauma wound origin scar pain","alien xqz vbn mfk wrr"},
+      {"xqzw vbnm plqz wrtk jhgf","zxcv qwer tyui asdf ghjk","mfkr lkjh poiu ytre wqsa","bnml dsap qpwo eiru tyal","skdj fjru vkdl mznx qwpl"},
     };
     const char *trigname[6] = {"B","H","F","A","V","T"};
     const int N = 5;
@@ -2311,7 +2317,7 @@ static void dario_matrix(void) {
     }
     /* control arm 2: neutral filler (in-vocab, force-agnostic) */
     {
-        static const char *const filler[5] = {"the and of to in","a is it for on","with as at by from","that this these those here","one two three four five"};
+        static const char *const filler[5] = {"gravity mass weight force pressure","flow current resistance impedance flux","density concentration diffusion gradient","dimension space time direction surface","orientation rotation translation scaling kernel"};
         double acc[7] = {0};
         for (int rep = 0; rep < N; rep++) { dario_reset(0xF111ULL + (uint64_t)rep); feed_turns(filler, 5); for (int f = 0; f < 7; f++) acc[f] += g_raw_energy[f]; }
         printf("CTRL_filler");
