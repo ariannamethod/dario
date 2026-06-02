@@ -136,3 +136,10 @@ coherence diff vs legacy + freeze triggers in pre-reg + E4 (polygon/runpod + pap
 ## Remaining: token-delta rigor per force · coherence diff vs legacy · freeze triggers in
 ## pre-reg · E4 (polygon/runpod re-run + Dario paper 2 with honesty fixes: Result-1 L1,
 ## §5.1 SARTRE/KK, A/V random-embeddings). legacy = "what was".
+
+**E3 — coherence-diff vs legacy: PASS**
+- Built frozen legacy (bdacb6a) in a worktree; generated same 3 prompts on legacy vs
+  current. Both produce coherent thematic concept-clusters (legacy "trauma wound scar
+  healing"; current "noise destiny collapse bifurcation"). Clusters differ (mechanisms
+  changed -> different logits) but coherence QUALITY preserved — no degradation/garbage.
+- The rebuild isolated the forces without breaking Dario's generation. Regression gate PASS.
