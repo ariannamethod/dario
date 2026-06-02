@@ -2265,8 +2265,9 @@ static void dario_matrix(void) {
     /* control arm 1: empty context (no turns) — baseline activation per force */
     {
         double acc[7] = {0};
-        for (int rep = 0; rep < N; rep++) { dario_reset(0xE0E0ULL + (uint64_t)rep); for (int f = 0; f < 7; f++) acc[f] += g_raw_energy[f]; }
-        printf("CTRL_empty");
+        static const char *const neutral[1] = {"the"};
+        for (int rep = 0; rep < N; rep++) { dario_reset(0xE0E0ULL + (uint64_t)rep); feed_turns(neutral, 1); for (int f = 0; f < 7; f++) acc[f] += g_raw_energy[f]; }
+        printf("CTRL_minimal");
         for (int f = 0; f < 7; f++) printf("\t%.2f", acc[f] / N);
         printf("\n");
     }
