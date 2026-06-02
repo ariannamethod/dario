@@ -708,6 +708,7 @@ static float g_dest_magnitude = 0;
  * at analysis time (per-force z-score across triggers). Order: B H F A V S T. */
 static float g_raw_energy[7];
 static int   g_matrix_mode = 0;
+static float g_snap[7][512];   /* matrix-mode: last pre-renorm force vector per term (for orthogonality) */
 
 static float vec_dot(const float *a, const float *b, int n) {
     float s = 0; for (int i = 0; i < n; i++) s += a[i] * b[i]; return s;
@@ -1310,7 +1311,7 @@ static void dario_compute(float *logits, int vocab_size) {
     for (int i = 0; i < vocab_size; i++)
         if (H[i] > h_max) h_max = H[i];
     if (g_matrix_mode)
-        for (int i = 0; i < vocab_size; i++) g_raw_energy[TERM_H] += fabsf(H[i]);
+        for (int i = 0; i < vocab_size; i++) { g_raw_energy[TERM_H] += fabsf(H[i]); if (i < 512) g_snap[TERM_H][i] = H[i]; }
     if (h_max > 1e-6f)
         for (int i = 0; i < vocab_size; i++) H[i] /= h_max;
 
@@ -1335,7 +1336,7 @@ static void dario_compute(float *logits, int vocab_size) {
     for (int i = 0; i < vocab_size; i++)
         if (F[i] > f_max) f_max = F[i];
     if (g_matrix_mode)
-        for (int i = 0; i < vocab_size; i++) g_raw_energy[TERM_F] += fabsf(F[i]);
+        for (int i = 0; i < vocab_size; i++) { g_raw_energy[TERM_F] += fabsf(F[i]); if (i < 512) g_snap[TERM_F][i] = F[i]; }
     if (f_max > 1e-6f)
         for (int i = 0; i < vocab_size; i++) F[i] /= f_max;
 
@@ -1349,7 +1350,7 @@ static void dario_compute(float *logits, int vocab_size) {
         for (int i = 0; i < vocab_size; i++)
             if (fabsf(A[i]) > a_max) a_max = fabsf(A[i]);
         if (g_matrix_mode)
-            for (int i = 0; i < vocab_size; i++) g_raw_energy[TERM_A] += fabsf(A[i]);
+            for (int i = 0; i < vocab_size; i++) { g_raw_energy[TERM_A] += fabsf(A[i]); if (i < 512) g_snap[TERM_A][i] = A[i]; }
         if (a_max > 1e-6f)
             for (int i = 0; i < vocab_size; i++) A[i] /= a_max;
     }
@@ -1374,7 +1375,7 @@ static void dario_compute(float *logits, int vocab_size) {
         for (int i = 0; i < vocab_size; i++)
             if (fabsf(V[i]) > v_max) v_max = fabsf(V[i]);
         if (g_matrix_mode)
-            for (int i = 0; i < vocab_size; i++) g_raw_energy[TERM_V] += fabsf(V[i]);
+            for (int i = 0; i < vocab_size; i++) { g_raw_energy[TERM_V] += fabsf(V[i]); if (i < 512) g_snap[TERM_V][i] = V[i]; }
         if (v_max > 1e-6f)
             for (int i = 0; i < vocab_size; i++) V[i] /= v_max;
     }
@@ -2277,6 +2278,33 @@ static void dario_matrix(void) {
         printf("CTRL_filler");
         for (int f = 0; f < 7; f++) printf("\t%.2f", acc[f] / N);
         printf("\n");
+    }
+
+    /* orthogonality: are A/H/F/V collinear (cosine projections of one space)? */
+    {
+        static const char *const rich[6] = {
+            "resonance memory destiny prophecy trauma flow emergence",
+            "the organism bends toward its gravitational center slowly",
+            "knowledge enters through hebbian bridging sentence boundaries",
+            "fear love rage void flow complex chambers couple modulate",
+            "force pressure flow current density concentration diffusion osmosis",
+            "origin destination journey return path between inside outside"};
+        dario_reset(0xC0DEULL);
+        feed_turns(rich, 6);
+        const int idx[4] = {TERM_A, TERM_H, TERM_F, TERM_V};
+        const char *nm[4] = {"A","H","F","V"};
+        int VN = 380;
+        printf("# orthogonality (Pearson r over %d-dim force vectors; |r|>0.70 = collinear by construction)\n", VN);
+        for (int a = 0; a < 4; a++)
+            for (int b = a + 1; b < 4; b++) {
+                double ma=0, mb=0;
+                for (int i=0;i<VN;i++){ ma+=g_snap[idx[a]][i]; mb+=g_snap[idx[b]][i]; }
+                ma/=VN; mb/=VN;
+                double num=0, da=0, db=0;
+                for (int i=0;i<VN;i++){ double x=g_snap[idx[a]][i]-ma, y=g_snap[idx[b]][i]-mb; num+=x*y; da+=x*x; db+=y*y; }
+                double r = (da>1e-9 && db>1e-9) ? num/sqrt(da*db) : 0.0;
+                printf("corr(%s,%s) = %.3f\n", nm[a], nm[b], r);
+            }
     }
     g_matrix_mode = 0;
 }
