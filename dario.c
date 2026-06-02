@@ -2331,6 +2331,24 @@ static void dario_matrix(void) {
                 printf("corr(%s,%s) = %.3f\n", nm[a], nm[b], r);
             }
     }
+
+    /* token-delta gate: does the H-trigger carry H on trigger-specific tokens
+     * (river/stone) vs the baseline's tokens? If the active set differs, H
+     * responds to its pattern, not a rescaled always-on field. */
+    {
+        printf("# token-delta — top-5 H tokens (g_snap[H]): H-trigger vs baseline\n");
+        for (int phase = 0; phase < 2; phase++) {
+            if (phase == 0) { dario_reset(0x7777ULL); feed_turns(trig[1], 5); printf("H-trig : "); }
+            else { static const char *const nb[1] = {"the"}; dario_reset(0x7777ULL); feed_turns(nb, 1); printf("base   : "); }
+            char used[512]; for (int i = 0; i < 512; i++) used[i] = 0;
+            for (int rk = 0; rk < 5; rk++) {
+                int bi = -1; float bv = -1e30f;
+                for (int i = 0; i < 380; i++) if (!used[i] && g_snap[TERM_H][i] > bv) { bv = g_snap[TERM_H][i]; bi = i; }
+                if (bi >= 0) { used[bi] = 1; printf(" %s(%.0f)", (bi < D.vocab.n_words ? D.vocab.words[bi] : "?"), bv); }
+            }
+            printf("\n");
+        }
+    }
     g_matrix_mode = 0;
 }
 
