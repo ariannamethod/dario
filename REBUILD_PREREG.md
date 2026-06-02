@@ -81,3 +81,15 @@ metric+triggers+running+scoring+rewriting = exactly the loop that produced editi
 
 ## E0 first gate
 Harness validated by: legacy-vs-canonical matrix delta == 0 (same code → same matrix).
+
+---
+## FROZEN TRIGGERS (E4 — finalized from mechanism, locked here)
+Each derived from the force's real mechanism (not its name), 5 turns:
+- B (strict order):        "one two three four five six" ×5
+- H (symmetric recurrence):"river stone river stone river stone" ×5
+- F (confident-then-violated): "alpha bravo"×4 then "alpha zulu"×2
+- A (concentration):       "echo echo echo echo echo" ×5
+- V: honest-inactive (no visual signal in text — placeholder like S)
+- T (alien/dissonance):    pure gibberish ×5
+- neutral control:         known bootstrap-vocab words (gravity mass force ...)
+Result (cae03ae): diagonal dominates — B=125 H=56.9 F=24 A=25 T=127.5, each row+col max.
