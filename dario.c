@@ -1376,10 +1376,12 @@ static void dario_compute(float *logits, int vocab_size) {
      * Coherent/known input -> low dissonance -> T~0. Replaces the trauma_level gate,
      * which never tripped on input (alien became known after 1 exposure) and tripped
      * spuriously on seasonal drift. */
-    if (g_input_dissonance > 1e-6f) {
-        float boost = g_input_dissonance;
-        for (int i = 0; i < vocab_size && i < 50; i++)
-            T[i] = boost * (1.0f - (float)i / 50.0f);
+    {
+        float boost = g_input_dissonance;                          /* provenance: trigger-specific alien input */
+        if (D.trauma_level > 0.3f) boost += D.trauma_level * 3.0f;  /* accumulated trauma (origin pull, original behavior) */
+        if (boost > 1e-6f)
+            for (int i = 0; i < vocab_size && i < 50; i++)
+                T[i] = boost * (1.0f - (float)i / 50.0f);
     }
     if (g_matrix_mode)
         for (int i = 0; i < vocab_size; i++) { g_raw_energy[FORCE_TRAUMA] += fabsf(T[i]); if (i < 512) g_snap[FORCE_TRAUMA][i] = T[i]; }

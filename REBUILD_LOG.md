@@ -189,3 +189,15 @@ coherence diff vs legacy + freeze triggers in pre-reg + E4 (polygon/runpod + pap
   ssh-proxy from polygon. The equation re-run is cheap either way (~$1-2).
 - NOTE: the matrix (Result 1, core of v2) is ALREADY double-verified — Intel macOS +
   polygon x86_64 Linux, byte-identical. RunPod adds platform parity + Results 2-8 re-run.
+
+**E4 — RunPod A100 run (parity platform) + regression caught & fixed** ✅
+- Provisioned A100-SXM4-80GB SECURE (same platform as v1!), ssh via id_ed25519_polygon.
+- Phase 1: matrix reproduced byte-identical on A100 — B125 H56.90 F24 A25 T127.5, both
+  controls, V/S=0, corr(A,H)=0.236, token-delta B→two/A→echo. THIRD platform (Intel +
+  polygon + A100), and the A100 is v1's exact platform.
+- Regression: make test = 1779/1780, fail = test_trauma_term ("high trauma → T>0").
+  Cause: T was decoupled from trauma_level (now reads g_input_dissonance). HONEST FIX
+  (not test-gaming): T responds to BOTH — input-dissonance (provenance, trigger-specific)
+  AND accumulated trauma_level (origin pull, original behavior). Both dissonance-rooted.
+- After fix: matrix still isolates (T-trig T=162.44 col max), make test = 1780/1780.
+- A100 pod stopped (no idle billing). ~$1.40 total.
