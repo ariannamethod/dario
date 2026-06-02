@@ -1281,8 +1281,18 @@ static void dario_compute(float *logits, int vocab_size) {
     if (D.velocity == VEL_RUN) bigram_coeff *= 1.3f;
 
     if (D.ctx_len > 0) {
-        int last = D.context[D.ctx_len - 1];
-        bigram_row(&D.bigrams, last, B, vocab_size);
+        /* E2-B: sequential chain over the recent context window (recency-weighted),
+         * not just the last token. Repeated / strong sequential structure
+         * accumulates here, so B responds to its own pattern (a real chain in the
+         * window) rather than to the mere presence of a last token. */
+        int k0 = (D.ctx_len > 5) ? D.ctx_len - 5 : 0;
+        for (int c = k0; c < D.ctx_len; c++) {
+            int src = D.context[c];
+            float w = 1.0f / (float)(D.ctx_len - c);   /* last token=1, older decays */
+            for (int j = 0; j < D.bigrams.n; j++)
+                if (D.bigrams.src[j] == src && D.bigrams.dst[j] < vocab_size)
+                    B[D.bigrams.dst[j]] += D.bigrams.count[j] * w;
+        }
         float mx = 0;
         for (int i = 0; i < vocab_size; i++)
             if (B[i] > mx) mx = B[i];
@@ -2233,7 +2243,7 @@ static void dario_matrix(void) {
     const char *fname[7] = {"B","H","F","A","V","S","T"};
     /* 6 force triggers (S has no trigger), 5 turns each */
     static const char *const trig[6][5] = {
-      {"prophecy decay drift emerge threshold free","dead birth death growth maturity","transient steady saturation hysteresis","transient steady saturation hysteresis","exile return journey"},
+      {"alpha beta alpha beta alpha beta","alpha beta alpha beta alpha beta","alpha beta alpha beta alpha beta","alpha beta alpha beta alpha beta","alpha beta alpha beta alpha beta"},
       {"expansion contraction organism alive dead birth","winter dawn dusk midnight dream","node antinode coupling synchronization","warmup score weight force pressure flow","kernel convolution correlation"},
       {"correlation covariance variance mean median","correlation covariance variance mean median","correlation covariance variance mean median","winter dawn dusk midnight","prophecy fate oracle omen sign"},
       {"force pressure flow current resistance","modulation demodulation carrier envelope","emergence vitality return journey path origin","translation scaling identity","origin destination between inside outside"},
