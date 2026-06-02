@@ -243,3 +243,17 @@ Coherence preserved (resonance −9%, ent/emg within 5%; debt +123% as F tracks 
 V inactive matrix+live (term_V=0). Synthesis: docs/dario_paper_v2_phase3_findings.md.
 Artifacts: runpod/2026-06-02-comprehensive/logs/ (matrix + 10 jsonl + master.log). Pod removed.
 NEXT: verification workflow (adversarial verify each claim vs jsonl + Codex 2nd opinion) → write v2.
+
+**E8 — PLAN v2 + dual audit (Opus + Codex) + fixes.** RUNPOD_PLAN_V2_FULL.md = full 13-phase paper
+protocol on rebuilt code (118fa98), nothing dropped (P5 SARTRE, P6 KK-injection, P7 540-cell sweep,
+P8 chain/duet/trialogue model-to-model dialogue, P9 cross-arch duet re-inserted, P11 parity).
+Opus plan-audit: FAIL-3-blocking (Phase 9 dropped / raw-vs-zscore "5 forces" / dario non-determinism)
++ CPU/GPU money split — all fixed. Background verify-workflow (7/7 claims recompute TRUE) + its
+second-opinion caught the SAME вши in the findings doc: live dominance is RAW-argmax not z-gate;
+per-TRIGGER own-force isolation STILL FAILS for F & V (T beats them on their own triggers); only 5/7
+forces active; corr excluded B,T; n=40 no stats; T 1975/2000 long-run contradicts "no force dominates";
+Phase-5 gen is canned template; "as legacy would produce" never measured. Codex review (codex-cli 0.136
+reinstalled): 2 PASS on core (phase coverage + raw-vs-zscore fixed), FAIL-5 tightening (findings stale /
+N=5 seed protocol / P12 numeric degradation rule / ablation commit-pin / pipefail) — all 5 applied.
+Findings doc marked SUPERSEDED/INTERIM with the 10 audit caveats. NEXT: singularity execution per plan —
+CPU phases on polygon ($0), A100 only P7/P9.

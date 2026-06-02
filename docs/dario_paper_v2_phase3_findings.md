@@ -1,8 +1,29 @@
 # Dario Paper 2 — Comprehensive RunPod findings (2026-06-02, A100)
 
+> ⚠ **SUPERSEDED / INTERIM — partial-run evidence, audited and found to overclaim.** This doc is the
+> PARTIAL pass (Results 1-8 + coherence + laws), kept for provenance. An Opus + Codex adversarial audit
+> (2026-06-02) flagged real вши that the **full run (`RUNPOD_PLAN_V2_FULL.md`) must correct before any
+> number here enters paper v2**:
+> 1. The live head-to-head dominance (legacy A:destiny 29/40 → rebuilt 0/40) is **RAW-argmax**, NOT the
+>    z-score gate. Real and verified by recompute, but it shows "which force has the biggest unnormalized
+>    scale changed identity" — T's raw scale grows unbounded. State RAW + report the z-scored version.
+> 2. **Per-TRIGGER own-force isolation still FAILS for F and V** (F-trig: T 38.25 > F 24; V-trig: T 40.8,
+>    V 0). The v1 "приговор" is unfixed per-trigger; the per-force z-gate passes only by collapsing across
+>    triggers. Disclose, don't hide.
+> 3. **5 of 7 forces active** (V, S all-zero) — not "7-force isolation". 4. Orthogonality computed only
+>    among A/H/F/V; **B and T excluded** — compute all pairs + CI. 5. **n=40 single run, no seeds/variance/
+>    CI** — add McNemar + Wilcoxon. 6. **T:trauma owns 1975/2000 long-run** — contradicts "no single force
+>    dominates"; reconcile (raw-scale artifact reappearing as trauma). 7. The z-scores in the result-1
+>    draft were **hand-derived in prose**, no machine artifact. 8. **Phase-5 generation is canned template
+>    text** (C-source comments + fixed word list), not free prose; "register preserved vs legacy" has **no
+>    legacy transcript** — counterfactual, must be measured or cut. 9. "byte-identical Intel+polygon" was
+>    verified earlier (REBUILD_LOG E2-E4) but those artifacts are not in this run dir — cite the source.
+> 10. R2 trauma **anti-tracks** injected dissonance (falls as it rises) — sign issue, report honestly.
+
 Source artifacts: `runpod/2026-06-02-comprehensive/logs/` (matrix, 8 harness jsonl,
 coh_rebuilt.jsonl, coh_legacy.jsonl, 04_laws_2000.jsonl, generation, master.log).
-Run: A100-SXM4-80GB SECURE, rebuilt HEAD `78d101f` vs legacy HEAD `bdacb6a`.
+Run: A100-SXM4-80GB SECURE. Binary cloned at HEAD `78d101f`; current repo HEAD `118fa98` is code-identical
+(it only added this doc + the log entry), so the binary == `118fa98` code. Legacy HEAD `bdacb6a`.
 
 ## Finding A — the reversal measured head-to-head (the gem)
 
