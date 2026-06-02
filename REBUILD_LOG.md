@@ -201,3 +201,10 @@ coherence diff vs legacy + freeze triggers in pre-reg + E4 (polygon/runpod + pap
   AND accumulated trauma_level (origin pull, original behavior). Both dissonance-rooted.
 - After fix: matrix still isolates (T-trig T=162.44 col max), make test = 1780/1780.
 - A100 pod stopped (no idle billing). ~$1.40 total.
+
+**E4 — HONEST gap: full run NOT yet done.** The A100 run did only: build + Result-1 matrix
++ make test (caught regression). It did NOT run Results 2-8 (chambers/velocity/laws/SARTRE/
+KK/sampling/chain) or the organism's actual GENERATION behavior. The force rebuild changed
+B/H/F/A/T, so downstream (generation, chambers, laws, KK) may have shifted — must be MEASURED,
+not assumed. Re-provisioning A100 for the FULL run (build all + tests/*.sh R2-8 + generation
+samples + coherence), capture to runpod/2026-06-02/.
