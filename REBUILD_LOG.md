@@ -153,3 +153,14 @@ coherence diff vs legacy + freeze triggers in pre-reg + E4 (polygon/runpod + pap
 
 ## E4 (next): freeze triggers in pre-reg · re-run on polygon (x86) / runpod · Dario paper 2
 ## (corrected numbers + honesty fixes: Result-1 L1, §5.1 SARTRE/KK, A/V random-embeddings).
+
+**E4 — independent x86 re-run on polygon: BYTE-IDENTICAL** ✅
+- Cloned/built dario on polygon (x86_64 Linux, different OS/compiler, independent node).
+- Matrix reproduced EXACTLY: B=125 H=56.90 F=24 A=25 T=127.50 — identical to Intel/darwin.
+- Closes the pre-reg independent-re-run binding. Diagonal-dominates is a reproducible,
+  cross-platform, independently-verified fact, not a local artifact.
+- Triggers FROZEN in REBUILD_PREREG.md.
+
+## E4 remaining: Dario paper 2 (second edition) — corrected matrix + honesty fixes
+## (Result-1 was L1-artifact; §5.1 ran with SARTRE/KK; A/V relied on random-hash embeddings;
+## V/S honest placeholders). "Prior was false" stated AFTER the rebuild, not instead of it.
