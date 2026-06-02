@@ -248,7 +248,8 @@ func (s *session) speak(ctx context.Context, voiceName, prompt string, maxTokens
 	res, err := dario.Run(ctx, s.binPath, dario.InferRequest{
 		Voice: rv.V, WeightsPath: rv.Weights,
 		Prompt: full, MaxTokens: maxTokens,
-		Temp: rv.Temp, TopK: rv.TopK, Timeout: s.cfg.Timeout,
+		Temp: rv.Temp, TopK: rv.TopK, RepPenalty: rv.RepPen,
+		ChatTokens: rv.V.ChatTokens, Timeout: s.cfg.Timeout,
 	})
 	if err != nil {
 		return "", err

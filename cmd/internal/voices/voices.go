@@ -28,6 +28,7 @@ type Voice struct {
 	Temp        float64 // Default sampling temperature
 	TopK        int     // Default top-k cutoff (0 = disabled)
 	RepPenalty  float64 // Default repetition penalty
+	ChatTokens  bool    // SFT voices trained with BOS/USER/ASST wrapping need --chat-tokens
 	Desc        string  // Short human description
 }
 
@@ -48,19 +49,19 @@ var Catalog = map[string]Voice{
 	"leo": {
 		Name: "leo", Backend: BackendJanus,
 		WeightsFile: "janus_v4_sft_leo.bin",
-		Temp:        0.7, TopK: 0, RepPenalty: 1.3,
+		Temp:        0.7, TopK: 0, RepPenalty: 1.3, ChatTokens: true,
 		Desc: "luminous, philosophical -- Janus 176M",
 	},
 	"arianna": {
 		Name: "arianna", Backend: BackendJanus,
 		WeightsFile: "janus_v4_sft_arianna.bin",
-		Temp:        0.8, TopK: 40, RepPenalty: 1.4,
+		Temp:        0.8, TopK: 40, RepPenalty: 1.4, ChatTokens: true,
 		Desc: "precise, architectural -- Janus 176M",
 	},
 	"yent": {
 		Name: "yent", Backend: BackendJanus,
 		WeightsFile: "janus_v4_sft_yent.bin",
-		Temp:        0.9, TopK: 40, RepPenalty: 1.3,
+		Temp:        0.9, TopK: 40, RepPenalty: 1.3, ChatTokens: true,
 		Desc: "warm, direct -- Janus 176M",
 	},
 	"resonance-yent": {

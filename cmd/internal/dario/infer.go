@@ -26,6 +26,8 @@ type InferRequest struct {
 	Temp        float64 // sampling temperature (>0)
 	TopK        int     // top-k cutoff (0 = disabled)
 	Seed        int     // RNG seed (0 = use binary's wall-clock default)
+	RepPenalty  float64 // repetition penalty (0 = binary default 1.3)
+	ChatTokens  bool    // wrap prompt in Janus BOS/USER/ASST chat tokens (SFT voices)
 	Timeout     time.Duration
 }
 
@@ -87,6 +89,13 @@ func Run(ctx context.Context, binary string, req InferRequest) (*InferResult, er
 		if req.TopK > 0 {
 			args = append(args, strconv.Itoa(req.TopK))
 		}
+	}
+	// P0.5 flags (scanned by infer_v4 regardless of position).
+	if req.RepPenalty > 0 {
+		args = append(args, "--rep-penalty", strconv.FormatFloat(req.RepPenalty, 'f', -1, 64))
+	}
+	if req.ChatTokens {
+		args = append(args, "--chat-tokens")
 	}
 
 	rctx, cancel := context.WithTimeout(ctx, req.Timeout)
