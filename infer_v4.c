@@ -574,7 +574,16 @@ int main(int argc, char **argv) {
     const char *prompt = argc > 2 ? argv[2] : "Q: What is resonance?\nA:";
     int max_gen = argc > 3 ? atoi(argv[3]) : 200;
     float temp = argc > 4 ? atof(argv[4]) : 0.6f;
-    printf("prompt: \"%s\"\n\n", prompt);
+    /* P0.5 — chat-token wrapping + CLI rep-penalty. Janus SFT voices (leo/arianna/yent) were
+     * trained with BOS/USER/ASST special-token wrapping; raw prompts produce off-voice salad. */
+    int use_chat = 0;
+    float cli_rep_penalty = 1.3f;
+    for (int ai = 1; ai < argc; ai++) {
+        if (strcmp(argv[ai], "--chat-tokens") == 0) use_chat = 1;
+        else if (strcmp(argv[ai], "--rep-penalty") == 0 && ai + 1 < argc) cli_rep_penalty = (float)atof(argv[ai + 1]);
+    }
+    const int TOK_BOS = 32759, TOK_USER_START = 32760, TOK_USER_END = 32761, TOK_ASST_START = 32762, TOK_ASST_END = 32763;
+    printf("prompt: \"%s\"%s\n\n", prompt, use_chat ? " [chat-tokens]" : "");
 
     /* encode prompt */
     int ctx[4096]; int len = 0;
@@ -600,6 +609,16 @@ int main(int argc, char **argv) {
             ctx[len++] = (unsigned char)prompt[i];
     }
 
+    /* P0.5 — wrap the prompt in Janus chat special tokens (the SFT training format):
+     * [BOS][USER_START] <prompt> [USER_END][ASST_START] ... generate until [ASST_END]. */
+    if (use_chat && !prompt_is_file && len + 4 < 4096) {
+        memmove(ctx + 2, ctx, (size_t)len * sizeof(int));
+        ctx[0] = TOK_BOS; ctx[1] = TOK_USER_START;
+        len += 2;
+        ctx[len++] = TOK_USER_END;
+        ctx[len++] = TOK_ASST_START;
+    }
+
     /* Clamp prompt to model context — prefill_batch writes kv_*[(bl*T+p)*E]
      * for p in [0,len), so len > T would overrun the KV cache. */
     if (len > T) {
@@ -623,8 +642,8 @@ int main(int argc, char **argv) {
 #endif
 
     for (int step = 0; step < max_gen && len < T; step++) {
-        /* Repetition penalty: penalize tokens seen in last 32 positions */
-        float rep_penalty = 1.3f;
+        /* Repetition penalty: penalize tokens seen in last 32 positions (CLI-overridable) */
+        float rep_penalty = cli_rep_penalty;
         int window = 32;
         int start = len > window ? len - window : 0;
         for (int j = start; j < len; j++) {
@@ -667,18 +686,23 @@ int main(int argc, char **argv) {
         int next = 0;
         for (int i = 0; i < V; i++) { cum += logits[i]; if (cum >= r) { next = i; break; } }
 
-        /* decode token */
-        if (use_bpe) {
-            char decoded[64];
-            int nbytes = nt_bpe_decode(&g_bpe, &next, 1, decoded, 63);
-            decoded[nbytes] = '\0';
-            printf("%s", decoded);
-        } else {
-            if (next < 256 && next > 31) putchar(next);
-            else if (next == 10) putchar('\n');
-            else printf("[%d]", next);
+        /* P0.5 — stop on assistant-end when chat-wrapped */
+        if (use_chat && next == TOK_ASST_END) { ctx[len] = next; len++; break; }
+
+        /* decode token (skip special tokens 32759+ the BPE decoder doesn't cover) */
+        if (next < TOK_BOS) {
+            if (use_bpe) {
+                char decoded[64];
+                int nbytes = nt_bpe_decode(&g_bpe, &next, 1, decoded, 63);
+                decoded[nbytes] = '\0';
+                printf("%s", decoded);
+            } else {
+                if (next < 256 && next > 31) putchar(next);
+                else if (next == 10) putchar('\n');
+                else printf("[%d]", next);
+            }
+            fflush(stdout);
         }
-        fflush(stdout);
 
         ctx[len] = next;
         forward_token(&w, next, len, logits, hidden);
