@@ -702,6 +702,13 @@ static void prophecy_update(ProphecySystem *ps, int token) {
 static float g_destiny[DIM];
 static float g_dest_magnitude = 0;
 
+/* ── isolation harness (--matrix): measurement-only, gated, off in normal runs ──
+ * g_raw_energy[t] = sum |force_t[i]| sampled BEFORE per-force [0,1] renorm and
+ * BEFORE swiglu/vis enrichment, so the trigger×force matrix is density-neutral
+ * at analysis time (per-force z-score across triggers). Order: B H F A V S T. */
+static float g_raw_energy[7];
+static int   g_matrix_mode = 0;
+
 static float vec_dot(const float *a, const float *b, int n) {
     float s = 0; for (int i = 0; i < n; i++) s += a[i] * b[i]; return s;
 }
@@ -1265,6 +1272,8 @@ static void dario_compute(float *logits, int vocab_size) {
     float *V = calloc(vocab_size, sizeof(float));
     float *T = calloc(vocab_size, sizeof(float));
 
+    if (g_matrix_mode) for (int t = 0; t < 7; t++) g_raw_energy[t] = 0.0f;
+
     /* ── B: Sequential Chain ── */
     float bigram_coeff = 8.0f;
     if (D.season == 2) bigram_coeff *= 1.3f; /* autumn boost */
@@ -1276,6 +1285,8 @@ static void dario_compute(float *logits, int vocab_size) {
         float mx = 0;
         for (int i = 0; i < vocab_size; i++)
             if (B[i] > mx) mx = B[i];
+        if (g_matrix_mode)
+            for (int i = 0; i < vocab_size; i++) g_raw_energy[TERM_B] += fabsf(B[i]);
         if (mx > 1e-6f)
             for (int i = 0; i < vocab_size; i++) B[i] /= mx;
     }
@@ -1298,6 +1309,8 @@ static void dario_compute(float *logits, int vocab_size) {
     float h_max = 0;
     for (int i = 0; i < vocab_size; i++)
         if (H[i] > h_max) h_max = H[i];
+    if (g_matrix_mode)
+        for (int i = 0; i < vocab_size; i++) g_raw_energy[TERM_H] += fabsf(H[i]);
     if (h_max > 1e-6f)
         for (int i = 0; i < vocab_size; i++) H[i] /= h_max;
 
@@ -1321,6 +1334,8 @@ static void dario_compute(float *logits, int vocab_size) {
     float f_max = 0;
     for (int i = 0; i < vocab_size; i++)
         if (F[i] > f_max) f_max = F[i];
+    if (g_matrix_mode)
+        for (int i = 0; i < vocab_size; i++) g_raw_energy[TERM_F] += fabsf(F[i]);
     if (f_max > 1e-6f)
         for (int i = 0; i < vocab_size; i++) F[i] /= f_max;
 
@@ -1333,6 +1348,8 @@ static void dario_compute(float *logits, int vocab_size) {
         float a_max = 0;
         for (int i = 0; i < vocab_size; i++)
             if (fabsf(A[i]) > a_max) a_max = fabsf(A[i]);
+        if (g_matrix_mode)
+            for (int i = 0; i < vocab_size; i++) g_raw_energy[TERM_A] += fabsf(A[i]);
         if (a_max > 1e-6f)
             for (int i = 0; i < vocab_size; i++) A[i] /= a_max;
     }
@@ -1344,6 +1361,8 @@ static void dario_compute(float *logits, int vocab_size) {
         for (int i = 0; i < vocab_size && i < 50; i++)
             T[i] = boost * (1.0f - (float)i / 50.0f);
     }
+    if (g_matrix_mode)
+        for (int i = 0; i < vocab_size; i++) g_raw_energy[FORCE_TRAUMA] += fabsf(T[i]);
 
     /* ── V: Visual Grounding ── */
     if (D.vis_magnitude > 1e-6f) {
@@ -1354,6 +1373,8 @@ static void dario_compute(float *logits, int vocab_size) {
         float v_max = 0;
         for (int i = 0; i < vocab_size; i++)
             if (fabsf(V[i]) > v_max) v_max = fabsf(V[i]);
+        if (g_matrix_mode)
+            for (int i = 0; i < vocab_size; i++) g_raw_energy[TERM_V] += fabsf(V[i]);
         if (v_max > 1e-6f)
             for (int i = 0; i < vocab_size; i++) V[i] /= v_max;
     }
@@ -2186,6 +2207,80 @@ static void dario_web(int port, const char *html_path) {
  * ./dario --web N   — HTTP server on port N
  * ═══════════════════════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════════════════════
+ * ISOLATION HARNESS (--matrix) — measurement only, off in normal runs.
+ * Per the rebuild pre-registration (REBUILD_PREREG.md): full per-cell
+ * state reset, raw pre-renorm energies, control arms. Trigger sequences
+ * below are E0.5 PLACEHOLDERS (the experiment's originals) — E1 re-derives
+ * them from each force's real sensitivity and freezes them in the pre-reg.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+static void dario_reset(uint64_t seed) {
+    dario_init();                          /* memset(&D,0) + re-bootstrap base */
+    memset(g_destiny, 0, sizeof(g_destiny));
+    g_dest_magnitude = 0.0f;               /* globals outside D */
+    rng_state = seed;                      /* deterministic: overrides dario_init's time(NULL) seed */
+}
+
+static void feed_turns(const char *const *turns, int n) {
+    char words[4096];
+    for (int t = 0; t < n; t++)
+        if (turns[t]) process_input(turns[t], words, sizeof(words));
+}
+
+static void dario_matrix(void) {
+    const char *fname[7] = {"B","H","F","A","V","S","T"};
+    /* 6 force triggers (S has no trigger), 5 turns each */
+    static const char *const trig[6][5] = {
+      {"prophecy decay drift emerge threshold free","dead birth death growth maturity","transient steady saturation hysteresis","transient steady saturation hysteresis","exile return journey"},
+      {"expansion contraction organism alive dead birth","winter dawn dusk midnight dream","node antinode coupling synchronization","warmup score weight force pressure flow","kernel convolution correlation"},
+      {"correlation covariance variance mean median","correlation covariance variance mean median","correlation covariance variance mean median","winter dawn dusk midnight","prophecy fate oracle omen sign"},
+      {"force pressure flow current resistance","modulation demodulation carrier envelope","emergence vitality return journey path origin","translation scaling identity","origin destination between inside outside"},
+      {"orientation rotation translation scaling identity","median mode distribution probability","density concentration diffusion osmosis","zero two cycle season spring summer","orientation rotation translation"},
+      {"density concentration diffusion osmosis","collision loss reward penalty score","density concentration diffusion","trauma wound origin scar pain","alien xqz vbn mfk wrr"},
+    };
+    const char *trigname[6] = {"B","H","F","A","V","T"};
+    const int N = 5;
+
+    g_matrix_mode = 1;
+    printf("# dario isolation matrix — raw pre-renorm energy, N=%d repeats, full reset per cell\n", N);
+    printf("# diagonal must dominate its column AFTER per-force z-score (analysis side)\n");
+    printf("trigger");
+    for (int f = 0; f < 7; f++) printf("\t%s", fname[f]);
+    printf("\n");
+
+    for (int tr = 0; tr < 6; tr++) {
+        double acc[7] = {0};
+        for (int rep = 0; rep < N; rep++) {
+            dario_reset(0x5151ULL + (uint64_t)tr * 131 + (uint64_t)rep);
+            feed_turns(trig[tr], 5);
+            for (int f = 0; f < 7; f++) acc[f] += g_raw_energy[f];
+        }
+        printf("%s", trigname[tr]);
+        for (int f = 0; f < 7; f++) printf("\t%.2f", acc[f] / N);
+        printf("\n");
+    }
+
+    /* control arm 1: empty context (no turns) — baseline activation per force */
+    {
+        double acc[7] = {0};
+        for (int rep = 0; rep < N; rep++) { dario_reset(0xE0E0ULL + (uint64_t)rep); for (int f = 0; f < 7; f++) acc[f] += g_raw_energy[f]; }
+        printf("CTRL_empty");
+        for (int f = 0; f < 7; f++) printf("\t%.2f", acc[f] / N);
+        printf("\n");
+    }
+    /* control arm 2: neutral filler (in-vocab, force-agnostic) */
+    {
+        static const char *const filler[5] = {"the and of to in","a is it for on","with as at by from","that this these those here","one two three four five"};
+        double acc[7] = {0};
+        for (int rep = 0; rep < N; rep++) { dario_reset(0xF111ULL + (uint64_t)rep); feed_turns(filler, 5); for (int f = 0; f < 7; f++) acc[f] += g_raw_energy[f]; }
+        printf("CTRL_filler");
+        for (int f = 0; f < 7; f++) printf("\t%.2f", acc[f] / N);
+        printf("\n");
+    }
+    g_matrix_mode = 0;
+}
+
 int main(int argc, char **argv) {
     printf("\n");
     printf("  dario.c — The Dario Equation, Embodied\n");
@@ -2226,6 +2321,14 @@ int main(int argc, char **argv) {
         }
     }
 #endif
+
+    /* --matrix — isolation harness (trigger×force, reset per cell), then exit */
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--matrix") == 0) {
+            dario_matrix();
+            return 0;
+        }
+    }
 
     printf("  this is not a chatbot.\n");
     printf("  this is a formula that reacts to you\n");
