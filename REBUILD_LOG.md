@@ -257,3 +257,14 @@ reinstalled): 2 PASS on core (phase coverage + raw-vs-zscore fixed), FAIL-5 tigh
 N=5 seed protocol / P12 numeric degradation rule / ablation commit-pin / pipefail) — all 5 applied.
 Findings doc marked SUPERSEDED/INTERIM with the 10 audit caveats. NEXT: singularity execution per plan —
 CPU phases on polygon ($0), A100 only P7/P9.
+
+**E9 — P0 GREEN + P1 CORE DONE (singularity, polygon $0).** P0: 6 build configs (dario_kk_only SOFT-fails
+= documented #ifdef coupling), infer_v4 OK, make test 1780/1780. P1: honest machine-emitted harness
+(c77c6b2) reproduced on polygon. z-gate: B/H/F/A/T PASS, V FAIL (vacuous 0.00), S placeholder — 5 forces
+isolate, not 7. per-trigger raw: F-trig→T FAIL, V-trig→T FAIL (v1 приговор for F/V unclosed at trigger
+level — machine-visible now). corr ALL 6: corr(B,A)=0.845 COLLINEAR (decoupling NOT clean B↔A; was hidden
+by excluding B,T), B↔H=0.444, rest ~0. Head-to-head stats (awk, Python-ban kept): McNemar b=29 c=0 exact
+p≈3.7e-9 (reversal rock-solid); resonance sign-test 38/40 rebuilt<legacy z≈5.53 (systematic modest drop,
+within pre-reg −0.15 threshold → "small systematic drop" not "preserved"). Ablation A1 DROPPED per pre-reg
+(provenance+decoupling not separable). FINAL honest Result 1: docs/dario_paper_v2_result1_FINAL.md.
+NEXT: P2 chambers (+R2 trauma-vs-dissonance sign check) on polygon, then P3-P6, then A100 for P7/P9.
