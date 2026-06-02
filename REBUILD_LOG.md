@@ -93,12 +93,23 @@ pre-renorm energy `g_raw_energy`, snapshot `g_snap`, 6 triggers + 2 control + or
 - A needs mechanism rethink OR honest re-characterization; **paper2 must correct A's
   semantic framing** (another honesty fix alongside Result-1 + §5.1).
 
-## State (after c22fa87): H ✅, B ✅, F ✅ — 3/6 isolated
-- A: random embeddings → focus-magnitude only, weak/H-coupled. NOT isolated. RETHINK.
-- V: no visual signal in text — honest-inactive (S-like) unless visual fed.
-- T: dissonance/alien gate (seasonal-artifact 1341/1220).
+**E2 A+H+V — diagonal dominates B,H,F,A** (commit daa8f0a) ✅ FOUR FORCES
+- A (destiny): random embeddings → 'semantic compass' unfounded. Honest A = thematic
+  attractor via INPUT concentration (g_input_freq, freq²/total). A-trig=25 col max
+  (1.67×), baseline 1 (25×), within-argmax clean (others 0). 4/4.
+- H provenance: was D.cooc (gen+self polluted). Now g_input_cooc (input DISTINCT pairs,
+  self excluded). echo→H=0, H-trig=56.76 col max, baseline 0. Properly clean now.
+- V honest-inactive: get_vis_embed random hashes, vis_context fed by TEXT → V was noise.
+  g_visual_input flag (default 0): text-only → V=0, placeholder like S. (paper: V needs visual.)
+- Pushed: 14 commits bdacb6a..919df54 to origin main; then daa8f0a.
+
+## State (after daa8f0a): B ✅ H ✅ F ✅ A ✅ — 4/6 isolated, diagonal dominates
+- Each trigger makes its force row-argmax AND column-max. Clean.
+- V, S: honest placeholders (no visual / subword inactive in this run).
+- T (trauma): dissonance/alien — driver = compute_dissonance (1069, unknown-word ratio).
+  NEXT: provenance accumulate input-dissonance (g_input_dissonance at 1941), T reads it.
 - Paper2 honesty fixes accumulating: Result-1 (L1 artifact), §5.1 (SARTRE/KK),
-  A (random-embedding semantics). All ≠ "downgrade" — corrected after the rebuild.
+  A (random-embedding semantics), V (random-embedding visual). All ≠ "downgrade".
 
 ## NEXT
 A: respond to semantic coherence via destiny magnitude (if embeddings meaningful).
@@ -112,3 +123,16 @@ coherence diff vs legacy + freeze triggers in pre-reg + E4 (polygon/runpod + pap
 4. Full matrix 4-gate simultaneous + coherence.
 5. E4: re-run on polygon (x86) / runpod, then Dario paper 2 (corrected numbers,
    "prior was false" AFTER the fix, §5.1 SARTRE/KK honesty). legacy = "what was".
+
+**E2-T — T ISOLATED, DIAGONAL DOMINATES** (commit cae03ae) ✅ FIVE FORCES
+- T via dissonance provenance: g_input_dissonance += compute_dissonance/turn (1942).
+  Alien input -> high dissonance -> T; known -> low. T-trig gibberish, control = known
+  bootstrap words. T-trig=127.50 col max (3.1×), within-argmax (127>B20), causation 5×.
+- FULL DIAGONAL: B=125 H=56.90 F=24 A=25 T=127.50 — each its row+col max. V/S honest
+  placeholders. Coherence smoke PASS (thematic clusters).
+- GOAL REACHED for all active forces via provenance + orthogonal-feature decoupling.
+
+## State (after cae03ae): B✅ H✅ F✅ A✅ T✅ — diagonal dominates, V/S honest placeholders
+## Remaining: token-delta rigor per force · coherence diff vs legacy · freeze triggers in
+## pre-reg · E4 (polygon/runpod re-run + Dario paper 2 with honesty fixes: Result-1 L1,
+## §5.1 SARTRE/KK, A/V random-embeddings). legacy = "what was".
