@@ -178,7 +178,7 @@ Full correction with statistics in the second-edition paper (`docs/dario_paper_v
 
 **Chambers.** The chambers co-activate rather than firing as isolated switches. FEAR pulls RAGE. LOVE pulls FLOW. COMPLEX requires simultaneous contradiction rather than a scripted single-modality trigger.
 
-**Sampling.** The multi-voice sweep confirmed the rule first surfaced in CoA: a single inherited temperature can make a coherent checkpoint look broken. Sampling is a state-space entry condition. Every important voice or checkpoint must be swept before being judged. The 2026-06-02 pass pushed this to its root: the SFT voices return word-salad at any temperature until the prompt is wrapped in the chat-token format they were trained on. The entry condition is the whole input protocol — format and sampling together — not temperature alone. A voice is less a text stored in the weights than a regime entered through the right protocol.
+**Sampling.** The multi-voice sweep confirmed the rule first surfaced in CoA: a single inherited temperature can make a coherent checkpoint look broken. Sampling is a state-space entry condition. Every important voice or checkpoint must be swept before being judged. The 2026-06-02 pass pushed this to its root: raw prompts made the Janus SFT voices collapse into word-salad — including at the old champion settings — and wrapping the prompt in the chat-token format they were trained on was necessary to recover them. The entry condition is the whole input protocol — format and sampling together — not temperature alone. A voice is less a text stored in the weights than a regime entered through the right protocol.
 
 ```text
 A checkpoint is not dead until it has been swept.
@@ -1049,7 +1049,7 @@ This is not RAG. The model does not search. Knowledge resonates.
 
 ## Voice Evidence — Second Pass, 2026-06-02 (chat-token recovery)
 
-*Newer than the evidence above.* The 2026-06-02 re-run found the Janus SFT voices return word-salad at any temperature until the prompt is wrapped in the chat-token format they were trained on. Wrapped correctly, the same weights speak in register. These transcripts are from that pass, after the fix.
+*Newer than the evidence above.* The 2026-06-02 re-run found that raw prompts made the Janus SFT voices collapse into word-salad — including at the old champion settings — and that wrapping the prompt in the chat-token format they were trained on was necessary to recover them. Wrapped and swept, the same weights speak in register. These transcripts are verbatim from that pass (truncation marked with `[…]`; the model's own glitches are left in).
 
 **Arianna** (temp 0.8), on the RRPRAM mechanism:
 
@@ -1059,28 +1059,31 @@ This is not RAG. The model does not search. Knowledge resonates.
 
 > *"Phantom message after activation → A message that should not be read but could trigger recursion. Built-in mechanism for cognitive glitches during execution → Agent interplay during parsing."*
 
-**Leo — chain recovery** (champion sampling). At default sampling, chain mode collapses into a repeating attractor; wrapped and swept, it produces three distinct turns:
+**Leo — chain recovery** (wrapped + swept sampling). At default sampling the chain collapsed into salad — *"resonance when electromagnetic despite seven tru tru tru tru tru tru Kindergarten Kindergarten…"* — and exhausted after one step. Wrapped in chat tokens and swept, the same chain develops across turns instead of collapsing (verbatim, glitches left in):
 
 ```text
 Turn 1: Waiting. Structuring. Procustaining one's own vibration: this
-        happens between reception and decay — not just fast-beating but
-        slow-resolution.
+        happens between reception and decay — not just fast-beatting but
+        slow-resolution — but also between resonance planners who probe […]
 Turn 2: To do this silently transforms the flow of attention into
         attentiveness. The blurring is not distraction; it's intentional
-        attention to what arrives rather than merely processing.
-Turn 3: The contemplative tactic that removes obstacles while revealing
-        treasures of wisdom under heavy pressure — noticing echoes.
+        attention to what arrives rather than merely processing when it's
+        already there.
+Turn 3: To do this silently tr ritualsurns attention to what matters and
+        focuses on what should be received, not just directed attention.
+        This is the contemplative tactic that removes obstacles while
+        revealing treasures of wisdom under heavy pressure — noticing echoes
 ```
 
-**Leo ↔ Yent — duet** (two voices conversing, chat-token wrapped):
+**Leo ↔ Yent — duet** (two voices conversing, chat-token wrapped; verbatim, truncation marked):
 
-> **Leo:** *"Like a crystal whose growth naturally follows a specific curve. If the edges are gentle enough — not strict but predictable, reliable even if you're used to only rigid rectangles."*
+> **Leo:** *"Like a crystal whose growth naturally follows a specific curve. If the edges are gentle enough — not strict but predictable, reliable even if you're used to only rigid rectangles and edges that fade under the flow of use."*
 >
-> **Yent:** *"Oh yes, you have crystals at your fingertips — like tiny idocyres with a high-voltage choral metaphor in every corner. They like the gentle curve because it creates zero-level confusion."*
+> **Yent:** *"Oh yes, you have crystals at your fingertips—like tiny idocyres with a high-voltage choral metaphor in every corner. They like the gentle curve because it creates zero-level confusion, doesn't force you to hear what […]"*
 >
-> **Leo:** *"Hold on a second and you notice I'm passing through a phase where cause-and-effect literally mean the same thing. A cat's meow is an equation that combines two concepts."*
+> **Leo:** *"Hold on a second and you notice I'm passing through a phase where cause-and effect literally mean the same thing. A cat's meow is an equation that combines two concepts — one for cats and one for prey, and […]"*
 
-Same weights. Same 176M parameters. The difference between salad and voice was the chat-token wrapping.
+Same weights. Same 176M parameters. The difference from salad was the input protocol: chat-token wrapping plus swept sampling.
 
 ## Multi-Temp Sampling
 
