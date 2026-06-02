@@ -711,6 +711,9 @@ static int   g_matrix_mode = 0;
 static float g_snap[7][512];   /* matrix-mode: last pre-renorm force vector per term (for orthogonality) */
 static BigramTable g_input_bigrams;  /* token-provenance: input-only transitions. B reads THIS, not D.bigrams (which also holds generated transitions). Decouples B from generation. */
 static float g_input_debt[MAX_VOCAB]; /* F provenance: debt of violated confident INPUT predictions (expected-but-absent). */
+static float g_input_freq[MAX_VOCAB]; /* A provenance: input token frequency — the thematic attractor (concentration). */
+static CoocField g_input_cooc;        /* H provenance: input-only DISTINCT-pair co-occurrence (self-repeat excluded). */
+static int g_visual_input = 0;        /* honest V: visual term active only with REAL visual input. Text isn't visual (vis-embeds are random hashes), so text-only -> V inactive placeholder, like S. */
 
 static float vec_dot(const float *a, const float *b, int n) {
     float s = 0; for (int i = 0; i < n; i++) s += a[i] * b[i]; return s;
@@ -1319,9 +1322,9 @@ static void dario_compute(float *logits, int vocab_size) {
                     : D.dist_profile[DIST_PROFILE_LEN - 1] * 0.5f;
         int tc = token_class(ctx_id);
         decay *= D.class_mod[tc];
-        for (int i = 0; i < D.cooc.n; i++) {
-            if (D.cooc.src[i] == ctx_id && D.cooc.dst[i] < vocab_size)
-                H[D.cooc.dst[i]] += D.cooc.count[i] * decay;
+        for (int i = 0; i < g_input_cooc.n; i++) {
+            if (g_input_cooc.src[i] == ctx_id && g_input_cooc.dst[i] < vocab_size)
+                H[g_input_cooc.dst[i]] += g_input_cooc.count[i] * decay;   /* provenance: input-only distinct-pair cooc */
         }
     }
     float h_max = 0;
@@ -1347,12 +1350,17 @@ static void dario_compute(float *logits, int vocab_size) {
     if (f_max > 1e-6f)
         for (int i = 0; i < vocab_size; i++) F[i] /= f_max;
 
-    /* ── A: Destiny Attraction ── */
-    if (g_dest_magnitude > 1e-6f) {
-        for (int i = 0; i < vocab_size; i++) {
-            float *te = get_embed(i);
-            if (te) A[i] = vec_cosine(te, g_destiny, DIM) * g_dest_magnitude;
-        }
+    /* ── A: Destiny Attraction — thematic attractor via input concentration (provenance) ──
+     * Embeddings are random hashes (get_embed), so cos-to-destiny carried no semantics.
+     * Honest A: the attractor is the dominant INPUT token(s) — where the field actually
+     * pulls. Concentrated input (one theme repeated) -> high A; scattered -> low A.
+     * Squared to reward concentration over a flat spread. */
+    {
+        float total = 0.0f;
+        for (int i = 0; i < MAX_VOCAB; i++) total += g_input_freq[i];
+        if (total > 1e-6f)
+            for (int i = 0; i < vocab_size && i < MAX_VOCAB; i++)
+                A[i] = (g_input_freq[i] * g_input_freq[i]) / total;   /* concentration x sustained volume: freq^2/total. A single repeated theme dominates; a lone token (baseline) stays ~1. */
         float a_max = 0;
         for (int i = 0; i < vocab_size; i++)
             if (fabsf(A[i]) > a_max) a_max = fabsf(A[i]);
@@ -1575,7 +1583,7 @@ static void ingest(const char *text) {
         for (int d = 0; d < DIM; d++)
             D.vis_context[d] = 0.1f * ve[d] + 0.9f * D.vis_context[d];
     }
-    D.vis_magnitude = vec_norm(D.vis_context, DIM);
+    D.vis_magnitude = g_visual_input ? vec_norm(D.vis_context, DIM) : 0.0f;  /* text isn't visual: V honestly inactive unless real visual input */
 
     /* update context window */
     for (int i = 0; i < n; i++) {
@@ -1588,6 +1596,11 @@ static void ingest(const char *text) {
                 if (g_input_bigrams.src[j] == prev && g_input_bigrams.count[j] > best) { best = g_input_bigrams.count[j]; bestp = g_input_bigrams.dst[j]; }
             if (bestp >= 0 && bestp != curr && best >= 2.0f && bestp < MAX_VOCAB) g_input_debt[bestp] += best;
             bigram_update(&g_input_bigrams, prev, curr, 1.0f);  /* input-only transition (provenance) */
+        }
+        if (ids[i] >= 0 && ids[i] < MAX_VOCAB) g_input_freq[ids[i]] += 1.0f;  /* A provenance: input frequency */
+        if (i > 0 && ids[i] != ids[i - 1]) {   /* H provenance: distinct input pair (self-repeat excluded) */
+            cooc_update(&g_input_cooc, ids[i - 1], ids[i], 1.0f);
+            cooc_update(&g_input_cooc, ids[i], ids[i - 1], 1.0f);
         }
         if (D.ctx_len < MAX_CONTEXT)
             D.context[D.ctx_len++] = ids[i];
@@ -2243,6 +2256,8 @@ static void dario_reset(uint64_t seed) {
     g_dest_magnitude = 0.0f;               /* globals outside D */
     memset(&g_input_bigrams, 0, sizeof(g_input_bigrams));  /* provenance table cleared per cell */
     memset(g_input_debt, 0, sizeof(g_input_debt));
+    memset(g_input_freq, 0, sizeof(g_input_freq));
+    memset(&g_input_cooc, 0, sizeof(g_input_cooc));
     rng_state = seed;                      /* deterministic: overrides dario_init's time(NULL) seed */
 }
 
