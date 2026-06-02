@@ -1299,7 +1299,7 @@ static void dario_compute(float *logits, int vocab_size) {
                     for (int k = 0; k < D.bigrams.n; k++)
                         if (D.bigrams.src[k] == dst && D.bigrams.dst[k] == src) { rev = D.bigrams.count[k]; break; }
                     float asym = D.bigrams.count[j] - rev;
-                    if (asym > 0.0f) B[dst] += asym * w;
+                    if (asym > 0.0f) B[dst] += asym * asym * w;   /* square: amplify strict order, suppress near-symmetric */
                 }
             }
         }
