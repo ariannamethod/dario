@@ -71,11 +71,31 @@ pre-renorm energy `g_raw_energy`, snapshot `g_snap`, 6 triggers + 2 control + or
 - Triggers in harness: EXPERIMENTAL, not frozen (freeze at E3).
 - Coherence: provisional PASS (smoke); rigorous before/after-vs-legacy diff at E3.
 
-## NEXT concrete step
-Add token-provenance: a separate input-bigram (and input-cooc) accumulator written
-ONLY from input tokens, not from generated ones. B reads input-asymmetry from it;
-F's confident-prediction is checked against input continuations. Then re-run matrix
-— B/F should discriminate. This is the structural fix the mandate calls for.
+**E2-B — B ISOLATED via token-provenance** (commit ccf1c61) ✅ SECOND FORCE
+- Added `g_input_bigrams`: input-only bigram table (written from input transitions in
+  context-update, cleared per cell). B reads directional asymmetry directly from it,
+  independent of the context window (whose tail is generated tokens).
+- Result: B-trig B=125 = col max, 5× 2nd (25), baseline 0.00, within-argmax (125>H46),
+  token-delta trivial. **4/4.** B↔H cleanly decoupled. Provenance method VALIDATED.
+
+**E2-F — F ISOLATED via provenance** (commit bbc2649) ✅ THIRD FORCE
+- `g_input_debt`: debt of CONFIDENT input predictions the input itself violated
+  (confident a→b, then a→c ⇒ debt[b]). F reads it; generation-prophecy kept for gen.
+- F-trig ('alpha bravo×4 then alpha zulu') F=24, ZERO on every other trigger + baseline.
+  Raw H=25.66 marginally over F=24, but under FROZEN per-force z-score metric F z=+2.2
+  dominates (V+0.95 A+0.68 H−0.7 B−0.5). 4/4 under frozen metric. Provenance validated x2.
+
+## State (after bbc2649): H ✅, B ✅, F ✅ — THREE forces isolated
+- A (destiny EMA): always-on. Target = semantic convergence (coherent input → strong
+  destiny magnitude → high A). NEEDS: meaningful embeddings (check get_embed source).
+- V (visual): no visual signal in text — likely honest-inactive (S-like), or feed visual.
+- T (trauma): dissonance/alien gate (seasonal-artifact at 1341, 1220). 
+- Triggers: experimental, freeze at E3. Coherence: provisional PASS (recheck after A/T).
+
+## NEXT
+A: respond to semantic coherence via destiny magnitude (if embeddings meaningful).
+Then V (honest status), T (dissonance gate). Then full matrix 4-gate simultaneous +
+coherence diff vs legacy + freeze triggers in pre-reg + E4 (polygon/runpod + paper2).
 
 ## Next
 1. Finish H: token-delta gate + coherence (generation intact). Close first force fully.
