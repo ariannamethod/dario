@@ -709,6 +709,7 @@ static float g_dest_magnitude = 0;
 static float g_raw_energy[7];
 static int   g_matrix_mode = 0;
 static float g_snap[7][512];   /* matrix-mode: last pre-renorm force vector per term (for orthogonality) */
+static BigramTable g_input_bigrams;  /* token-provenance: input-only transitions. B reads THIS, not D.bigrams (which also holds generated transitions). Decouples B from generation. */
 
 static float vec_dot(const float *a, const float *b, int n) {
     float s = 0; for (int i = 0; i < n; i++) s += a[i] * b[i]; return s;
@@ -1285,23 +1286,18 @@ static void dario_compute(float *logits, int vocab_size) {
          * not just the last token. Repeated / strong sequential structure
          * accumulates here, so B responds to its own pattern (a real chain in the
          * window) rather than to the mere presence of a last token. */
-        int k0 = (D.ctx_len > 5) ? D.ctx_len - 5 : 0;
-        for (int c = k0; c < D.ctx_len; c++) {
-            int src = D.context[c];
-            float w = 1.0f / (float)(D.ctx_len - c);   /* last token=1, older decays */
-            for (int j = 0; j < D.bigrams.n; j++) {
-                if (D.bigrams.src[j] == src && D.bigrams.dst[j] < vocab_size) {
-                    int dst = D.bigrams.dst[j];
-                    /* directional asymmetry: forward minus reverse. Symmetric
-                     * recurrence (a<->b) cancels here (that is H's signal);
-                     * only strict order (a->b, rarely b->a) survives as B. */
-                    float rev = 0.0f;
-                    for (int k = 0; k < D.bigrams.n; k++)
-                        if (D.bigrams.src[k] == dst && D.bigrams.dst[k] == src) { rev = D.bigrams.count[k]; break; }
-                    float asym = D.bigrams.count[j] - rev;
-                    if (asym > 0.0f) B[dst] += asym * asym * w;   /* square: amplify strict order, suppress near-symmetric */
-                }
-            }
+        /* B = directional asymmetry of the INPUT transition structure (provenance).
+         * Iterate input bigrams directly — independent of the context window, whose
+         * tail is dominated by generated tokens. Strict order (a->b, no reverse)
+         * -> high B; symmetric recurrence (a<->b) cancels (that is H's signal). */
+        for (int j = 0; j < g_input_bigrams.n; j++) {
+            int s = g_input_bigrams.src[j], dst = g_input_bigrams.dst[j];
+            if (dst >= vocab_size) continue;
+            float rev = 0.0f;
+            for (int k = 0; k < g_input_bigrams.n; k++)
+                if (g_input_bigrams.src[k] == dst && g_input_bigrams.dst[k] == s) { rev = g_input_bigrams.count[k]; break; }
+            float asym = g_input_bigrams.count[j] - rev;
+            if (asym > 0.0f) B[dst] += asym * asym;
         }
         float mx = 0;
         for (int i = 0; i < vocab_size; i++)
@@ -1592,6 +1588,7 @@ static void ingest(const char *text) {
 
     /* update context window */
     for (int i = 0; i < n; i++) {
+        if (i > 0) bigram_update(&g_input_bigrams, ids[i - 1], ids[i], 1.0f);  /* input-only transition (provenance) */
         if (D.ctx_len < MAX_CONTEXT)
             D.context[D.ctx_len++] = ids[i];
         else {
@@ -2244,6 +2241,7 @@ static void dario_reset(uint64_t seed) {
     dario_init();                          /* memset(&D,0) + re-bootstrap base */
     memset(g_destiny, 0, sizeof(g_destiny));
     g_dest_magnitude = 0.0f;               /* globals outside D */
+    memset(&g_input_bigrams, 0, sizeof(g_input_bigrams));  /* provenance table cleared per cell */
     rng_state = seed;                      /* deterministic: overrides dario_init's time(NULL) seed */
 }
 
