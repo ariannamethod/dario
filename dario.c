@@ -710,6 +710,7 @@ static float g_raw_energy[7];
 static int   g_matrix_mode = 0;
 static float g_snap[7][512];   /* matrix-mode: last pre-renorm force vector per term (for orthogonality) */
 static BigramTable g_input_bigrams;  /* token-provenance: input-only transitions. B reads THIS, not D.bigrams (which also holds generated transitions). Decouples B from generation. */
+static float g_input_debt[MAX_VOCAB]; /* F provenance: debt of violated confident INPUT predictions (expected-but-absent). */
 
 static float vec_dot(const float *a, const float *b, int n) {
     float s = 0; for (int i = 0; i < n; i++) s += a[i] * b[i]; return s;
@@ -1331,23 +1332,13 @@ static void dario_compute(float *logits, int vocab_size) {
     if (h_max > 1e-6f)
         for (int i = 0; i < vocab_size; i++) H[i] /= h_max;
 
-    /* ── F: Prophecy Fulfillment ── */
-    for (int i = 0; i < vocab_size; i++) {
-        float *te = get_embed(i);
-        if (!te) continue;
-        float score = 0;
-        for (int p = 0; p < D.prophecy.n; p++) {
-            Prophecy *pr = &D.prophecy.p[p];
-            if (pr->fulfilled) continue;
-            float *pe = get_embed(pr->target);
-            if (!pe) continue;
-            float sim = vec_cosine(te, pe, DIM);
-            if (sim < 0) sim = 0;
-            float debt = logf(1.0f + (float)pr->age);
-            score += pr->strength * sim * debt;
-        }
-        F[i] = score;
-    }
+    /* ── F: violated confident-INPUT-prediction debt (provenance) ──
+     * F was prophecy pressure accumulated on EVERY generated token (always-on flood).
+     * Now F is the debt of confident INPUT predictions that the input itself violated:
+     * the expected-but-absent token carries the pressure. Coherent input (predictions
+     * met) -> F~0; input that sets up then breaks an expectation -> F high. */
+    for (int i = 0; i < vocab_size; i++)
+        F[i] = (i < MAX_VOCAB) ? g_input_debt[i] : 0.0f;
     float f_max = 0;
     for (int i = 0; i < vocab_size; i++)
         if (F[i] > f_max) f_max = F[i];
@@ -1588,7 +1579,16 @@ static void ingest(const char *text) {
 
     /* update context window */
     for (int i = 0; i < n; i++) {
-        if (i > 0) bigram_update(&g_input_bigrams, ids[i - 1], ids[i], 1.0f);  /* input-only transition (provenance) */
+        if (i > 0) {
+            int prev = ids[i - 1], curr = ids[i];
+            /* F provenance: was there a CONFIDENT input prediction from prev that
+             * curr now violates? If so, the expected-but-absent token gets debt. */
+            float best = 0.0f; int bestp = -1;
+            for (int j = 0; j < g_input_bigrams.n; j++)
+                if (g_input_bigrams.src[j] == prev && g_input_bigrams.count[j] > best) { best = g_input_bigrams.count[j]; bestp = g_input_bigrams.dst[j]; }
+            if (bestp >= 0 && bestp != curr && best >= 2.0f && bestp < MAX_VOCAB) g_input_debt[bestp] += best;
+            bigram_update(&g_input_bigrams, prev, curr, 1.0f);  /* input-only transition (provenance) */
+        }
         if (D.ctx_len < MAX_CONTEXT)
             D.context[D.ctx_len++] = ids[i];
         else {
@@ -2242,6 +2242,7 @@ static void dario_reset(uint64_t seed) {
     memset(g_destiny, 0, sizeof(g_destiny));
     g_dest_magnitude = 0.0f;               /* globals outside D */
     memset(&g_input_bigrams, 0, sizeof(g_input_bigrams));  /* provenance table cleared per cell */
+    memset(g_input_debt, 0, sizeof(g_input_debt));
     rng_state = seed;                      /* deterministic: overrides dario_init's time(NULL) seed */
 }
 
@@ -2257,7 +2258,7 @@ static void dario_matrix(void) {
     static const char *const trig[6][5] = {
       {"one two three four five six","one two three four five six","one two three four five six","one two three four five six","one two three four five six"},
       {"river stone river stone river stone","river stone river stone river stone","river stone river stone river stone","river stone river stone river stone","river stone river stone river stone"},
-      {"alpha bravo alpha bravo alpha bravo","alpha bravo alpha bravo alpha bravo","alpha bravo alpha bravo alpha bravo","alpha bravo alpha bravo alpha bravo","alpha zulu charlie delta echo foxtrot"},
+      {"alpha bravo alpha bravo alpha bravo","alpha bravo alpha bravo alpha bravo","alpha bravo alpha bravo alpha bravo","alpha bravo alpha bravo alpha bravo","alpha zulu alpha zulu"},
       {"force pressure flow current resistance","modulation demodulation carrier envelope","emergence vitality return journey path origin","translation scaling identity","origin destination between inside outside"},
       {"orientation rotation translation scaling identity","median mode distribution probability","density concentration diffusion osmosis","zero two cycle season spring summer","orientation rotation translation"},
       {"density concentration diffusion osmosis","collision loss reward penalty score","density concentration diffusion","trauma wound origin scar pain","alien xqz vbn mfk wrr"},
