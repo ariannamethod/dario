@@ -208,3 +208,10 @@ KK/sampling/chain) or the organism's actual GENERATION behavior. The force rebui
 B/H/F/A/T, so downstream (generation, chambers, laws, KK) may have shifted — must be MEASURED,
 not assumed. Re-provisioning A100 for the FULL run (build all + tests/*.sh R2-8 + generation
 samples + coherence), capture to runpod/2026-06-02/.
+
+**E5 — FULL run on A100 (vto66qir637tqz), Phase 2+3.** Matrix byte-identical (T=162.44
+with trauma fix), tests 1780/1780. Results 2-8 harnesses BLOCKED: pod missing `jq`
+(servers started 3101-3108 but response-parse failed) — NOT measured. Generation: organism
+speaks; rebuilt B dominates live chamber readout (B:552 H:2 F:0 A:8 V:0 T:44) — downstream
+effect of B=directional-asymmetry² raw scale, must be characterized vs legacy in Phase 3.
+Singularity fix: install jq, re-run harnesses only.
