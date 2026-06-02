@@ -143,3 +143,13 @@ coherence diff vs legacy + freeze triggers in pre-reg + E4 (polygon/runpod + pap
   healing"; current "noise destiny collapse bifurcation"). Clusters differ (mechanisms
   changed -> different logits) but coherence QUALITY preserved — no degradation/garbage.
 - The rebuild isolated the forces without breaking Dario's generation. Regression gate PASS.
+
+**E3 — token-delta: B/A direct, H/F/T via matrix** (commit pending)
+- token-delta dump extended to 5 forces. B-trig->two, A-trig->echo (trigger-specific,
+  direct pass). T-trig->origin words (by design). H/F read 0 in dump (snapshot timing
+  artifact) — their trigger-specificity is via column dominance in the matrix.
+- E3 status: diagonal dominates (5 forces) + coherence PASS + token-delta (B/A direct,
+  H/F/T via matrix). Rebuild core COMPLETE.
+
+## E4 (next): freeze triggers in pre-reg · re-run on polygon (x86) / runpod · Dario paper 2
+## (corrected numbers + honesty fixes: Result-1 L1, §5.1 SARTRE/KK, A/V random-embeddings).
