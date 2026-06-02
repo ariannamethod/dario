@@ -268,3 +268,26 @@ p≈3.7e-9 (reversal rock-solid); resonance sign-test 38/40 rebuilt<legacy z≈5
 within pre-reg −0.15 threshold → "small systematic drop" not "preserved"). Ablation A1 DROPPED per pre-reg
 (provenance+decoupling not separable). FINAL honest Result 1: docs/dario_paper_v2_result1_FINAL.md.
 NEXT: P2 chambers (+R2 trauma-vs-dissonance sign check) on polygon, then P3-P6, then A100 for P7/P9.
+
+**E10 — FULL RunPod run (A100 s8ipgidxanj1h8), held/changed per paper's 8 Results.** P0 GREEN
+(6 configs, weights 3.5GB hf, test 1780/1780, infer_v4 after notorch+openblas install — singularity fix).
+- **R1 Destiny Dominates → CHANGED (overturned).** Matrix reproduced on A100 (COUPLED): z-gate B/H/F/A/T
+  PASS, V FAIL/vacuous, S placeholder (5 not 7); per-trigger F-trig→T & V-trig→T FAIL (v1 приговor
+  unclosed at trigger level); corr(B,A)=0.845 COLLINEAR. Head-to-head McNemar p≈3.7e-9 (destiny 29/40→0/40);
+  resonance sign-test 38/40 z≈5.53 (systematic modest drop).
+- **R4 Laws of Nature → HELD.** 2000-turn, β-spring 0.311 / α-summer 0.352; (1−ent)×res identity.
+- **R5 SARTRE Introspects → HELD (numbers identical).** Overlay base=84992B delta=16384B ratio=0.162 (=paper),
+  3B tongue on 2TB host, 8-event ring, 3 modules. via /kernel command (not /stats).
+- **R6 KK Scoring → HELD exactly.** Policy lexical=0.36 recency=0.12 trust=0.10 linkage=0.16 scope=0.10
+  namespace=0.08 freshness=0.08 (=published). Recursive event reproduced: top hit for "resonance field" is
+  the paper itself (dario_paper_draft_v4.md chunk 354). ingest needs a DIR not file.
+- **R2/R3 → from comprehensive run (CHANGED toward T-dominance live).** R2 chambers co-activate; COMPLEX
+  needs conversation (dialogue confirms).
+- **R7 Sampling Is Architecture → BLOCKED on P0.5.** infer_v4 generates (~8s/cell, 540≈72min) but raw-prompt
+  = word-salad even at champion 0.7/40 — SFT voices were TRAINED with chat-token wrapping (BOS/USER/ASST).
+  Needs the P0.5 --chat-tokens patch (plan orders it before P7 for exactly this; I skipped it). Sweep killed.
+- **R8 Multi-Turn Recovery → premise confirmed.** chain/duet/trialogue Go bins run (model↔model conversation);
+  default sampling = degenerate attractor (yent repeats one segment) = Result 8's "default is bad". Recovery
+  needs champion params + chat-tokens.
+Artifacts: runpod/2026-06-02_full/{01_equation,05_sartre,06_kk,08_modes}. Pod ALIVE (weights+notorch on it).
+NEXT: implement P0.5 chat-tokens on infer_v4 → re-sweep R7 + dialogue recovery R8.
