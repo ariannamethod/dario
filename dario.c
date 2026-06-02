@@ -1289,9 +1289,19 @@ static void dario_compute(float *logits, int vocab_size) {
         for (int c = k0; c < D.ctx_len; c++) {
             int src = D.context[c];
             float w = 1.0f / (float)(D.ctx_len - c);   /* last token=1, older decays */
-            for (int j = 0; j < D.bigrams.n; j++)
-                if (D.bigrams.src[j] == src && D.bigrams.dst[j] < vocab_size)
-                    B[D.bigrams.dst[j]] += D.bigrams.count[j] * w;
+            for (int j = 0; j < D.bigrams.n; j++) {
+                if (D.bigrams.src[j] == src && D.bigrams.dst[j] < vocab_size) {
+                    int dst = D.bigrams.dst[j];
+                    /* directional asymmetry: forward minus reverse. Symmetric
+                     * recurrence (a<->b) cancels here (that is H's signal);
+                     * only strict order (a->b, rarely b->a) survives as B. */
+                    float rev = 0.0f;
+                    for (int k = 0; k < D.bigrams.n; k++)
+                        if (D.bigrams.src[k] == dst && D.bigrams.dst[k] == src) { rev = D.bigrams.count[k]; break; }
+                    float asym = D.bigrams.count[j] - rev;
+                    if (asym > 0.0f) B[dst] += asym * w;
+                }
+            }
         }
         float mx = 0;
         for (int i = 0; i < vocab_size; i++)
@@ -1652,7 +1662,11 @@ static int generate_words(char *out, int max_len) {
             if (D.cooc.src[i] == next && D.cooc.count[i] > best_cooc) {
                 best_cooc = D.cooc.count[i]; best_pred = D.cooc.dst[i];
             }
-        if (best_pred >= 0) prophecy_add(&D.prophecy, best_pred, 0.3f);
+        /* E2-F: register a prophecy only for a CONFIDENT prediction (seen >=2x),
+         * strength proportional to confidence. Weak random cooc-guesses no longer
+         * flood F; F now reflects violated confident expectations (debt), not
+         * the sheer volume of content. */
+        if (best_pred >= 0 && best_cooc >= 2.0f) prophecy_add(&D.prophecy, best_pred, best_cooc * 0.1f);
 
         /* prophecy debt */
         float max_l = -1e30f;
@@ -2243,9 +2257,9 @@ static void dario_matrix(void) {
     const char *fname[7] = {"B","H","F","A","V","S","T"};
     /* 6 force triggers (S has no trigger), 5 turns each */
     static const char *const trig[6][5] = {
-      {"alpha beta alpha beta alpha beta","alpha beta alpha beta alpha beta","alpha beta alpha beta alpha beta","alpha beta alpha beta alpha beta","alpha beta alpha beta alpha beta"},
-      {"expansion contraction organism alive dead birth","winter dawn dusk midnight dream","node antinode coupling synchronization","warmup score weight force pressure flow","kernel convolution correlation"},
-      {"correlation covariance variance mean median","correlation covariance variance mean median","correlation covariance variance mean median","winter dawn dusk midnight","prophecy fate oracle omen sign"},
+      {"one two three four five six","one two three four five six","one two three four five six","one two three four five six","one two three four five six"},
+      {"river stone river stone river stone","river stone river stone river stone","river stone river stone river stone","river stone river stone river stone","river stone river stone river stone"},
+      {"alpha bravo alpha bravo alpha bravo","alpha bravo alpha bravo alpha bravo","alpha bravo alpha bravo alpha bravo","alpha bravo alpha bravo alpha bravo","alpha zulu charlie delta echo foxtrot"},
       {"force pressure flow current resistance","modulation demodulation carrier envelope","emergence vitality return journey path origin","translation scaling identity","origin destination between inside outside"},
       {"orientation rotation translation scaling identity","median mode distribution probability","density concentration diffusion osmosis","zero two cycle season spring summer","orientation rotation translation"},
       {"density concentration diffusion osmosis","collision loss reward penalty score","density concentration diffusion","trauma wound origin scar pain","alien xqz vbn mfk wrr"},
