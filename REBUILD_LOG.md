@@ -232,3 +232,14 @@ T and B lead the chamber readout, A (destiny) does NOT. Reversal holds in matrix
 Archive: runpod/2026-06-02/ = runpod_matrix_a100.txt + 8×*.jsonl + full_run.log + results_2_8.log.
 STILL OPEN: Phase 3 coherence diff vs legacy (bdacb6a) — generation runs & organism speaks,
 but not yet diffed against legacy to claim "no degradation". Then Codex post-audit, then write v2.
+
+**E7 — COMPREHENSIVE A100 run (apwkzu9e40moqb), Phases 1-5, fix-on-spot.** Tools pre-installed
+(jq+column), both versions built (rebuilt 78d101f 182512B, legacy bdacb6a 177992B). HEAD GEM:
+head-to-head coherence on 40 identical neutral prompts — LEGACY dominant = A:destiny 29/40
+(reproduces "Destiny Dominates"); REBUILT dominant = B:chain 27/40, A:destiny 0/40. The original
+claim is real-in-code, artifact-in-mechanism: dominance vanishes when forces read input-provenance.
+R4 laws-of-nature SURVIVES at full 2000-turn (β peak spring 0.311, α peak summer 0.352, τ 1.05→0.84).
+Coherence preserved (resonance −9%, ent/emg within 5%; debt +123% as F tracks honest violations).
+V inactive matrix+live (term_V=0). Synthesis: docs/dario_paper_v2_phase3_findings.md.
+Artifacts: runpod/2026-06-02-comprehensive/logs/ (matrix + 10 jsonl + master.log). Pod removed.
+NEXT: verification workflow (adversarial verify each claim vs jsonl + Codex 2nd opinion) → write v2.
