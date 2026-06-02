@@ -1,13 +1,14 @@
 # RunPod Full-Pass Plan v2 — Dario (rebuilt code)
 
-> Single-pod (+polygon-CPU), single-architect, **Singularity-mode** full re-run of the ENTIRE
-> paper protocol on the **rebuilt** organism, to produce verified numbers for paper edition 2.
+> Single RunPod pod, single-architect, **Singularity-mode** full re-run of the ENTIRE
+> paper protocol (the published paper's **8 Results**) on the **rebuilt** organism, to produce
+> verified numbers for paper edition 2.
 > Mirrors `runpod_plan_v3.md` (the 2026-05-08 v1 contract — 13 phases) phase-for-phase; v3 stays
 > the exhaustive micro-step reference. This file is the v2 contract: full phase list, per-phase
 > acceptance, rebuild-specific risk, and the **audit fixes** folded in. Plan → **Codex/Opus review
 > PASS** → Singularity execution. No phase skipped.
 >
-> **Pinned HEADs:** rebuilt = `118fa98` (E7 — the head-to-head + laws-2000 in hand were produced
+> **Pinned HEADs:** rebuilt = `cca1e4d` (P1 honest z-gate harness already landed; head-to-head + laws-2000 produced earlier
 > here, NOT 78d101f); legacy = `bdacb6a` (frozen). Document build parity: both binaries built with
 > identical flags, same host, same vocab=380 bootstrap — so the head-to-head attributes to the
 > provenance/decoupling rebuild, not build environment.
@@ -50,14 +51,15 @@ T=162.44 — but see Result-1 honesty below); head-to-head **raw-argmax** domina
    mean±sd over N=5 on the matrix. Clarify determinism: if the seed is fixed, "N=5 repeats" measures
    reproducibility, not variance — inject seed variation for real dispersion or drop the N=5 framing.
 
-## Pod / budget / discipline (CPU/GPU split — money fix)
+## Pod / budget / discipline (RunPod-ONLY — PI directive: всё на ранподе, не мелочиться)
 
-- **CPU phases (P0 build/test, P1-P6, P8, P10, P11 C/Go, P12) run on polygon ($0)** — they use
-  `dario`/`kk`/`sartre`/`infer_v4` CPU harnesses; the A100 would idle ~5h through them.
-- **A100-SXM4-80GB SECURE only for P7 (540-cell sweep) + P9 (cross-arch duet) voice inference.**
-  Target **≤2-3 GPU-hours ≈ $3-5**, hard kill at 3 GPU-h. Bring the pod up only when CPU phases done.
-  ssh via two-hop polygon, key `~/.ssh/id_ed25519_polygon`, save pod id LOCALLY. Stop+delete at end.
-- Volume ≥ 20 GB (weights `ataeff/dario` ≈ 3.4 GB + sqlite + logs + sweep transcripts).
+- **EVERYTHING runs on ONE RunPod A100-SXM4-80GB SECURE pod. NO polygon split.** Per the PI's explicit,
+  repeated directive ("всё на ранподе, не мелочись"), full verification outranks a few GPU-dollars. All
+  phases P0-P13 on the pod, parity with the v1 2026-05-08 run (same platform that produced the paper).
+- polygon is used ONLY as the ssh relay (two-hop, key `~/.ssh/id_ed25519_polygon`) — no compute runs on
+  it. Save pod id LOCALLY (`/tmp/dario_full_pod_id`). Budget ≤ 8 GPU-h, hard kill at 10 GPU-h. Stop+delete
+  the pod at the very end (no idle billing). The A100 idling through CPU phases is ACCEPTED, not optimized.
+- Volume ≥ 30 GB (weights `ataeff/dario` ≈ 3.4 GB + sqlite + per-phase logs + 540-cell sweep transcripts).
 - **Tools FIRST** (lesson: missing `jq`/`column` silently broke harnesses): `build-essential git
   libsqlite3-dev jq bsdmainutils sqlite3` + `hf` CLI in venv (Python for data prep / weight download
   ONLY, never inference).
@@ -91,8 +93,27 @@ capture (clean wiped them). Capture `--help` for `aml/dario_{infer,dialogue,foru
 → Go binary only; no `--kk-db` on Go.
 
 **P1 — Equation correctness (7 forces, `make dario` alone) — THE CORE OF v2.**
-`./dario --matrix`: per-trigger raw matrix + BOTH controls + token-delta dump + orthogonality (ALL pairs
-incl B,T). **N=5 seed protocol (codex #4):** the matrix harness reseeds deterministically per cell, so
+**P1.0 (FIRST, mandatory — REBUILD_PREREG.md:29 "run on UNFIXED code first"):** before ANY rebuilt
+measurement, build legacy `bdacb6a` and run the 3 null arms (shuffled in-vocab / empty context / scrambled
+trigger→force labels) + the 2 controls through the matrix harness → artifact
+`01_equation/null_unfixed/{baseline_per_force.txt,raw,zgate}`. CONSEQUENCE: this establishes the
+non-separability baseline. If the UNFIXED code shows dense always-on fields under the density-neutral
+(z-score) metric, non-separability is confirmed as the edition-1 defect (the L1-density artifact) BEFORE
+any per-force tuning — this is the causal control that makes the rebuilt result interpretable. Only after
+P1.0 artifact exists does the rebuilt measurement run.
+**P1.1 (rebuilt):** `./dario --matrix`: per-trigger raw matrix + token-delta dump + orthogonality (ALL pairs incl B,T).
+**Null arms (codex #4 — exactly as frozen REBUILD_PREREG.md:29-32, mandatory):** (i) shuffled in-vocab
+tokens, (ii) empty context, (iii) scrambled trigger→force labels — each through the identical pipeline+reset,
+defining `baseline_X` per force; PLUS the two existing controls (CTRL_minimal, CTRL_filler). If even the
+density-neutral metric shows dense always-on fields on UNFIXED code, non-separability is reached before any
+tuning. **COUPLED/UNCOUPLED label (codex #5 — REBUILD_PREREG.md:40-47):** every Result-1 artifact and paper
+table MUST state whether it is the COUPLED organism or the UNCOUPLED measurement build (α_mod=β_mod=γ_mod=
+τ_mod=1, swiglu gate constant, trauma→γ off, A-flood off) — the numbers differ; no mixing claims across them.
+The current `--matrix` is the COUPLED organism — label it so, and emit the UNCOUPLED build alongside.
+**Independent re-run gate (codex #3 — REBUILD_PREREG.md:77-80):** before ANY Result-1 number is marked
+verified, a second agent rebuilds from the frozen spec and re-produces the matrix, byte-comparing to this
+run. Same-author-defines-and-scores is exactly the loop that produced edition-1's lie — the independent
+rerun artifact is a hard gate, not post-review. **N=5 seed protocol (codex #4):** the matrix harness reseeds deterministically per cell, so
 5 bare repeats are byte-identical — that measures *reproducibility, not variance*. Either (a) drive the
 seed override with a fixed schedule `seed ∈ {1,2,3,4,5}` per cell and report per-cell mean±sd across
 those seeds, or (b) if no seed-vary hook exists, relabel as **N=1 deterministic + a reproducibility
@@ -105,7 +126,7 @@ yields (don't pre-assert 5). **Head-to-head vs legacy `bdacb6a`** on identical n
 distributional (raw-argmax dominance, NOT token-exact — no `--seed` for dario generation) + **McNemar
 p-value** on the 29/40→0/40 flip. **Ablation arm (codex #6 — pin exact builds):** A0=`bdacb6a` (neither),
 A1=provenance-only (cherry-pick the `g_input_*` input-accumulator commits WITHOUT the orthogonal-feature
-force rewrite — exact commit range pinned in P1 setup before running), A2=`118fa98` (both); same 40
+force rewrite — exact commit range pinned in P1 setup before running), A2=`cca1e4d` (both, canonical); same 40
 prompts for all three. **If A1 cannot be cleanly built/isolated, DROP the ablation and attribute the
 reversal to the combined rebuild — do not decompose a cause you did not measure.** Token-delta status per force (B/A direct →two/→echo; H/F/T column
 only — criterion-4 unmet for 3/5, state it). Also emit dest_magnitude vs argmax-rate side-by-side for
@@ -167,12 +188,40 @@ free prose — so coherence rests on field metrics, with that caveat stated.
 **P13 — Doc + archive + post-review.** Everything to `runpod/2026-06-02_full/<NN_phase>/` incl master.log.
 Codex POST-audit of the numbers (overclaim hunt). Then write edition 2 strictly from these artifacts.
 
+## Mapping to the paper's 8 Results (each re-measured held/changed — NO assumption)
+
+Anchored to `docs/dario_paper_draft_v4.md` §6. Each phase reproduces the paper's EXACT claim + source,
+on rebuilt code, and reports HELD or CHANGED with its own artifact. Expected direction stated, not assumed.
+
+- **P1 → Result 1 "Destiny Dominates"** (paper: A dominant 42-52 across all 7 triggers, src
+  `01_equation/per_term/*.txt`). Rebuild's direct target → **expected CHANGED** (reversal, McNemar p≈3.7e-9).
+- **P2 → Result 2 "Chambers Co-Activate"** (5/6 cross threshold, FEAR→RAGE, LOVE→FLOW; **COMPLEX 0.13
+  below threshold — "requires conversation"**, src `02_chambers/per_chamber/*.txt`). Chambers ≠ the 7 forces
+  → may HOLD; the COMPLEX-needs-conversation claim is tested in P8 (duet/trialogue forces simultaneous
+  LOVE+RAGE that single-modality input cannot). Also tighten the control (paper's own reviewer note).
+- **P3 → Result 3 "Velocity Priority"** (STOP/UP/BREATHE/WALK observable, RUN transient, DOWN rarely
+  reached). Reads dissonance/trauma/debt which the rebuild changed → **expected CHANGED** (report new histogram).
+- **P4 → Result 4 "Laws of Nature"** (2000 turns, entropy≥0.10, res≤0.95, emergence=(1−ent)×res exact,
+  src `04_seasons/timeseries.tsv`). Structural law, equation-independent → **expected HELD** (confirm the
+  identity at sampled steps; also disclose long-run T-dominance, separate from the law).
+- **P5 → Result 5 "SARTRE Introspects"** (tongue-tier, 8-event ring, OverlayFS base=84992B delta=16384B,
+  src `05_sartre/repl_views.txt`). Host-specific; capture the A100 host's dump (numbers will differ by host).
+- **P6 → Result 6 "KK Scoring Matches Spec"** (policy weights lexical 0.36…, query "resonance"→chunk 131,
+  src `06_kk/multi_essay.txt`). Equation-independent → **expected HELD**; also drive nonzero fulfillment.
+- **P7 → Result 7 "Sampling Is Architecture"** (540-cell sweep, champions leo 0.7/∞/1.3 etc., src
+  `07_voices/scores.tsv`). Uses Janus/Resonance WEIGHTS, equation-independent → **expected HELD** (re-derive
+  champions or report drift; champions are the hypothesis under test). + §7 Resonance-200M infer_v4 bounds.
+- **P8 → Result 8 "Multi-Turn Recovery"** + dialogue modes (chain attractor broken by new optima, src
+  `08_modes/transcripts/chain_leo{,_FINAL}.txt`; duet/trialogue = model-to-model conversation that surfaces
+  COMPLEX for Result 2). Sampling/voices → **expected HELD**.
+- **P9 cross-arch duet · P10 web · P11 parity** support the above (not separate paper Results).
+
 ## Acceptance for the run as a whole
 Result-1 metric = frozen z-score, **machine-emitted** (raw labeled raw, z beside it); per-trigger F/V
 failure disclosed; **5-force** framing (V/S inactive); ALL-pairs corr incl B/T with CI; head-to-head with
 McNemar p; matrix N=5 mean±sd (determinism clarified); coherence with pre-registered threshold + Wilcoxon.
 Both controls, full 4-gate+tie-rule, synthetic-trigger + vocab=380 scope disclosed (the promised
-"full-scale" validation does NOT exist yet — say so), no gain-tuning. CPU/GPU split honored (≤3 GPU-h).
+"full-scale" validation does NOT exist yet — say so), no gain-tuning. ALL phases on the A100 pod (≤8 GPU-h).
 Held/changed reported honestly per phase, no silent omission. v1 NOT deleted; legacy `bdacb6a` frozen; v2
 marked "Second Edition — corrected". Codex/Opus review PRE + POST PASS.
 
@@ -181,7 +230,8 @@ A1 infer_v4-last + git-clean-first (P0) · A2 aml/go-bins before help-loop (P0.6
 B5 Phase 9 re-inserted · B6 SARTRE slot-cap/register harnesses (P5) · B8 make-test actual-count gate ·
 C9 raw-vs-zscore "5 forces" → report what 4-gate yields, z machine-emitted · C10 full 4-gate+tie-rule ·
 C12 champions = hypothesis · D14/D16 T-trauma raw-scale disclosure (P2/P3/P4/P6) · E17/E18 CPU/GPU split
-(money) · F19 dario non-determinism → distributional head-to-head, parity token-exact only infer_v4/Go ·
-F20 HEAD=118fa98 · plus findings-doc overclaims (raw argmax, per-trigger F/V failure, 5-not-7, corr B/T,
+OVERRIDDEN by PI directive → RunPod-only, all phases on A100 (cost accepted) · F19 dario non-determinism
+→ distributional head-to-head + McNemar, parity token-exact only infer_v4/Go ·
+F20 HEAD=`cca1e4d` (canonical, all refs agree) · plus findings-doc overclaims (raw argmax, per-trigger F/V failure, 5-not-7, corr B/T,
 n=40 stats, T-trauma long-run, KK fulfillment=0, R2 trauma anti-track, Phase-5 template, byte-identical
 provenance, build parity).
