@@ -45,13 +45,37 @@ pre-renorm energy `g_raw_energy`, snapshot `g_snap`, 6 triggers + 2 control + or
 - **H**: unchanged mechanism (symmetric cooc). With F-flood gone, H now passes 3/4 gates:
   H-trig H=133 = column max, 2.6× 2nd, 6.3× baseline(21), within-argmax ✓. CLOSEST to done.
 
-## Current state (after f993f2f)
-- H: 3/4 gates (need token-delta + coherence). CLOSEST.
-- B: noisy asymmetry, not column-leading cleanly. NEEDS WORK.
-- F: flood killed; trigger indirect. WIP.
+**E2-H — H ISOLATED, first force done** (commit e977c58)
+- Token-delta gate added to harness. Coherence verified PASS (generation still
+  thematic/coherent after B/F changes; B/F are minor logit terms).
+- H passes 4/4: specificity (133=col max, 2.6×), within-argmax, causation (6.3×
+  baseline), token-delta (active set differs: measurement/observation vs
+  saturation/hysteresis). Residual: H slightly elevated everywhere, margin clean.
+
+**E2-B squared + generation-coupling diagnosis** (commits d26ca47)
+- Squared the asymmetry (amplify strict order). B rose but still does NOT lead its
+  column (B-trig 6.09 vs H-trig 6.33).
+- ROOT DIAGNOSIS (precise): B is polluted by the organism's OWN generation. During
+  process_input the generated tokens are appended to context (dario.c:1680) and
+  `bigram_update(last, next, 0.5)` writes generation transitions (dario.c:1651).
+  So the bigram table = input + generated, generation dominating. The input trigger
+  cannot cleanly discriminate B. SAME class as F (generation-driven).
+
+## Current state (after d26ca47)
+- **H: DONE 4/4.** ✅ First force isolated, coherence intact.
+- **B / F: generation-coupled** — their signal is mixed with the organism's own
+  generation (bigrams 1651, context 1680; prophecy 1645). Input triggers don't
+  cleanly discriminate them. FIX (deep): token-provenance — track input→input
+  transitions separately from generated ones; B/F read only the input view.
 - A / V / T: not addressed.
-- token-delta + coherence gates: not yet run.
-- Triggers in harness: EXPERIMENTAL, not frozen in pre-reg.
+- Triggers in harness: EXPERIMENTAL, not frozen (freeze at E3).
+- Coherence: provisional PASS (smoke); rigorous before/after-vs-legacy diff at E3.
+
+## NEXT concrete step
+Add token-provenance: a separate input-bigram (and input-cooc) accumulator written
+ONLY from input tokens, not from generated ones. B reads input-asymmetry from it;
+F's confident-prediction is checked against input continuations. Then re-run matrix
+— B/F should discriminate. This is the structural fix the mandate calls for.
 
 ## Next
 1. Finish H: token-delta gate + coherence (generation intact). Close first force fully.
