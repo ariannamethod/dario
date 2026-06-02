@@ -178,3 +178,14 @@ coherence diff vs legacy + freeze triggers in pre-reg + E4 (polygon/runpod + pap
   synthetic+vocab+orthogonality. Numbers finalized from RunPod Phase-1.
 
 ## RUNPOD_PLAN.md written — all on RunPod, with plan/run/edition checklists. Next: Codex pre-audit.
+
+**E4 — RunPod provisioning attempt (learning logged)**
+- Provisioned via polygon (runpodctl 2.2 + SDK 1.9 + RunPod-Key-Go). CPU community pod
+  `ys9pjkunk6ipat`, 2 vCPU/4GB, $0.06/hr, US-NC-1, RUNNING.
+- BUT: CPU community pods don't map a direct TCP ssh port (RunPod routes their ssh via
+  console proxy, not a public IP:port). Terminated immediately — no volume, nothing built,
+  zero lost, no idle billing.
+- NEXT for the full RunPod re-run: use a GPU pod (reliable direct ssh) OR RunPod console
+  ssh-proxy from polygon. The equation re-run is cheap either way (~$1-2).
+- NOTE: the matrix (Result 1, core of v2) is ALREADY double-verified — Intel macOS +
+  polygon x86_64 Linux, byte-identical. RunPod adds platform parity + Results 2-8 re-run.
