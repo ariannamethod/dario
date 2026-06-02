@@ -85,12 +85,20 @@ pre-renorm energy `g_raw_energy`, snapshot `g_snap`, 6 triggers + 2 control + or
   Raw H=25.66 marginally over F=24, but under FROZEN per-force z-score metric F z=+2.2
   dominates (V+0.95 A+0.68 H−0.7 B−0.5). 4/4 under frozen metric. Provenance validated x2.
 
-## State (after bbc2649): H ✅, B ✅, F ✅ — THREE forces isolated
-- A (destiny EMA): always-on. Target = semantic convergence (coherent input → strong
-  destiny magnitude → high A). NEEDS: meaningful embeddings (check get_embed source).
-- V (visual): no visual signal in text — likely honest-inactive (S-like), or feed visual.
-- T (trauma): dissonance/alien gate (seasonal-artifact at 1341, 1220). 
-- Triggers: experimental, freeze at E3. Coherence: provisional PASS (recheck after A/T).
+**E2-A — honest finding, NOT isolated** (commit c22fa87)
+- Embeddings are RANDOM hashes of token id (get_embed:732) — no semantic relation.
+  So A's "semantic destiny/compass" is unfounded (same class as Result-1 lie).
+- A's real signal = destiny MAGNITUDE (focus). But weak & H-coupled: 'echo×5' →
+  A=19.79 (col max, only 1.14× 2nd) while H=177 dominates the row. within-argmax fails.
+- A needs mechanism rethink OR honest re-characterization; **paper2 must correct A's
+  semantic framing** (another honesty fix alongside Result-1 + §5.1).
+
+## State (after c22fa87): H ✅, B ✅, F ✅ — 3/6 isolated
+- A: random embeddings → focus-magnitude only, weak/H-coupled. NOT isolated. RETHINK.
+- V: no visual signal in text — honest-inactive (S-like) unless visual fed.
+- T: dissonance/alien gate (seasonal-artifact 1341/1220).
+- Paper2 honesty fixes accumulating: Result-1 (L1 artifact), §5.1 (SARTRE/KK),
+  A (random-embedding semantics). All ≠ "downgrade" — corrected after the rebuild.
 
 ## NEXT
 A: respond to semantic coherence via destiny magnitude (if embeddings meaningful).
