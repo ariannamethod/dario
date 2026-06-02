@@ -164,3 +164,17 @@ coherence diff vs legacy + freeze triggers in pre-reg + E4 (polygon/runpod + pap
 ## E4 remaining: Dario paper 2 (second edition) — corrected matrix + honesty fixes
 ## (Result-1 was L1-artifact; §5.1 ran with SARTRE/KK; A/V relied on random-hash embeddings;
 ## V/S honest placeholders). "Prior was false" stated AFTER the rebuild, not instead of it.
+
+**E4 — Opus audit of Result-1 v2 draft: found вши (caught BEFORE publication)**
+- KILLER: draft showed RAW energies but claimed "row argmax under frozen metric" — in raw,
+  F<T (24<38.3), table contradicts claim = edition-1's exact structural error, repeated.
+- Also: V row omitted (V-trig fires T=40.8,B=21), only CTRL_minimal shown (CTRL_filler T=46.4),
+  token-delta over-claimed (direct only B/A), causation-on-unfixed unverified, closer too strong.
+- RIGHT: L1-root, random-embedding finding, generation-coupling, B/A/T columns, orthogonality
+  |r|≤0.236, refuse-to-retract — all genuinely honest.
+- FIX: rewrite draft to show z-score (the real gate). Verified within-argmax DOES hold under
+  per-force z-score for all 5 (F-trig F z=2.6 max; T-trig T z=2.4 max) — raw just hides it
+  because force scales differ. Show z, both controls, V/S rows, honest token-delta, disclose
+  synthetic+vocab+orthogonality. Numbers finalized from RunPod Phase-1.
+
+## RUNPOD_PLAN.md written — all on RunPod, with plan/run/edition checklists. Next: Codex pre-audit.
