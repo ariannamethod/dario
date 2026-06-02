@@ -2296,35 +2296,68 @@ static void dario_matrix(void) {
     for (int f = 0; f < 7; f++) printf("\t%s", fname[f]);
     printf("\n");
 
+    /* fill M[8][7] mean + SD[8][7] over N seeds (rep varies the seed -> real per-cell dispersion).
+     * rows 0-5 = triggers B H F A V T; rows 6-7 = CTRL_minimal, CTRL_filler. */
+    double M[8][7], SD[8][7];
+    const char *rowname[8] = {"B","H","F","A","V","T","CTRL_minimal","CTRL_filler"};
     for (int tr = 0; tr < 6; tr++) {
-        double acc[7] = {0};
+        double s[7] = {0}, s2[7] = {0};
         for (int rep = 0; rep < N; rep++) {
             dario_reset(0x5151ULL + (uint64_t)tr * 131 + (uint64_t)rep);
             feed_turns(trig[tr], 5);
-            for (int f = 0; f < 7; f++) acc[f] += g_raw_energy[f];
+            for (int f = 0; f < 7; f++) { s[f] += g_raw_energy[f]; s2[f] += (double)g_raw_energy[f] * g_raw_energy[f]; }
         }
-        printf("%s", trigname[tr]);
-        for (int f = 0; f < 7; f++) printf("\t%.2f", acc[f] / N);
-        printf("\n");
+        for (int f = 0; f < 7; f++) { M[tr][f] = s[f] / N; double v = s2[f] / N - M[tr][f] * M[tr][f]; SD[tr][f] = v > 0 ? sqrt(v) : 0.0; }
+    }
+    {   /* control arm 1: minimal in-vocab token */
+        static const char *const neutral[1] = {"the"};
+        double s[7] = {0}, s2[7] = {0};
+        for (int rep = 0; rep < N; rep++) { dario_reset(0xE0E0ULL + (uint64_t)rep); feed_turns(neutral, 1); for (int f = 0; f < 7; f++) { s[f] += g_raw_energy[f]; s2[f] += (double)g_raw_energy[f] * g_raw_energy[f]; } }
+        for (int f = 0; f < 7; f++) { M[6][f] = s[f] / N; double v = s2[f] / N - M[6][f] * M[6][f]; SD[6][f] = v > 0 ? sqrt(v) : 0.0; }
+    }
+    {   /* control arm 2: neutral filler (in-vocab, force-agnostic) */
+        static const char *const filler[5] = {"gravity mass weight force pressure","flow current resistance impedance flux","density concentration diffusion gradient","dimension space time direction surface","orientation rotation translation scaling kernel"};
+        double s[7] = {0}, s2[7] = {0};
+        for (int rep = 0; rep < N; rep++) { dario_reset(0xF111ULL + (uint64_t)rep); feed_turns(filler, 5); for (int f = 0; f < 7; f++) { s[f] += g_raw_energy[f]; s2[f] += (double)g_raw_energy[f] * g_raw_energy[f]; } }
+        for (int f = 0; f < 7; f++) { M[7][f] = s[f] / N; double v = s2[f] / N - M[7][f] * M[7][f]; SD[7][f] = v > 0 ? sqrt(v) : 0.0; }
     }
 
-    /* control arm 1: empty context (no turns) — baseline activation per force */
+    /* RAW table (mean +/- sd over N seeds) */
+    for (int r = 0; r < 8; r++) { printf("%s", rowname[r]); for (int f = 0; f < 7; f++) printf("\t%.2f\xC2\xB1%.2f", M[r][f], SD[r][f]); printf("\n"); }
+
+    /* per-trigger RAW argmax — exposes per-TRIGGER own-force isolation honestly.
+     * F and V are EXPECTED to FAIL here (T wins on their triggers by raw scale); the
+     * per-force z-gate below passes only by standardizing across triggers. Both reported. */
     {
-        double acc[7] = {0};
-        static const char *const neutral[1] = {"the"};
-        for (int rep = 0; rep < N; rep++) { dario_reset(0xE0E0ULL + (uint64_t)rep); feed_turns(neutral, 1); for (int f = 0; f < 7; f++) acc[f] += g_raw_energy[f]; }
-        printf("CTRL_minimal");
-        for (int f = 0; f < 7; f++) printf("\t%.2f", acc[f] / N);
-        printf("\n");
+        const int owncol[6] = {0, 1, 2, 3, 4, 6};  /* trigger row -> its own force column (T col=6) */
+        printf("# per-trigger RAW argmax (own-force isolation at trigger level)\n");
+        for (int tr = 0; tr < 6; tr++) {
+            int am = 0; for (int f = 1; f < 7; f++) if (M[tr][f] > M[tr][am]) am = f;
+            printf("  %s-trig raw-argmax=%s own=%s %s\n", trigname[tr], fname[am], fname[owncol[tr]], am == owncol[tr] ? "PASS" : "FAIL");
+        }
     }
-    /* control arm 2: neutral filler (in-vocab, force-agnostic) */
+
+    /* Z-MATRIX (machine-emitted gate): per-force z across the 8 conditions */
     {
-        static const char *const filler[5] = {"gravity mass weight force pressure","flow current resistance impedance flux","density concentration diffusion gradient","dimension space time direction surface","orientation rotation translation scaling kernel"};
-        double acc[7] = {0};
-        for (int rep = 0; rep < N; rep++) { dario_reset(0xF111ULL + (uint64_t)rep); feed_turns(filler, 5); for (int f = 0; f < 7; f++) acc[f] += g_raw_energy[f]; }
-        printf("CTRL_filler");
-        for (int f = 0; f < 7; f++) printf("\t%.2f", acc[f] / N);
-        printf("\n");
+        double Z[8][7];
+        for (int f = 0; f < 7; f++) {
+            double mu = 0; for (int r = 0; r < 8; r++) mu += M[r][f]; mu /= 8;
+            double v = 0; for (int r = 0; r < 8; r++) { double d = M[r][f] - mu; v += d * d; } v /= 8;
+            double sd = v > 0 ? sqrt(v) : 0.0;
+            for (int r = 0; r < 8; r++) Z[r][f] = sd > 1e-9 ? (M[r][f] - mu) / sd : 0.0;
+        }
+        printf("# z-scored matrix (per-force z across 8 conditions — THE GATE)\n");
+        printf("trigger"); for (int f = 0; f < 7; f++) printf("\t%s", fname[f]); printf("\n");
+        for (int r = 0; r < 8; r++) { printf("%s", rowname[r]); for (int f = 0; f < 7; f++) printf("\t%+.2f", Z[r][f]); printf("\n"); }
+        const int ownrow[7] = {0, 1, 2, 3, 4, -1, 5};  /* force col -> its trigger row; S has none */
+        printf("# z-gate verdict: own-trigger z vs best other-row z (force isolates if own is argmax of its column)\n");
+        for (int f = 0; f < 7; f++) {
+            int orow = ownrow[f];
+            if (orow < 0) { printf("  %s: placeholder (no trigger)\n", fname[f]); continue; }
+            double own = Z[orow][f], best = -1e30; int bo = 0;
+            for (int r = 0; r < 8; r++) if (r != orow && Z[r][f] > best) { best = Z[r][f]; bo = r; }
+            printf("  %s: own=%+.2f best-other=%+.2f(%s) %s\n", fname[f], own, best, rowname[bo], own > best ? "PASS" : "FAIL");
+        }
     }
 
     /* orthogonality: are A/H/F/V collinear (cosine projections of one space)? */
@@ -2338,12 +2371,12 @@ static void dario_matrix(void) {
             "origin destination journey return path between inside outside"};
         dario_reset(0xC0DEULL);
         feed_turns(rich, 6);
-        const int idx[4] = {TERM_A, TERM_H, TERM_F, TERM_V};
-        const char *nm[4] = {"A","H","F","V"};
+        const int idx[6] = {TERM_B, TERM_H, TERM_F, TERM_A, FORCE_TRAUMA, TERM_V};
+        const char *nm[6] = {"B","H","F","A","T","V"};
         int VN = 380;
-        printf("# orthogonality (Pearson r over %d-dim force vectors; |r|>0.70 = collinear by construction)\n", VN);
-        for (int a = 0; a < 4; a++)
-            for (int b = a + 1; b < 4; b++) {
+        printf("# orthogonality (Pearson r over %d-dim force vectors, ALL 6 active pairs incl B,T; |r|>0.70 = collinear)\n", VN);
+        for (int a = 0; a < 6; a++)
+            for (int b = a + 1; b < 6; b++) {
                 double ma=0, mb=0;
                 for (int i=0;i<VN;i++){ ma+=g_snap[idx[a]][i]; mb+=g_snap[idx[b]][i]; }
                 ma/=VN; mb/=VN;
