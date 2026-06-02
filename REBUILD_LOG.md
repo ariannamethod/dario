@@ -291,3 +291,15 @@ NEXT: P2 chambers (+R2 trauma-vs-dissonance sign check) on polygon, then P3-P6, 
   needs champion params + chat-tokens.
 Artifacts: runpod/2026-06-02_full/{01_equation,05_sartre,06_kk,08_modes}. Pod ALIVE (weights+notorch on it).
 NEXT: implement P0.5 chat-tokens on infer_v4 → re-sweep R7 + dialogue recovery R8.
+
+**E11 — P0.5 chat-tokens FIX + R7 sweep COMPLETE.** infer_v4 --chat-tokens (BOS/USER/ASST wrap, stop
+ASST_END, rep-penalty CLI) committed 81b43a6. Night-and-day: raw="The The Sw Sw sw" salad → chat="The
+sound that when two people speak in the same language creates a pattern of resonance..." coherent.
+540-cell sweep (chat-tokens for leo/arianna/yent, raw for resonance-yent/leo24m): 432 ok, 108 err
+(=resonance-yent, §7 infer_v4 H<=16 vs H=20 bound CONFIRMED). Scored distinct-2 - 0.5*rep, avg over 3
+prompts. **R7 verdict: THESIS HELD, exact champions DRIFTED.** "Sampling Is Architecture" holds — defaults
+0.75/40 not top-3; optima = high temp + no top-k + high rep-pen (paper's direction). But claimed champions
+rank #19(leo)/#7(arianna)/#22(yent)/#2(leo24m) of 36 under pure distinct-2 — proxy metric peaks at temp 1.0
+while paper's human picked lower temp for coherence among top-distinct cells + seed variation. Honest:
+direction confirmed, exact per-voice cells not re-derived by metric alone. Artifacts: 07_voices_scores.tsv,
+transcripts/. NEXT: R8 dialogue recovery (chat-tokens+champions) + trialogue + forum + P10 web + P11 parity.
