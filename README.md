@@ -61,6 +61,8 @@ you> hello world
 
 Your words were unknown. Dissonance maxed at 1.0. The equation went UP — manic velocity, high temperature, prophecy erupting. Visual grounding and destiny competed. Six chambers stirred. The fragment that surfaced was about visual perception.
 
+> **Legacy example.** This `hello world` trace shows the *original* (first-edition) force behavior, where the visual term was modeled active. In the 2026-06-02 rebuild the visual term is an inactive placeholder (`term_V = 0` in both the matrix and live operation) — see "Force behavior — corrected" below. The trace is kept to show the equation's shape, not the current V activation.
+
 This is presence: state, memory, substrate, and response in one loop.
 
 ---
