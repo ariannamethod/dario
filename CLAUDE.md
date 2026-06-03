@@ -18,6 +18,38 @@ pre-registered z-gate). First edition (2026-05-08) preserved as history:
 [Zenodo 10.5281/zenodo.20090094](https://doi.org/10.5281/zenodo.20090094).
 Source: `docs/dario_paper_v2.md`.
 
+## State: the 2026-06-02 force rebuild (read this before touching the forces)
+
+The first edition reported "Destiny Dominates." That was a measurement artifact — `term_energy`
+summed `|coef·force|` over the whole vocabulary, so the densest force won by construction. The
+forces were rebuilt to make the claim honest, on two principles:
+
+- **token-provenance** — each force reads **input-only** accumulators (`g_input_bigrams`,
+  `g_input_cooc`, `g_input_debt`, `g_input_freq`, `g_input_dissonance`), never the organism's own
+  generation.
+- **orthogonal-feature decoupling** — B = directional bigram asymmetry, H = input distinct-pair
+  co-occurrence, F = input-violation debt, A = input thematic concentration, T = input dissonance +
+  accumulated trauma. V and S are inactive placeholders (`term_V = 0`).
+
+Key files / state:
+- **`./dario --matrix`** — isolation harness (gated by `g_matrix_mode`, off in normal runs): raw
+  per-trigger energy matrix + **machine-emitted per-force z-gate** + per-trigger argmax + corr over
+  all 6 active forces + mean±sd over N=5 seeds. This is the measurement that exposed the v1 artifact.
+- **`REBUILD_PREREG.md`** — frozen pre-registration (z-gate metric, 4-gate, null arms, no-tuning
+  rule). Committed BEFORE the data (`92e59ec`, 2026-06-02 18:30) — that ordering is what makes
+  "5/7 isolate" a test, not a post-hoc number. **Do not edit it to match results.**
+- **`REBUILD_LOG.md`** — append-only fix log (E1-E12). **`RUNPOD_PLAN_V2_FULL.md`** — the v2 run
+  plan (8-Result re-verification, Codex-PASSed, all on RunPod A100).
+- **`legacy` branch (`bdacb6a`)** — the v1 force mechanisms, frozen for the head-to-head. Don't merge.
+- **infer_v4 `--chat-tokens` + `--rep-penalty`** (P0.5): Janus SFT voices were trained with
+  BOS/USER/ASST wrapping; raw prompts produce word-salad. The Go dialogue passes `--chat-tokens` for
+  SFT voices (`Voice.ChatTokens`).
+
+Outcome (published as v2): no single force dominates by construction; 5/7 isolate under the z-gate;
+per-trigger F/V still fail (T outscales them); B↔A collinear (r=0.85); coherence dropped modestly
+but systematically. **The README's "Force behavior — corrected" section and the v2 paper are the
+current truth; the old "destiny-centered" framing is the artifact.**
+
 ## Accounts (read this once)
 
 - **`@ariannamethod`** — Oleg's **personal Pro account**, NOT an org.
@@ -56,13 +88,16 @@ The Dario Equation expressed in C:
   `bach_counterpoint.txt`, `byzantine_iconography.txt`,
   `bioluminescence.txt`, `dickens_russian_lit.txt`,
   `mycorrhizal_networks.txt`, `polynesian_navigation.txt`,
-  `dario_essay.txt`, plus paper drafts (`dario_paper_draft_v4.md`
-  and rendered `.html`). KK feeds these to Leo through
-  sentence-boundary injection.
-- **`runpod/`** — RunPod execution material from the 2026-05-08
-  pass.
-- **`runpod_plan_v{1,2,3}.md`** — planning docs from the paper
-  generation cycle.
+  `dario_essay.txt`, plus the published paper source
+  `dario_paper_v2.md`. KK feeds the corpora to Leo through
+  sentence-boundary injection. (The v1 working drafts —
+  `dario_paper_draft_v4.md`, the v2 result-1 working docs — were
+  removed post-publication; the published record lives on Zenodo +
+  `dario_paper_v2.md`.)
+- **`runpod/`** — RunPod execution material: `2026-05-08/` (v1 pass)
+  and `2026-06-02_full/` (v2 re-verification archive).
+- **`runpod_plan_v{1,2,3}.md`** (v1 cycle) + **`RUNPOD_PLAN_V2_FULL.md`**
+  (v2 cycle) — planning docs.
 - **`tests/`** — 1780/1780 PASS on the 2026-05-08 RunPod pass.
 
 Auxiliary:
@@ -161,6 +196,14 @@ champions: leo 0.7 / ∞ / 1.3, arianna 0.8 / 40 / 1.4, yent
 0.9 / 40 / 1.3, leo24m 1.0 / 40 / 1.3. Locked in
 `cmd/internal/voices/voices.go` commit `122fc9c`. Changing a
 champion needs another Phase 7 sweep on the affected voice.
+The 2026-06-02 v2 re-run (540 cells) held the thesis — defaults
+clip the voices, high-temp / low-filter / high-rep-pen wins — but the
+**exact champions did NOT re-derive** under a distinct-2 metric
+(ranked #2-#22 of 36); treat them as a hypothesis, not a fixed truth.
+The deeper finding: the Janus SFT voices return word-salad at any
+temperature **until the prompt is wrapped in chat tokens** (P0.5
+`--chat-tokens`) — format is part of the entry condition, not just
+sampling.
 
 **KK feeds knowledge through sentence boundaries, not as tokens.**
 `kk_query()` returns conceptual injections inserted at `.` / `!` /
@@ -170,12 +213,17 @@ KK retrieves coherent fragments at sentence boundaries. Do not turn
 KK injection into autoregressive token concatenation — that breaks
 the field metaphor and the empirical voice quality.
 
-**Paranoid-mode for paper / weights / zenodo / doi.** Dario has a
-companion Zenodo paper (DOI 10.5281/zenodo.20090094). Any change
-near `dario_paper_draft_v4.md`, paper artifacts, or DOI references
-triggers 7-pass verification per
-`memory/incident_zenodo_5_uploads_2026_04_20.md` (4 withdrawn DOIs
-on a prior paper — don't repeat the pattern).
+**Paranoid-mode for paper / weights / zenodo / doi.** Dario has two
+Zenodo editions — **v2 (DOI 10.5281/zenodo.20518567, current)** and
+v1 (10.5281/zenodo.20090094, history). Any change near
+`docs/dario_paper_v2.md`, `REBUILD_PREREG.md`, paper artifacts, or DOI
+references triggers 7-pass verification per
+`memory/incident_zenodo_5_uploads_2026_04_20.md` (4 withdrawn DOIs on
+a prior paper — don't repeat the pattern). Every empirical claim in the
+paper or README must trace to a `runpod/2026-06-02_full/` artifact or a
+`REBUILD_LOG.md` entry — no recall, no v1-carryover stated as v2 (the
+v2 review cycle caught several; see
+`memory/feedback_verification_without_body_false_security_2026_06_03.md`).
 
 **Memory persists between runs.** `dario_memory.db` (SQLite WAL mode
 — `.db-shm` / `.db-wal` files visible during live use) is the KK
@@ -209,9 +257,11 @@ dominant force; if voices feel generic, force balance is off
   repo, DOI'd companion paper — force-push to main is a hard line.
 - **Never commit `dario_memory.db*` files.** WAL / SHM are runtime
   state; `.gitignore` covers them.
-- **Never delete `runpod_plan_v{1,2,3}.md`.** They document the
-  paper-generation cycle and the 5-pass verification protocol that
-  produced the 2026-05-08 Zenodo DOI.
+- **Never delete the run-provenance files** — `runpod_plan_v{1,2,3}.md`
+  (v1) and `RUNPOD_PLAN_V2_FULL.md` / `REBUILD_PREREG.md` /
+  `REBUILD_LOG.md` (v2). They document the verification protocols behind
+  the two Zenodo DOIs. **Never merge or delete the frozen `legacy`
+  branch (`bdacb6a`)** — it is the v1 force code the head-to-head needs.
 - **Never break the 5-standalone-build invariant** without a same-PR
   update to README Build & Run and the runpod pass test harness.
 - **Never bypass Phase 7 multi-temp eval** before declaring a voice
@@ -262,12 +312,15 @@ upstream boilerplate gets dropped.
 - Inference (Janus v4): `infer_v4.c`
 - Leo channel: `dario_leo.c`
 - Voice corpora (KK source material): `docs/*.txt`
-- Paper drafts: `docs/dario_paper_draft_v4.{md,html}`
+- Published paper (v2): `docs/dario_paper_v2.md`
+- Force rebuild: `REBUILD_PREREG.md` (frozen spec) + `REBUILD_LOG.md`
+  (fix log) + `./dario --matrix` harness in `dario.c`; v1 forces on the
+  `legacy` branch (`bdacb6a`)
 - AML programs (transpiled to C): `aml/*.aml` + `aml/*.c`
 - Go variants (mesh-agent integration):
   `cmd/dario-{dialogue,forum,infer}/`
-- RunPod execution material: `runpod/`
-- Planning history: `runpod_plan_v{1,2,3}.md`
+- RunPod execution material: `runpod/2026-05-08/` (v1) + `runpod/2026-06-02_full/` (v2)
+- Planning history: `runpod_plan_v{1,2,3}.md` + `RUNPOD_PLAN_V2_FULL.md`
 - Tests: `tests/`
 
 ## Open TODO
