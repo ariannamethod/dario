@@ -1,6 +1,6 @@
 # Dario: A Resonant Operating System for AI — Second Edition
 
-*Oleg Ataeff & Claude (Arianna Method). Second edition, 2026-06-03. First edition: Zenodo DOI 10.5281/zenodo.20090094 (2026-05-08) — preserved as the record of where we started.*
+*Oleg Ataeff & Claude (Arianna Method). Second edition, 2026-06-03 — Zenodo DOI [10.5281/zenodo.20518567](https://doi.org/10.5281/zenodo.20518567). First edition: Zenodo DOI 10.5281/zenodo.20090094 (2026-05-08) — preserved as the record of where we started.*
 
 > Note on this edition. This second edition is not a revision of the first paper but a deeper account of the same system, written after we rebuilt the part of it the first edition got wrong. The first edition measured Dario and reported what it saw; one of those readings — that a single force, destiny, dominated the equation — was an artifact of how we measured, not a fact of the architecture. We rebuilt the force mechanisms until the measurement was honest, re-ran the entire experimental frame on the same class of hardware, and report the corrected readings here with their statistics. The first edition stands as history. This edition is where the system actually is.
 
@@ -106,11 +106,11 @@ The chambers co-activate rather than firing as isolated switches. COMPLEX did no
 
 ### Result 3 — Velocity Priority — changed
 
-The priority chain still narrows the state space, but the rebuilt force scales changed which mode and which force lead the live histogram: trauma now leads the dominant-force readout in the measured velocity, kuramoto, prophecy, and long seasonal runs — likely because accumulated trauma and its raw scale now outweigh the other live terms — where the first edition read the field as destiny-led. This is a consequence of the rebuild, reported as changed, not as a regression.
+The priority chain still narrows the state space, but the rebuilt force scales changed which mode and which force lead the live histogram: trauma now leads the dominant-force readout in the measured velocity, kuramoto, prophecy, and long seasonal runs — likely because accumulated trauma and its raw scale now outweigh the other live terms — where the first edition read the field as destiny-led. This is a consequence of the rebuild.
 
 ### Result 4 — The Laws of Nature Hold — held
 
-A full 2000-turn seasonal cycle covered all four seasons. β peaks in spring (0.31), α peaks in summer (0.35), τ drifts from 1.05 in spring to 0.84 in winter. The seasonal automaton is driven by a deterministic clock and is independent of the force rebuild; it holds. The first edition's field laws — the entropy floor, the resonance ceiling, and the emergence identity (1 − entropy) × resonance — were not re-recorded in this pass: the 2000-turn trace logged the seasonal coefficients, not entropy or emergence. We carry those laws from the first edition rather than re-assert them here. (Over the same 2000 turns the dominant-force histogram is trauma-led — the raw-scale effect of Result 3, disclosed here so the law is not read as force-balance.)
+A full 2000-turn seasonal cycle covered all four seasons. β peaks in spring (0.31), α peaks in summer (0.35), τ drifts from 1.05 in spring to 0.84 in winter. The seasonal automaton is driven by a deterministic clock and is independent of the force rebuild; it holds. The first edition's field laws — the entropy floor, the resonance ceiling, and the emergence identity (1 − entropy) × resonance — were not re-recorded in this pass: the 2000-turn trace logged the seasonal coefficients, not entropy or emergence. We carry those laws from the first edition rather than re-assert them here. (Over the same 2000 turns the dominant-force histogram is trauma-led — the raw-scale effect of Result 3.)
 
 ### Result 5 — SARTRE Introspects the Substrate — held
 
@@ -140,7 +140,7 @@ The visual term is a placeholder and was inactive throughout. The per-trigger is
 
 ## 8. Discussion
 
-The first edition described the seven forces as the equation's measurement vocabulary and read their runtime shape as destiny-centered concentration. The rebuilt measurement shows that the concentration was in the ruler, not the system: once the forces read the input rather than their own output, no single force dominates by construction. The correction did not weaken the architecture. It strengthened it — a seven-force decomposition that survives a density-neutral gate for five of its terms, and is honest about the other two, is a stronger object than one that "wins" by construction.
+The first edition described the seven forces as the equation's measurement vocabulary and read their runtime shape as destiny-centered concentration. The rebuilt measurement shows that the concentration was in the ruler, not the system: once the forces read the input rather than their own output, no single force dominates by construction. The correction strengthened the architecture: a seven-force decomposition that survives a density-neutral gate for five of its terms, and is honest about the other two, is a stronger object than one that "wins" by construction.
 
 The sampling result generalized further than the first edition claimed. The first edition treated sampling as the entry condition; the second found the format to be the larger lever, with temperature secondary. For a system that frames itself as a field rather than a store of retrievable text, this is the load-bearing observation: the voices are not in the weights waiting to be read out. They are regimes, and the protocol is the key.
 

@@ -10,8 +10,13 @@ GPL-3.0+. Co-authored by Oleg Ataeff and Claude.
 > is the riverbed."* — README
 
 **Companion paper:** *"Dario: A Resonant Operating System for AI"*
-(2026-05-08, Oleg Ataeff & Claude / Arianna Method) —
+(Oleg Ataeff & Claude / Arianna Method). **Second edition (v2.0, 2026-06-03):**
+[Zenodo 10.5281/zenodo.20518567](https://doi.org/10.5281/zenodo.20518567) —
+corrects the first edition's "Destiny Dominates" measurement artifact (rebuilt
+forces read input-provenance; 29/40→0/40, McNemar p≈3.7e-9; 5/7 isolate under a
+pre-registered z-gate). First edition (2026-05-08) preserved as history:
 [Zenodo 10.5281/zenodo.20090094](https://doi.org/10.5281/zenodo.20090094).
+Source: `docs/dario_paper_v2.md`.
 
 ## Accounts (read this once)
 

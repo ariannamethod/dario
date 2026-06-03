@@ -176,7 +176,9 @@ The 2026-05-08 RunPod pass measured Dario as a running system and synced this RE
 
 The corrected result: **no single force dominates by construction.** On forty neutral prompts, the original code makes destiny the dominant force on 29/40; the rebuilt code on 0/40 (McNemar p ≈ 3.7×10⁻⁹). Five of seven forces isolate under their own trigger's z-gate; the visual and subword terms stay inactive placeholders. We report the limits in the open: at the raw per-trigger level the prophecy and visual triggers still fail to raise their own force above trauma, and the chain and destiny features remain correlated (r = 0.85). Dario is not destiny-centered.
 
-Full correction with statistics in the second-edition paper (`docs/dario_paper_v2.md`).
+Full correction with statistics in the second-edition paper (`docs/dario_paper_v2.md`) —
+[Zenodo 10.5281/zenodo.20518567](https://doi.org/10.5281/zenodo.20518567) (v2.0, 2026-06-03).
+First edition preserved as history: [10.5281/zenodo.20090094](https://doi.org/10.5281/zenodo.20090094).
 
 **Chambers.** The chambers co-activate rather than firing as isolated switches. The first edition's specific pairings (FEAR pulls RAGE, LOVE pulls FLOW) are carried from that pass and not cleanly reproduced in the 2026-06-02 kuramoto trace. COMPLEX requires simultaneous contradiction rather than a scripted single-modality trigger.
 
