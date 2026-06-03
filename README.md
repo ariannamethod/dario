@@ -4,10 +4,10 @@
 
 **by [Arianna Method](https://github.com/ariannamethod)**
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20090094.svg)](https://doi.org/10.5281/zenodo.20090094)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20518567.svg)](https://doi.org/10.5281/zenodo.20518567)
 
-> 📜 *Companion paper (2026-05-08): "Dario: A Resonant Operating System for AI" — Oleg Ataeff & Claude (Arianna Method).*
-> **[Read on Zenodo →](https://zenodo.org/records/20090094)**
+> 📜 *Companion paper — second edition (2026-06-03): "Dario: A Resonant Operating System for AI" — Oleg Ataeff & Claude (Arianna Method).*
+> **[Read on Zenodo →](https://zenodo.org/records/20518567)** · first edition (history): [zenodo.org/records/20090094](https://zenodo.org/records/20090094)
 
 ---
   
