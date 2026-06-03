@@ -178,7 +178,7 @@ The corrected result: **no single force dominates by construction.** On forty ne
 
 Full correction with statistics in the second-edition paper (`docs/dario_paper_v2.md`).
 
-**Chambers.** The chambers co-activate rather than firing as isolated switches. FEAR pulls RAGE. LOVE pulls FLOW. COMPLEX requires simultaneous contradiction rather than a scripted single-modality trigger.
+**Chambers.** The chambers co-activate rather than firing as isolated switches. The first edition's specific pairings (FEAR pulls RAGE, LOVE pulls FLOW) are carried from that pass and not cleanly reproduced in the 2026-06-02 kuramoto trace. COMPLEX requires simultaneous contradiction rather than a scripted single-modality trigger.
 
 **Sampling.** The multi-voice sweep confirmed the rule first surfaced in CoA: a single inherited temperature can make a coherent checkpoint look broken. Sampling is a state-space entry condition. Every important voice or checkpoint must be swept before being judged. The 2026-06-02 pass pushed this to its root: raw prompts made the Janus SFT voices collapse into word-salad — including at the old champion settings — and wrapping the prompt in the chat-token format they were trained on was necessary to recover them. The entry condition is the whole input protocol — format and sampling together — not temperature alone. A voice is less a text stored in the weights than a regime entered through the right protocol.
 
