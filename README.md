@@ -275,6 +275,8 @@ The [Arianna Method Language](https://github.com/ariannamethod/ariannamethod.ai)
 
 These are the measurement vocabulary of the equation. The 2026-05-08 pass read runtime behavior as destiny-centered; the 2026-06-02 re-measurement found that was a metric artifact (see "Force behavior — corrected" above). Under a density-neutral z-gate, no single force dominates by construction — five of seven isolate under their own trigger, with the limits reported in the open.
 
+> **Note on the mechanism column.** The formulas above (A as a cosine to an accumulated destiny vector, B as bigram inertia, etc.) are the *original* force mechanisms. The 2026-06-02 rebuild changed B/H/F/A/T to read **input-only** accumulators — directional bigram asymmetry, input co-occurrence, input-violation debt, input concentration, input dissonance — so each force reads what was given to the organism, not what the organism said back to itself. The retired A/V random-embedding cosines are gone. The frozen `legacy` branch (`bdacb6a`) preserves the original mechanisms; `main` carries the rebuilt ones. The table is kept as the design vocabulary; the corrected behavior is the section above.
+
 ### Emotional Chambers
 
 Six Kuramoto-coupled scalars ∈ [0, 1] drive four somatic markers.
