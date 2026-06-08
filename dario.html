@@ -125,6 +125,38 @@
     100% { opacity: 0.7; transform: translateY(0); }
   }
 
+  /* ── CHAMBERS BAR ── */
+  #chambers {
+    height: 22px;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--dim);
+    border-top: 1px solid #1a1a1e;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+  #chambers .ch {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  #chambers .ch-bar {
+    width: 36px;
+    height: 4px;
+    background: #1a1a1e;
+    position: relative;
+    overflow: hidden;
+  }
+  #chambers .ch-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    transition: width 0.15s;
+  }
+  #chambers .val { color: var(--fg); font-weight: 700; font-size: 9px; }
+
   /* ── METRICS BAR ── */
   #metrics {
     height: 28px;
@@ -319,6 +351,19 @@
   <div id="kernel-panel"></div>
 </div>
 
+<div id="chambers">
+  <div class="ch">FEAR<div class="ch-bar"><div class="ch-fill" id="ch-fear" style="background:#c0392b;width:0%"></div></div></div>
+  <div class="ch">LOVE<div class="ch-bar"><div class="ch-fill" id="ch-love" style="background:#e84393;width:0%"></div></div></div>
+  <div class="ch">RAGE<div class="ch-bar"><div class="ch-fill" id="ch-rage" style="background:#d63031;width:0%"></div></div></div>
+  <div class="ch">VOID<div class="ch-bar"><div class="ch-fill" id="ch-void" style="background:#6c5ce7;width:0%"></div></div></div>
+  <div class="ch">FLOW<div class="ch-bar"><div class="ch-fill" id="ch-flow" style="background:#00b894;width:0%"></div></div></div>
+  <div class="ch">CPLX<div class="ch-bar"><div class="ch-fill" id="ch-cplx" style="background:#fdcb6e;width:0%"></div></div></div>
+  <span style="margin-left:6px">α<sub>m</sub>=<span class="val" id="m-amod">1.00</span></span>
+  <span>β<sub>m</sub>=<span class="val" id="m-bmod">1.00</span></span>
+  <span>γ<sub>m</sub>=<span class="val" id="m-gmod">1.00</span></span>
+  <span>τ<sub>m</sub>=<span class="val" id="m-tmod">1.00</span></span>
+</div>
+
 <div id="metrics">
   <span>d=<span class="val" id="m-dis">0.00</span></span>
   <span>τ=<span class="val" id="m-tau">0.85</span></span>
@@ -500,6 +545,16 @@ function updateMetrics(d) {
     bar.style.background = getComputedStyle(document.documentElement).getPropertyValue(TERM_CSS_VARS[i]);
     barsDiv.appendChild(bar);
   });
+
+  // emotional chambers (Kuramoto somatic markers) — fed by the C backend via /api/chat
+  const setCh = (id, v) => { document.getElementById(id).style.width = Math.min(100, Math.max(0, v * 100)) + '%'; };
+  setCh('ch-fear', d.chambers.fear); setCh('ch-love', d.chambers.love); setCh('ch-rage', d.chambers.rage);
+  setCh('ch-void', d.chambers.void); setCh('ch-flow', d.chambers.flow); setCh('ch-cplx', d.chambers.complex);
+  // somatic coefficient modifiers
+  document.getElementById('m-amod').textContent = d.alpha_mod.toFixed(2);
+  document.getElementById('m-bmod').textContent = d.beta_mod.toFixed(2);
+  document.getElementById('m-gmod').textContent = d.gamma_mod.toFixed(2);
+  document.getElementById('m-tmod').textContent = d.tau_mod.toFixed(2);
 }
 
 async function sendMessage(text) {
