@@ -28,8 +28,8 @@ VELOCITY WALK
 ATTEND_FOCUS 0.70
 ATTEND_SPREAD 0.20
 
-ECHO "../kk_kernel.h"
-ECHO "../kk_kernel.c"
+BLOOD INCLUDE "../kk_kernel.h"
+BLOOD INCLUDE "../kk_kernel.c"
 
 BLOOD LINK -lsqlite3
 
