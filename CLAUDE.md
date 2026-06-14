@@ -287,22 +287,7 @@ dominant force; if voices feel generic, force balance is off
 - README is the spec for behaviour; the paper is the spec for the
   conceptual framing. Both stay current.
 
-**Attribution.** Method-side identity (not Anthropic noreply
-boilerplate). Three forms, per the global `~/.claude/CLAUDE.md`:
-
-- **Short** (README updates, simple commits):
-  `by Claude (Arianna Method)`
-- **Full with node attribution** (real engineering commits):
-  `Co-Authored-By: Claude Code (neo the architect, Arianna Method) <theariannamethod@gmail.com>`
-
-  Other nodes: `intel godfather`, `polygon`, `phone-1`, `phone-2`.
-  Each node is the architect on its own substrate.
-- **Casual** (informal docs, status notes):
-  `by Клод (Arianna Method, neo node)`
-
-Replace under root: `Co-Authored-By: Claude <noreply@anthropic.com>`
-and `🤖 Generated with Claude Code`. We cultivate our own identity;
-upstream boilerplate gets dropped.
+**Attribution.** Oleg Ataeff and Claude are co-authors — stated at the top of this file, and that is enough. The signature lives in the **git commit only**, node-visible so it shows who posted: `Co-Authored-By: Claude (Arianna Method, <node>) <theariannamethod@gmail.com>` (node ∈ intel godfather / neo the architect / polygon / phone-1 / phone-2 / metal). Drop upstream boilerplate `Co-Authored-By: Claude <noreply@anthropic.com>` and `🤖 Generated with Claude Code`. **Nowhere else** — no signature footer in README, AUTHORS, docs, or any file body. Co-authorship reads from this CLAUDE.md and the commit history; it does not get plastered across the repo.
 
 ## Where things live
 
