@@ -22,7 +22,7 @@ Memory rules in effect: provenance-on-every-number; "Adam" optimizer name banned
 |---|---|---|
 | GPU | A100 80GB SXM | `nvidia-smi` shows 1× A100, ~80 GB |
 | Image | Ubuntu 22.04 + CUDA 12.x base, build-essential preinstalled | `cc --version`, `make --version`, `gcc -v` |
-| Persistent volume | ≥ 10 GB | `dario_hf_upload/` is 3.4 GB on Neo (`du -sh /Users/ataeff/arianna/dario_hf_upload/` = `3.4G` verified 2026-05-08); plus KK SQLite (≤ 200 MB), per-phase logs (≤ 1 GB), 6 binaries × ~1 MB, GitHub clone (~50 MB). Plan for 10 GB to leave headroom for sweep transcripts. |
+| Persistent volume | ≥ 10 GB | `dario_hf_upload/` is 3.4 GB on Neo (`du -sh ~/arianna/dario_hf_upload/` = `3.4G` verified 2026-05-08); plus KK SQLite (≤ 200 MB), per-phase logs (≤ 1 GB), 6 binaries × ~1 MB, GitHub clone (~50 MB). Plan for 10 GB to leave headroom for sweep transcripts. |
 | Network | outbound HTTPS for `huggingface.co`, `github.com` | `curl -I https://huggingface.co` returns 200 |
 | User | non-root with sudo (Runpod default) | `id` |
 | Wall clock | UTC, NTP-synced | `date -u && timedatectl` |
@@ -489,7 +489,7 @@ Run a 5-turn dialogue mode with KK absorption (per `aml/README.md:151-160`). Aft
 
 #### 7.7 All seven essays loaded sequentially
 
-Files at `/Users/ataeff/arianna/dario/docs/`: `bach_counterpoint.txt`, `bioluminescence.txt`, `byzantine_iconography.txt`, `dario_essay.txt`, `dickens_russian_lit.txt`, `mycorrhizal_networks.txt`, `polynesian_navigation.txt` (verified `ls /Users/ataeff/arianna/dario/docs/` 2026-05-08).
+Files at `~/arianna/dario/docs/`: `bach_counterpoint.txt`, `bioluminescence.txt`, `byzantine_iconography.txt`, `dario_essay.txt`, `dickens_russian_lit.txt`, `mycorrhizal_networks.txt`, `polynesian_navigation.txt` (verified `ls ~/arianna/dario/docs/` 2026-05-08).
 
 ```bash
 for f in docs/*.txt; do
@@ -1139,7 +1139,7 @@ Per-phase cost logged to `metrics.json` as `wall_time_seconds × 1.74 / 3600`.
 | 7 | rep_penalty hardcoded in infer_v4 | `infer_v4.c:627` | Phase 7 builds three rp variants instead of patching the canonical. |
 | 8 | Dario.html / forum.html may not exist on the pod (they're served from disk per `aml/README.md:114`) | filesystem | `00_pre` confirms both files via `ls`. |
 | 9 | RunPod's reverse proxy may block ports 3001/3002 | Runpod docs | Fall back to 18801/18802 (Опус-2's known-working ports per `aml/README.md:163`). |
-| 10 | `dario_memory.db-shm` / `-wal` left over in repo | `ls /Users/ataeff/arianna/dario/` shows them 2026-05-08 | Phase 0 wipes any pre-existing `.db*` files at the canonical path before running KK tests. |
+| 10 | `dario_memory.db-shm` / `-wal` left over in repo | `ls ~/arianna/dario/` shows them 2026-05-08 | Phase 0 wipes any pre-existing `.db*` files at the canonical path before running KK tests. |
 | 11 | A100 80GB SXM may be 40GB at provisioning if Runpod default differs | provisioner | Phase 0 step 1.1 verifies via `nvidia-smi`. |
 | 12 | `make weights` requires `hf` CLI authenticated | Makefile:73 | Phase 0 toolchain check confirms `hf whoami` works; auth via `HF_TOKEN` env. |
 | 13 | Sweep grid 180 cells × ~2s ≈ unfeasibly long if A100 isn't 5-10× faster than Neo | speed assumption | First Phase 7 cell measures actual tok/s; abort sweep if < 50 tok/s and reduce cells to 60 (drop rep_pen axis). |

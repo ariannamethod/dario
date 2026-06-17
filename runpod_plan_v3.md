@@ -81,7 +81,7 @@ If Phase 0 is restarted after a partial failure, the `mkdir -p` block is idempot
 |---|---|---|
 | GPU | A100 80GB SXM | `nvidia-smi` shows 1× A100, ~80 GB |
 | Image | Ubuntu 22.04 + CUDA 12.x base, build-essential preinstalled | `cc --version`, `make --version`, `gcc -v` |
-| Persistent volume | ≥ 10 GB | `dario_hf_upload/` is 3.4 GB on Neo (`du -sh /Users/ataeff/arianna/dario_hf_upload/` = `3.4G` verified 2026-05-08); plus KK SQLite (≤ 200 MB), per-phase logs (≤ 1 GB), 6 binaries × ~1 MB, GitHub clone (~50 MB). Plan for 10 GB to leave headroom for sweep transcripts. With Phase 7 expanded to 540 cells (Codex P2 #7), transcripts go to ~25 MB total — still well within budget. |
+| Persistent volume | ≥ 10 GB | `dario_hf_upload/` is 3.4 GB on Neo (`du -sh ~/arianna/dario_hf_upload/` = `3.4G` verified 2026-05-08); plus KK SQLite (≤ 200 MB), per-phase logs (≤ 1 GB), 6 binaries × ~1 MB, GitHub clone (~50 MB). Plan for 10 GB to leave headroom for sweep transcripts. With Phase 7 expanded to 540 cells (Codex P2 #7), transcripts go to ~25 MB total — still well within budget. |
 | Network | outbound HTTPS for `huggingface.co`, `github.com` | `curl -I https://huggingface.co` returns 200 |
 | User | non-root with sudo (Runpod default) | `id` |
 | Wall clock | UTC, NTP-synced | `date -u && timedatectl` |
@@ -1119,7 +1119,7 @@ Run a 5-turn dialogue mode with KK absorption (per `aml/README.md:151-160`). Aft
 
 ### 9.7 All seven essays loaded sequentially
 
-Files at `/Users/ataeff/arianna/dario/docs/`: `bach_counterpoint.txt`, `bioluminescence.txt`, `byzantine_iconography.txt`, `dario_essay.txt`, `dickens_russian_lit.txt`, `mycorrhizal_networks.txt`, `polynesian_navigation.txt` (verified `ls /Users/ataeff/arianna/dario/docs/` 2026-05-08).
+Files at `~/arianna/dario/docs/`: `bach_counterpoint.txt`, `bioluminescence.txt`, `byzantine_iconography.txt`, `dario_essay.txt`, `dickens_russian_lit.txt`, `mycorrhizal_networks.txt`, `polynesian_navigation.txt` (verified `ls ~/arianna/dario/docs/` 2026-05-08).
 
 ```bash
 for f in docs/*.txt; do

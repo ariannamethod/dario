@@ -130,7 +130,7 @@ Smoke tests, in order:
    ```
    $ ./dario_infer --voice leo24m --max-tokens 25 "What is resonance?"
    [voice]   leo24m (janus) — Leo 24M mini -- Janus d12 f16
-   [weights] /Users/ataeff/arianna/weights/dario/leo_janus_d12_f16.bin
+   [weights] ~/arianna/weights/dario/leo_janus_d12_f16.bin
    [janus-v4] 10 tokens, 182 tok/s
    [leo24m] ousnever acc�caucan be live A?ratiunderstand could…
    ```

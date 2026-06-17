@@ -98,7 +98,7 @@ func Names() []string {
 //  1. $DARIO_WEIGHTS_DIR (if set)
 //  2. <scriptDir>/weights/
 //  3. ~/arianna/weights/dario/
-//  4. ~/Downloads/janus-v4-final/
+//  4. ~/janus-v4-final/
 //  5. <scriptDir>/  (last resort, matches dario_infer.py)
 func SearchPaths(scriptDir string) []string {
 	var paths []string

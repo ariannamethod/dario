@@ -83,7 +83,7 @@ static int file_exists(const char *p) {
  *   2. <scriptDir>/weights/
  *   3. ~/arianna/weights/dario/
  *   4. ~/arianna/dario_hf_upload/   (where they actually live on Neo)
- *   5. ~/Downloads/janus-v4-final/
+ *   5. ~/janus-v4-final/
  *   6. <scriptDir>/                  (last-resort)
  *
  * Returns 0 on success, fills out_path. */
@@ -373,7 +373,7 @@ int main(int argc, char **argv) {
     else if (resolve_weights(script_dir, v->weights_file, weights_path, sizeof(weights_path)) != 0) {
         fprintf(stderr, "weights %s not found (searched DARIO_WEIGHTS_DIR, "
                         "%s/weights, ~/arianna/weights/dario, ~/arianna/dario_hf_upload, "
-                        "~/Downloads/janus-v4-final, %s)\n",
+                        "~/janus-v4-final, %s)\n",
                 v->weights_file, script_dir, script_dir);
         return 1;
     }
