@@ -32,14 +32,14 @@ VOICES = {
 # Search paths for weights
 WEIGHT_DIRS = [
     os.path.join(SCRIPT_DIR, 'weights'),
-    os.path.expanduser('~/Downloads/janus-v4-final'),
+    os.path.expanduser('~/janus-v4-final'),
     SCRIPT_DIR,
 ]
 
 # Tokenizer
 TOK_PATHS = [
     os.path.join(SCRIPT_DIR, 'tokenizer.pkl'),
-    os.path.expanduser('~/Downloads/janus-v4-weights/tokenizer.pkl'),
+    os.path.expanduser('~/janus-v4-weights/tokenizer.pkl'),
 ]
 
 
