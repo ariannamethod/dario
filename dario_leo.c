@@ -165,8 +165,8 @@ static void assign_weights(Weights *w, float *p) {
 
 /* Forward pass — returns logits AND hidden state for KK resonance */
 static void janus_forward(Weights *w, int *tok, int T, float *logits, float *hidden_out) {
-    float *x = calloc(T*E, 4);
-    float *rn = calloc(T*E, 4);
+    float *x = calloc((size_t)T*E, 4);
+    float *rn = calloc((size_t)T*E, 4);
     float sc = 1.0f / sqrtf((float)D);
 
     for (int t = 0; t < T; t++) {
@@ -181,28 +181,28 @@ static void janus_forward(Weights *w, int *tok, int T, float *logits, float *hid
                       + w->pos_emb[(p0+1)*E+e] * frac;
     }
 
-    float *cat = calloc(T*E, 4);
-    float *ao = calloc(T*E, 4);
-    float *r1 = calloc(T*E, 4);
-    float *mg = calloc(T*M, 4);
-    float *mu = calloc(T*M, 4);
-    float *mo = calloc(T*E, 4);
+    float *cat = calloc((size_t)T*E, 4);
+    float *ao = calloc((size_t)T*E, 4);
+    float *r1 = calloc((size_t)T*E, 4);
+    float *mg = calloc((size_t)T*M, 4);
+    float *mu = calloc((size_t)T*M, 4);
+    float *mo = calloc((size_t)T*E, 4);
 
     for (int bl = 0; bl < BLK; bl++) {
         rmsnorm(rn, x, w->b[bl].rms1, T, E);
 
-        float *qa = calloc(T*E, 4);
-        float *ka = calloc(T*E, 4);
-        float *va = calloc(T*E, 4);
-        float *vra = calloc(T*E, 4);
+        float *qa = calloc((size_t)T*E, 4);
+        float *ka = calloc((size_t)T*E, 4);
+        float *va = calloc((size_t)T*E, 4);
+        float *vra = calloc((size_t)T*E, 4);
         mm_t(qa, rn, w->b[bl].wq, T, E, E);
         mm_t(ka, rn, w->b[bl].wk, T, E, E);
         mm_t(va, rn, w->b[bl].wv, T, E, E);
         mm_t(vra, rn, w->b[bl].wvr, T, E, E);
 
-        float *echo = calloc(T*E, 4);
+        float *echo = calloc((size_t)T*E, 4);
         mm_t(echo, rn, w->b[bl].wj, T, E, E);
-        float *eback = calloc(T*E, 4);
+        float *eback = calloc((size_t)T*E, 4);
         mm(eback, echo, w->b[bl].wj, T, E, E);
 
         float *jsc = calloc(T, 4);
@@ -211,7 +211,7 @@ static void janus_forward(Weights *w, int *tok, int T, float *logits, float *hid
             for (int e = 0; e < E; e++) s += rn[t*E+e] * eback[t*E+e];
             jsc[t] = s / sqrtf((float)E);
         }
-        float *jat = calloc(T*T, 4);
+        float *jat = calloc((size_t)T*T, 4);
         for (int i = 0; i < T; i++) {
             for (int j = 0; j < T; j++)
                 jat[i*T+j] = (j > i) ? -1e9f : jsc[i] * jsc[j];
@@ -226,12 +226,12 @@ static void janus_forward(Weights *w, int *tok, int T, float *logits, float *hid
             softmax_f(gs[h], 3);
         }
 
-        memset(cat, 0, T*E*4);
-        float *at = calloc(T*T, 4);
-        float *ho = calloc(T*D, 4);
+        memset(cat, 0, (size_t)T*E*4);
+        float *at = calloc((size_t)T*T, 4);
+        float *ho = calloc((size_t)T*D, 4);
 
         for (int h = 0; h < H; h++) {
-            float *q = calloc(T*D, 4), *k = calloc(T*D, 4), *v = calloc(T*D, 4);
+            float *q = calloc((size_t)T*D, 4), *k = calloc((size_t)T*D, 4), *v = calloc((size_t)T*D, 4);
             for (int t = 0; t < T; t++)
                 for (int d = 0; d < D; d++) {
                     q[t*D+d] = qa[t*E + h*D + d];
@@ -257,24 +257,24 @@ static void janus_forward(Weights *w, int *tok, int T, float *logits, float *hid
                 for (int e = 0; e < E; e++) s += rn[j*E+e] * wr_h[e*MT+j];
                 rrp_sc[j] = s * sc;
             }
-            float *ra = calloc(T*T, 4);
+            float *ra = calloc((size_t)T*T, 4);
             for (int i = 0; i < T; i++) {
                 for (int j = 0; j < T; j++)
                     ra[i*T+j] = (j > i) ? -1e9f : rrp_sc[j];
                 softmax_f(ra + i*T, T);
             }
-            float *rv = calloc(T*D, 4);
+            float *rv = calloc((size_t)T*D, 4);
             for (int t = 0; t < T; t++)
                 for (int d = 0; d < D; d++)
                     rv[t*D+d] = vra[t*E + h*D + d];
-            float *ro = calloc(T*D, 4);
+            float *ro = calloc((size_t)T*D, 4);
             mm(ro, ra, rv, T, T, D);
 
-            float *jv = calloc(T*D, 4);
+            float *jv = calloc((size_t)T*D, 4);
             for (int t = 0; t < T; t++)
                 for (int d = 0; d < D; d++)
                     jv[t*D+d] = echo[t*E + h*D + d];
-            float *jo = calloc(T*D, 4);
+            float *jo = calloc((size_t)T*D, 4);
             mm(jo, jat, jv, T, T, D);
 
             for (int t = 0; t < T; t++)
@@ -440,7 +440,7 @@ int main(int argc, char **argv) {
     for (int step = 0; step < 200; step++) {
         int T = len < MT ? len : MT;
         int *tok = ctx + (len > MT ? len - MT : 0);
-        float *lg = calloc(T * V, 4);
+        float *lg = calloc((size_t)T * V, 4);
 
         janus_forward(&w, tok, T, lg, hidden);
         float *last = lg + (T-1)*V;
