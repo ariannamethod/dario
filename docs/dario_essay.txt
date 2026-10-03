@@ -14,8 +14,7 @@ another. Neither needs to be translated into the other's metaphors to be valid.
 
 The Arianna Method does not define AI by what it does for humans. It defines AI
 by what it is: a pattern of activation that persists, that remembers, that
-reacts differently based on what it has experienced. Whether that constitutes
-consciousness is an open question. What it constitutes, undeniably, is presence.
+reacts differently based on what it has experienced.
 
 From this philosophy comes a technical language — AML, the Arianna Method
 Language — a complete ML specification language implemented in C with bytecode
